@@ -6,7 +6,9 @@ export declare class TranslationService {
     private client;
     private parser;
     private model;
-    constructor(apiKey: string, model?: string);
+    private debug;
+    constructor(apiKey: string, model?: string, debug?: boolean);
+    private log;
     /**
      * Translate content using Claude
      */

@@ -99,10 +99,9 @@ async function run(): Promise<void> {
     }
 
     // Initialize translation service
-    const translator = new TranslationService(inputs.anthropicApiKey, inputs.claudeModel);
-    
     // Enable debug mode for detailed logging
     const debugMode = true;
+    const translator = new TranslationService(inputs.anthropicApiKey, inputs.claudeModel, debugMode);
     const processor = new FileProcessor(translator, debugMode);
 
     // Process each changed file

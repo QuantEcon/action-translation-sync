@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { Glossary, TranslationRequest, TranslationResult, ChangeBlock } from './types';
 import { MystParser } from './parser';
+import * as core from '@actions/core';
 
 /**
  * Translation Service using Claude (configurable model)
@@ -9,11 +10,19 @@ export class TranslationService {
   private client: Anthropic;
   private parser: MystParser;
   private model: string;
+  private debug: boolean;
 
-  constructor(apiKey: string, model: string = 'claude-sonnet-4-20250514') {
+  constructor(apiKey: string, model: string = 'claude-sonnet-4-20250514', debug: boolean = false) {
     this.client = new Anthropic({ apiKey });
     this.parser = new MystParser();
     this.model = model;
+    this.debug = debug;
+  }
+
+  private log(message: string): void {
+    if (this.debug) {
+      core.info(`[Translator] ${message}`);
+    }
   }
 
   /**
@@ -56,6 +65,10 @@ export class TranslationService {
       }
 
       const blockContent = changeBlock.newBlock?.content || '';
+      
+      this.log(`Translating block type=${changeBlock.type}, content length=${blockContent.length}`);
+      this.log(`Block content preview: ${blockContent.substring(0, 100)}...`);
+      
       const prompt = this.buildDiffPrompt(
         blockContent,
         contextBefore || '',
@@ -65,6 +78,9 @@ export class TranslationService {
         glossary
       );
 
+      this.log(`Prompt length: ${prompt.length}`);
+      this.log(`Full prompt:\n${prompt}\n--- END PROMPT ---`);
+
       const response = await this.client.messages.create({
         model: this.model,
         max_tokens: 4096,
@@ -73,13 +89,18 @@ export class TranslationService {
 
       const content = response.content[0];
       if (content.type === 'text') {
+        this.log(`Claude response length: ${content.text.length}`);
+        this.log(`Claude response:\n${content.text}\n--- END RESPONSE ---`);
         translatedBlocks.push(content.text.trim());
       }
     }
 
+    const finalResult = translatedBlocks.join('\n\n');
+    this.log(`Final combined translation length: ${finalResult.length}`);
+
     return {
       success: true,
-      translatedContent: translatedBlocks.join('\n\n'),
+      translatedContent: finalResult,
       tokensUsed: undefined, // Could extract from response if needed
     };
   }

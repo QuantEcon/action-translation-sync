@@ -1,4 +1,37 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -6,14 +39,21 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.TranslationService = void 0;
 const sdk_1 = __importDefault(require("@anthropic-ai/sdk"));
 const parser_1 = require("./parser");
+const core = __importStar(require("@actions/core"));
 /**
  * Translation Service using Claude (configurable model)
  */
 class TranslationService {
-    constructor(apiKey, model = 'claude-sonnet-4-20250514') {
+    constructor(apiKey, model = 'claude-sonnet-4-20250514', debug = false) {
         this.client = new sdk_1.default({ apiKey });
         this.parser = new parser_1.MystParser();
         this.model = model;
+        this.debug = debug;
+    }
+    log(message) {
+        if (this.debug) {
+            core.info(`[Translator] ${message}`);
+        }
     }
     /**
      * Translate content using Claude
@@ -52,7 +92,11 @@ class TranslationService {
                 continue; // Skip deleted blocks
             }
             const blockContent = changeBlock.newBlock?.content || '';
+            this.log(`Translating block type=${changeBlock.type}, content length=${blockContent.length}`);
+            this.log(`Block content preview: ${blockContent.substring(0, 100)}...`);
             const prompt = this.buildDiffPrompt(blockContent, contextBefore || '', contextAfter || '', request.sourceLanguage, request.targetLanguage, glossary);
+            this.log(`Prompt length: ${prompt.length}`);
+            this.log(`Full prompt:\n${prompt}\n--- END PROMPT ---`);
             const response = await this.client.messages.create({
                 model: this.model,
                 max_tokens: 4096,
@@ -60,12 +104,16 @@ class TranslationService {
             });
             const content = response.content[0];
             if (content.type === 'text') {
+                this.log(`Claude response length: ${content.text.length}`);
+                this.log(`Claude response:\n${content.text}\n--- END RESPONSE ---`);
                 translatedBlocks.push(content.text.trim());
             }
         }
+        const finalResult = translatedBlocks.join('\n\n');
+        this.log(`Final combined translation length: ${finalResult.length}`);
         return {
             success: true,
-            translatedContent: translatedBlocks.join('\n\n'),
+            translatedContent: finalResult,
             tokensUsed: undefined, // Could extract from response if needed
         };
     }
