@@ -1,0 +1,20 @@
+node_modules/
+
+# Build output - Keep dist/index.js for GitHub Actions
+dist/node_modules/
+dist/licenses.txt
+
+*.log
+.env
+.DS_Store
+coverage/
+*.test.ts.snap
+.vscode/
+.idea/
+
+# TypeScript build info
+*.tsbuildinfo
+
+# Temporary files
+*.tmp
+.cache/

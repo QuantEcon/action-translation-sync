@@ -1,0 +1,55 @@
+name: 'Translation Sync'
+description: 'Automatically sync translations across repositories'
+author: 'QuantEcon'
+
+branding:
+  icon: 'globe'
+  color: 'blue'
+
+inputs:
+  target-repo:
+    description: 'Target repository (owner/repo)'
+    required: true
+  target-language:
+    description: 'Target language code (e.g., zh-cn)'
+    required: true
+  docs-folder:
+    description: 'Documentation folder pattern (e.g., lectures/)'
+    required: false
+    default: 'lectures/'
+  source-language:
+    description: 'Source language code (e.g., en)'
+    required: false
+    default: 'en'
+  glossary-path:
+    description: 'Path to custom translation glossary JSON file (optional - built-in glossary used by default)'
+    required: false
+    default: ''
+  toc-file:
+    description: 'Table of contents file name'
+    required: false
+    default: '_toc.yml'
+  anthropic-api-key:
+    description: 'Anthropic API key for Claude'
+    required: true
+  github-token:
+    description: 'GitHub token for API access'
+    required: true
+  pr-labels:
+    description: 'Comma-separated labels for created PRs'
+    required: false
+    default: 'translation-sync,automated'
+  pr-reviewers:
+    description: 'Comma-separated list of reviewers'
+    required: false
+    default: ''
+
+outputs:
+  pr-url:
+    description: 'URL of the created pull request'
+  files-synced:
+    description: 'Number of files synchronized'
+
+runs:
+  using: 'node20'
+  main: 'dist/index.js'
