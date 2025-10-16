@@ -309,6 +309,26 @@ export class DiffDetector {
 
     this.log(`Finding insertion point: underHeading=${change.position.underHeading}, index=${change.position.index}, targetBlocks=${targetBlocks.length}`);
 
+    // For modified blocks treated as insertions, we need to find the block BEFORE the change
+    // Look for the previous block that exists in both documents
+    if (change.type === 'modified' && change.position.index !== undefined && change.position.index > 0) {
+      // Try to find a stable anchor point before this position
+      // Look for the nearest heading before the changed block
+      for (let i = change.position.index - 1; i >= 0; i--) {
+        // We need to search in the OLD doc blocks for a heading that exists in target
+        // For now, just use a position slightly before the change
+        const safeIndex = Math.max(0, change.position.index - 2);
+        const adjustedTargetIndex = Math.min(safeIndex, targetBlocks.length - 1);
+        
+        if (adjustedTargetIndex >= 0 && adjustedTargetIndex < targetBlocks.length) {
+          const insertAfterBlock = targetBlocks[adjustedTargetIndex];
+          this.log(`Modified block: inserting after adjusted index ${adjustedTargetIndex}: ${insertAfterBlock.content.substring(0, 30)}`);
+          return insertAfterBlock;
+        }
+        break;
+      }
+    }
+
     // Strategy 1: Use index-based positioning with ratio adjustment
     // The source and target may have different block counts, so we need to scale
     if (change.position.index !== undefined) {
