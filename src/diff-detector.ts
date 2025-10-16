@@ -1,5 +1,6 @@
 import { MystParser } from './parser';
 import { Block, ChangeBlock, ParsedDocument, BlockMapping, ReplaceStrategy } from './types';
+import * as core from '@actions/core';
 
 /**
  * Diff Detection Engine
@@ -7,9 +8,17 @@ import { Block, ChangeBlock, ParsedDocument, BlockMapping, ReplaceStrategy } fro
  */
 export class DiffDetector {
   private parser: MystParser;
+  private debug: boolean;
 
-  constructor() {
+  constructor(debug: boolean = false) {
     this.parser = new MystParser();
+    this.debug = debug;
+  }
+
+  private log(message: string): void {
+    if (this.debug) {
+      core.info(`[DiffDetector] ${message}`);
+    }
   }
 
   /**
@@ -20,8 +29,13 @@ export class DiffDetector {
     newContent: string,
     filepath: string
   ): Promise<ChangeBlock[]> {
+    this.log(`Detecting changes in ${filepath}`);
+    
     const oldDoc = await this.parser.parse(oldContent, filepath);
     const newDoc = await this.parser.parse(newContent, filepath);
+
+    this.log(`Old document: ${oldDoc.blocks.length} blocks`);
+    this.log(`New document: ${newDoc.blocks.length} blocks`);
 
     const changes: ChangeBlock[] = [];
 
@@ -42,6 +56,7 @@ export class DiffDetector {
 
       if (!correspondingOldBlock) {
         // New block added
+        this.log(`ADDED: Block at index ${i}, type=${newBlock.type}, content preview: ${newBlock.content.substring(0, 50)}...`);
         changes.push({
           type: 'added',
           newBlock,
@@ -52,6 +67,7 @@ export class DiffDetector {
 
         // Check if content changed
         if (!this.blocksEqual(correspondingOldBlock, newBlock)) {
+          this.log(`MODIFIED: Block at index ${i}, type=${newBlock.type}`);
           changes.push({
             type: 'modified',
             oldBlock: correspondingOldBlock,
@@ -68,6 +84,7 @@ export class DiffDetector {
       const blockKey = this.getBlockKey(oldBlock, i);
 
       if (!processedOldBlocks.has(blockKey)) {
+        this.log(`DELETED: Block at index ${i}, type=${oldBlock.type}`);
         changes.push({
           type: 'deleted',
           oldBlock,
@@ -75,6 +92,8 @@ export class DiffDetector {
         });
       }
     }
+
+    this.log(`Total changes detected: ${changes.length} (added: ${changes.filter(c => c.type === 'added').length}, modified: ${changes.filter(c => c.type === 'modified').length}, deleted: ${changes.filter(c => c.type === 'deleted').length})`);
 
     return changes;
   }
@@ -87,7 +106,11 @@ export class DiffDetector {
     targetContent: string,
     filepath: string
   ): Promise<BlockMapping[]> {
+    this.log(`Mapping ${changes.length} changes to target document`);
+    
     const targetDoc = await this.parser.parse(targetContent, filepath);
+    this.log(`Target document: ${targetDoc.blocks.length} blocks`);
+    
     const mappings: BlockMapping[] = [];
 
     for (const change of changes) {
@@ -101,6 +124,8 @@ export class DiffDetector {
           -1 // Index not relevant for target
         );
 
+        this.log(`MODIFIED block mapping: found=${!!targetBlock}`);
+        
         mapping = {
           change,
           targetBlock,
@@ -114,6 +139,8 @@ export class DiffDetector {
           targetDoc.blocks
         );
 
+        this.log(`ADDED block mapping: insertAfter=${insertAfter ? insertAfter.content.substring(0, 30) : 'null'}`);
+        
         mapping = {
           change,
           insertAfter,
@@ -128,6 +155,8 @@ export class DiffDetector {
           -1
         );
 
+        this.log(`DELETED block mapping: found=${!!targetBlock}`);
+        
         mapping = {
           change,
           targetBlock,
@@ -141,6 +170,7 @@ export class DiffDetector {
       mappings.push(mapping);
     }
 
+    this.log(`Created ${mappings.length} mappings`);
     return mappings;
   }
 

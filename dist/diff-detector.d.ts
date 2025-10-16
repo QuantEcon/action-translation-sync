@@ -5,7 +5,9 @@ import { ChangeBlock, BlockMapping } from './types';
  */
 export declare class DiffDetector {
     private parser;
-    constructor();
+    private debug;
+    constructor(debug?: boolean);
+    private log;
     /**
      * Detect changes between old and new versions
      */

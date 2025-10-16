@@ -8,7 +8,9 @@ export declare class FileProcessor {
     private parser;
     private diffDetector;
     private translator;
-    constructor(translationService: TranslationService);
+    private debug;
+    constructor(translationService: TranslationService, debug?: boolean);
+    private log;
     /**
      * Process a file in diff mode (existing file with changes)
      */

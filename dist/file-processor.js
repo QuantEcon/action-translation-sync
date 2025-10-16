@@ -1,35 +1,80 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.FileProcessor = void 0;
 const parser_1 = require("./parser");
 const diff_detector_1 = require("./diff-detector");
+const core = __importStar(require("@actions/core"));
 /**
  * File Processor
  * Orchestrates the translation process for a single file
  */
 class FileProcessor {
-    constructor(translationService) {
+    constructor(translationService, debug = false) {
         this.parser = new parser_1.MystParser();
-        this.diffDetector = new diff_detector_1.DiffDetector();
+        this.diffDetector = new diff_detector_1.DiffDetector(debug);
         this.translator = translationService;
+        this.debug = debug;
+    }
+    log(message) {
+        if (this.debug) {
+            core.info(`[FileProcessor] ${message}`);
+        }
     }
     /**
      * Process a file in diff mode (existing file with changes)
      */
     async processDiff(oldContent, newContent, targetContent, filepath, sourceLanguage, targetLanguage, glossary) {
+        this.log(`Processing diff for ${filepath}`);
         // 1. Detect changes between old and new
         const changes = await this.diffDetector.detectChanges(oldContent, newContent, filepath);
         if (changes.length === 0) {
             // No changes, return target as-is
+            this.log('No changes detected, returning target content unchanged');
             return targetContent;
         }
+        this.log(`Detected ${changes.length} changes`);
         // 2. Map changes to target document
         const mappings = await this.diffDetector.mapToTarget(changes, targetContent, filepath);
+        this.log(`Created ${mappings.length} mappings`);
         // 3. Translate changed blocks
         const translations = [];
         const targetDoc = await this.parser.parse(targetContent, filepath);
         for (const mapping of mappings) {
             if (mapping.change.type === 'deleted') {
+                this.log('Processing DELETED block - will be removed');
                 translations.push({
                     mapping,
                     translatedContent: null, // Will be deleted
@@ -40,6 +85,8 @@ class FileProcessor {
             const context = mapping.targetBlock
                 ? this.parser.getBlockContext(targetDoc.blocks, mapping.targetBlock, 2)
                 : { before: '', after: '' };
+            this.log(`Translating ${mapping.change.type} block...`);
+            this.log(`Context before length: ${context.before.length}, after length: ${context.after.length}`);
             // Translate the block
             const result = await this.translator.translate({
                 mode: 'diff',
@@ -55,12 +102,14 @@ class FileProcessor {
             if (!result.success) {
                 throw new Error(`Translation failed: ${result.error}`);
             }
+            this.log(`Translation result length: ${result.translatedContent?.length || 0}`);
             translations.push({
                 mapping,
                 translatedContent: result.translatedContent || '',
             });
         }
         // 4. Apply translations to target document
+        this.log('Applying translations to target document...');
         return this.applyTranslations(targetDoc.blocks, translations);
     }
     /**
@@ -85,6 +134,7 @@ class FileProcessor {
      * Apply translated blocks to target document
      */
     applyTranslations(targetBlocks, translations) {
+        this.log(`Applying ${translations.length} translations to ${targetBlocks.length} blocks`);
         // Create a mutable copy
         const updatedBlocks = [...targetBlocks];
         // Sort translations to apply from end to start (to preserve indices)
@@ -103,6 +153,7 @@ class FileProcessor {
                 // Replace existing block
                 const index = updatedBlocks.indexOf(mapping.targetBlock);
                 if (index >= 0 && translatedContent !== null) {
+                    this.log(`Replacing block at index ${index}`);
                     updatedBlocks[index] = {
                         ...updatedBlocks[index],
                         content: translatedContent,
@@ -113,6 +164,7 @@ class FileProcessor {
                 // Insert new block
                 const insertIndex = updatedBlocks.indexOf(mapping.insertAfter);
                 if (insertIndex >= 0 && translatedContent !== null && mapping.change.newBlock) {
+                    this.log(`Inserting block after index ${insertIndex}`);
                     updatedBlocks.splice(insertIndex + 1, 0, {
                         type: mapping.change.newBlock.type,
                         content: translatedContent,
@@ -121,15 +173,29 @@ class FileProcessor {
                         endLine: 0,
                     });
                 }
+                else if (insertIndex < 0) {
+                    this.log(`Warning: Could not find insertAfter block, appending to end`);
+                    if (translatedContent !== null && mapping.change.newBlock) {
+                        updatedBlocks.push({
+                            type: mapping.change.newBlock.type,
+                            content: translatedContent,
+                            parentHeading: mapping.change.newBlock.parentHeading,
+                            startLine: 0,
+                            endLine: 0,
+                        });
+                    }
+                }
             }
             else if (mapping.replaceStrategy === 'delete' && mapping.targetBlock) {
                 // Remove block
                 const deleteIndex = updatedBlocks.indexOf(mapping.targetBlock);
                 if (deleteIndex >= 0) {
+                    this.log(`Deleting block at index ${deleteIndex}`);
                     updatedBlocks.splice(deleteIndex, 1);
                 }
             }
         }
+        this.log(`Final document has ${updatedBlocks.length} blocks`);
         // Reconstruct markdown
         return this.parser.reconstructMarkdown(updatedBlocks);
     }

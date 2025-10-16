@@ -1,21 +1,64 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.DiffDetector = void 0;
 const parser_1 = require("./parser");
+const core = __importStar(require("@actions/core"));
 /**
  * Diff Detection Engine
  * Detects and tracks changes between two versions of a MyST document
  */
 class DiffDetector {
-    constructor() {
+    constructor(debug = false) {
         this.parser = new parser_1.MystParser();
+        this.debug = debug;
+    }
+    log(message) {
+        if (this.debug) {
+            core.info(`[DiffDetector] ${message}`);
+        }
     }
     /**
      * Detect changes between old and new versions
      */
     async detectChanges(oldContent, newContent, filepath) {
+        this.log(`Detecting changes in ${filepath}`);
         const oldDoc = await this.parser.parse(oldContent, filepath);
         const newDoc = await this.parser.parse(newContent, filepath);
+        this.log(`Old document: ${oldDoc.blocks.length} blocks`);
+        this.log(`New document: ${newDoc.blocks.length} blocks`);
         const changes = [];
         // Build maps for quick lookup
         const oldBlocksMap = this.buildBlockMap(oldDoc.blocks);
@@ -28,6 +71,7 @@ class DiffDetector {
             const correspondingOldBlock = this.findCorrespondingBlock(newBlock, oldDoc.blocks, i);
             if (!correspondingOldBlock) {
                 // New block added
+                this.log(`ADDED: Block at index ${i}, type=${newBlock.type}, content preview: ${newBlock.content.substring(0, 50)}...`);
                 changes.push({
                     type: 'added',
                     newBlock,
@@ -38,6 +82,7 @@ class DiffDetector {
                 processedOldBlocks.add(this.getBlockKey(correspondingOldBlock, oldDoc.blocks.indexOf(correspondingOldBlock)));
                 // Check if content changed
                 if (!this.blocksEqual(correspondingOldBlock, newBlock)) {
+                    this.log(`MODIFIED: Block at index ${i}, type=${newBlock.type}`);
                     changes.push({
                         type: 'modified',
                         oldBlock: correspondingOldBlock,
@@ -52,6 +97,7 @@ class DiffDetector {
             const oldBlock = oldDoc.blocks[i];
             const blockKey = this.getBlockKey(oldBlock, i);
             if (!processedOldBlocks.has(blockKey)) {
+                this.log(`DELETED: Block at index ${i}, type=${oldBlock.type}`);
                 changes.push({
                     type: 'deleted',
                     oldBlock,
@@ -59,13 +105,16 @@ class DiffDetector {
                 });
             }
         }
+        this.log(`Total changes detected: ${changes.length} (added: ${changes.filter(c => c.type === 'added').length}, modified: ${changes.filter(c => c.type === 'modified').length}, deleted: ${changes.filter(c => c.type === 'deleted').length})`);
         return changes;
     }
     /**
      * Map changes to corresponding blocks in target document
      */
     async mapToTarget(changes, targetContent, filepath) {
+        this.log(`Mapping ${changes.length} changes to target document`);
         const targetDoc = await this.parser.parse(targetContent, filepath);
+        this.log(`Target document: ${targetDoc.blocks.length} blocks`);
         const mappings = [];
         for (const change of changes) {
             let mapping;
@@ -73,6 +122,7 @@ class DiffDetector {
                 // Find corresponding block in target
                 const targetBlock = this.findCorrespondingBlock(change.oldBlock, targetDoc.blocks, -1 // Index not relevant for target
                 );
+                this.log(`MODIFIED block mapping: found=${!!targetBlock}`);
                 mapping = {
                     change,
                     targetBlock,
@@ -83,6 +133,7 @@ class DiffDetector {
             else if (change.type === 'added' && change.newBlock) {
                 // Find insertion point in target
                 const insertAfter = this.findInsertionBlockInTarget(change, targetDoc.blocks);
+                this.log(`ADDED block mapping: insertAfter=${insertAfter ? insertAfter.content.substring(0, 30) : 'null'}`);
                 mapping = {
                     change,
                     insertAfter,
@@ -93,6 +144,7 @@ class DiffDetector {
             else if (change.type === 'deleted' && change.oldBlock) {
                 // Find block to delete in target
                 const targetBlock = this.findCorrespondingBlock(change.oldBlock, targetDoc.blocks, -1);
+                this.log(`DELETED block mapping: found=${!!targetBlock}`);
                 mapping = {
                     change,
                     targetBlock,
@@ -105,6 +157,7 @@ class DiffDetector {
             }
             mappings.push(mapping);
         }
+        this.log(`Created ${mappings.length} mappings`);
         return mappings;
     }
     /**

@@ -2,6 +2,7 @@ import { MystParser } from './parser';
 import { DiffDetector } from './diff-detector';
 import { TranslationService } from './translator';
 import { Block, BlockMapping, TranslatedBlock, Glossary } from './types';
+import * as core from '@actions/core';
 
 /**
  * File Processor
@@ -11,11 +12,19 @@ export class FileProcessor {
   private parser: MystParser;
   private diffDetector: DiffDetector;
   private translator: TranslationService;
+  private debug: boolean;
 
-  constructor(translationService: TranslationService) {
+  constructor(translationService: TranslationService, debug: boolean = false) {
     this.parser = new MystParser();
-    this.diffDetector = new DiffDetector();
+    this.diffDetector = new DiffDetector(debug);
     this.translator = translationService;
+    this.debug = debug;
+  }
+
+  private log(message: string): void {
+    if (this.debug) {
+      core.info(`[FileProcessor] ${message}`);
+    }
   }
 
   /**
@@ -30,16 +39,23 @@ export class FileProcessor {
     targetLanguage: string,
     glossary?: Glossary
   ): Promise<string> {
+    this.log(`Processing diff for ${filepath}`);
+    
     // 1. Detect changes between old and new
     const changes = await this.diffDetector.detectChanges(oldContent, newContent, filepath);
 
     if (changes.length === 0) {
       // No changes, return target as-is
+      this.log('No changes detected, returning target content unchanged');
       return targetContent;
     }
 
+    this.log(`Detected ${changes.length} changes`);
+
     // 2. Map changes to target document
     const mappings = await this.diffDetector.mapToTarget(changes, targetContent, filepath);
+    
+    this.log(`Created ${mappings.length} mappings`);
 
     // 3. Translate changed blocks
     const translations: TranslatedBlock[] = [];
@@ -47,6 +63,7 @@ export class FileProcessor {
 
     for (const mapping of mappings) {
       if (mapping.change.type === 'deleted') {
+        this.log('Processing DELETED block - will be removed');
         translations.push({
           mapping,
           translatedContent: null, // Will be deleted
@@ -58,6 +75,9 @@ export class FileProcessor {
       const context = mapping.targetBlock
         ? this.parser.getBlockContext(targetDoc.blocks, mapping.targetBlock, 2)
         : { before: '', after: '' };
+
+      this.log(`Translating ${mapping.change.type} block...`);
+      this.log(`Context before length: ${context.before.length}, after length: ${context.after.length}`);
 
       // Translate the block
       const result = await this.translator.translate({
@@ -76,6 +96,8 @@ export class FileProcessor {
         throw new Error(`Translation failed: ${result.error}`);
       }
 
+      this.log(`Translation result length: ${result.translatedContent?.length || 0}`);
+
       translations.push({
         mapping,
         translatedContent: result.translatedContent || '',
@@ -83,6 +105,7 @@ export class FileProcessor {
     }
 
     // 4. Apply translations to target document
+    this.log('Applying translations to target document...');
     return this.applyTranslations(targetDoc.blocks, translations);
   }
 
@@ -117,6 +140,8 @@ export class FileProcessor {
    * Apply translated blocks to target document
    */
   private applyTranslations(targetBlocks: Block[], translations: TranslatedBlock[]): string {
+    this.log(`Applying ${translations.length} translations to ${targetBlocks.length} blocks`);
+    
     // Create a mutable copy
     const updatedBlocks = [...targetBlocks];
 
@@ -138,6 +163,7 @@ export class FileProcessor {
         // Replace existing block
         const index = updatedBlocks.indexOf(mapping.targetBlock);
         if (index >= 0 && translatedContent !== null) {
+          this.log(`Replacing block at index ${index}`);
           updatedBlocks[index] = {
             ...updatedBlocks[index],
             content: translatedContent,
@@ -147,6 +173,7 @@ export class FileProcessor {
         // Insert new block
         const insertIndex = updatedBlocks.indexOf(mapping.insertAfter);
         if (insertIndex >= 0 && translatedContent !== null && mapping.change.newBlock) {
+          this.log(`Inserting block after index ${insertIndex}`);
           updatedBlocks.splice(insertIndex + 1, 0, {
             type: mapping.change.newBlock.type,
             content: translatedContent,
@@ -154,16 +181,30 @@ export class FileProcessor {
             startLine: 0,
             endLine: 0,
           });
+        } else if (insertIndex < 0) {
+          this.log(`Warning: Could not find insertAfter block, appending to end`);
+          if (translatedContent !== null && mapping.change.newBlock) {
+            updatedBlocks.push({
+              type: mapping.change.newBlock.type,
+              content: translatedContent,
+              parentHeading: mapping.change.newBlock.parentHeading,
+              startLine: 0,
+              endLine: 0,
+            });
+          }
         }
       } else if (mapping.replaceStrategy === 'delete' && mapping.targetBlock) {
         // Remove block
         const deleteIndex = updatedBlocks.indexOf(mapping.targetBlock);
         if (deleteIndex >= 0) {
+          this.log(`Deleting block at index ${deleteIndex}`);
           updatedBlocks.splice(deleteIndex, 1);
         }
       }
     }
 
+    this.log(`Final document has ${updatedBlocks.length} blocks`);
+    
     // Reconstruct markdown
     return this.parser.reconstructMarkdown(updatedBlocks);
   }

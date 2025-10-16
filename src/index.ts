@@ -100,7 +100,10 @@ async function run(): Promise<void> {
 
     // Initialize translation service
     const translator = new TranslationService(inputs.anthropicApiKey, inputs.claudeModel);
-    const processor = new FileProcessor(translator);
+    
+    // Enable debug mode for detailed logging
+    const debugMode = true;
+    const processor = new FileProcessor(translator, debugMode);
 
     // Process each changed file
     const processedFiles: string[] = [];
