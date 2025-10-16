@@ -135,3 +135,9 @@ export interface SyncResult {
   prUrl?: string;
   errors: string[];
 }
+
+export interface TranslatedFile {
+  path: string;
+  content: string;
+  sha?: string; // SHA of existing file (for updates)
+}

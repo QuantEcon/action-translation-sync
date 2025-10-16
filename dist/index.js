@@ -539,6 +539,7 @@ async function run() {
         const processor = new file_processor_1.FileProcessor(translator);
         // Process each changed file
         const processedFiles = [];
+        const translatedFiles = [];
         const errors = [];
         for (const file of changedMarkdownFiles) {
             try {
@@ -575,6 +576,7 @@ async function run() {
                 const [targetOwner, targetRepo] = inputs.targetRepo.split('/');
                 let targetContent = '';
                 let isNewFile = false;
+                let existingFileSha;
                 try {
                     const { data: targetFileData } = await octokit.rest.repos.getContent({
                         owner: targetOwner,
@@ -583,6 +585,7 @@ async function run() {
                     });
                     if ('content' in targetFileData) {
                         targetContent = Buffer.from(targetFileData.content, 'base64').toString('utf-8');
+                        existingFileSha = targetFileData.sha;
                     }
                 }
                 catch (error) {
@@ -604,8 +607,12 @@ async function run() {
                 }
                 core.info(`Successfully processed ${file.filename}`);
                 processedFiles.push(file.filename);
-                // TODO: Create PR in target repo with translated content
-                // This will be implemented in the next phase
+                // Store translated content for PR creation
+                translatedFiles.push({
+                    path: file.filename,
+                    content: translatedContent,
+                    sha: existingFileSha,
+                });
             }
             catch (error) {
                 const errorMessage = `Error processing ${file.filename}: ${error}`;
@@ -619,7 +626,99 @@ async function run() {
         }
         else {
             core.info(`Successfully processed ${processedFiles.length} files`);
-            core.setOutput('files-synced', processedFiles.length.toString());
+            // Create PR in target repo with translated content
+            if (translatedFiles.length > 0) {
+                try {
+                    core.info('Creating PR in target repository...');
+                    const [targetOwner, targetRepoName] = inputs.targetRepo.split('/');
+                    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+                    const branchName = `translation-sync-${timestamp}`;
+                    // Get default branch of target repo
+                    const { data: targetRepoData } = await octokit.rest.repos.get({
+                        owner: targetOwner,
+                        repo: targetRepoName,
+                    });
+                    const defaultBranch = targetRepoData.default_branch;
+                    // Get the SHA of the default branch
+                    const { data: refData } = await octokit.rest.git.getRef({
+                        owner: targetOwner,
+                        repo: targetRepoName,
+                        ref: `heads/${defaultBranch}`,
+                    });
+                    const baseSha = refData.object.sha;
+                    // Create a new branch
+                    await octokit.rest.git.createRef({
+                        owner: targetOwner,
+                        repo: targetRepoName,
+                        ref: `refs/heads/${branchName}`,
+                        sha: baseSha,
+                    });
+                    core.info(`Created branch: ${branchName}`);
+                    // Commit each translated file
+                    for (const file of translatedFiles) {
+                        await octokit.rest.repos.createOrUpdateFileContents({
+                            owner: targetOwner,
+                            repo: targetRepoName,
+                            path: file.path,
+                            message: `Update translation: ${file.path}`,
+                            content: Buffer.from(file.content).toString('base64'),
+                            branch: branchName,
+                            sha: file.sha, // Include SHA if updating existing file
+                        });
+                        core.info(`Committed: ${file.path}`);
+                    }
+                    // Create pull request
+                    const prBody = `## Automated Translation Sync
+
+This PR contains automated translations from [${github.context.repo.owner}/${github.context.repo.repo}](https://github.com/${github.context.repo.owner}/${github.context.repo.repo}).
+
+### Changes
+${translatedFiles.map(f => `- \`${f.path}\``).join('\n')}
+
+### Source
+${prNumber ? `- **PR**: #${prNumber}` : '- **Trigger**: Manual workflow dispatch'}
+- **Source Language**: ${inputs.sourceLanguage}
+- **Target Language**: ${inputs.targetLanguage}
+- **Model**: ${inputs.claudeModel}
+
+---
+*This PR was created automatically by the [translation-sync action](https://github.com/quantecon/action-translation-sync).*`;
+                    const { data: pr } = await octokit.rest.pulls.create({
+                        owner: targetOwner,
+                        repo: targetRepoName,
+                        title: `🌐 Translation sync: ${processedFiles.length} file(s) updated`,
+                        body: prBody,
+                        head: branchName,
+                        base: defaultBranch,
+                    });
+                    core.info(`Created PR: ${pr.html_url}`);
+                    // Add labels if specified
+                    if (inputs.prLabels.length > 0) {
+                        await octokit.rest.issues.addLabels({
+                            owner: targetOwner,
+                            repo: targetRepoName,
+                            issue_number: pr.number,
+                            labels: inputs.prLabels,
+                        });
+                        core.info(`Added labels: ${inputs.prLabels.join(', ')}`);
+                    }
+                    // Request reviewers if specified
+                    if (inputs.prReviewers.length > 0) {
+                        await octokit.rest.pulls.requestReviewers({
+                            owner: targetOwner,
+                            repo: targetRepoName,
+                            pull_number: pr.number,
+                            reviewers: inputs.prReviewers,
+                        });
+                        core.info(`Requested reviewers: ${inputs.prReviewers.join(', ')}`);
+                    }
+                    core.setOutput('pr-url', pr.html_url);
+                    core.setOutput('files-synced', processedFiles.length.toString());
+                }
+                catch (prError) {
+                    core.setFailed(`Failed to create PR: ${prError instanceof Error ? prError.message : String(prError)}`);
+                }
+            }
         }
     }
     catch (error) {
