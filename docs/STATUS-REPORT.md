@@ -2,22 +2,35 @@
 
 **Date**: October 16, 2025  
 **Project**: Translation Sync GitHub Action  
-**Status**: Phase 1 Complete ✅
+**Version**: v0.1.0 (Released!)  
+**Repository**: https://github.com/quantecon/action-translation-sync  
+**Status**: Initial Release Complete ✅
 
 ---
 
 ## Executive Summary
 
-We have successfully completed the **core foundation** of the Translation Sync GitHub Action, implementing a sophisticated system for automatically synchronizing translations between repositories using AI-powered diff detection and translation.
+We have successfully completed and **released v0.1.0** of the Translation Sync GitHub Action, implementing a sophisticated system for automatically synchronizing translations between repositories using AI-powered diff detection and translation.
 
-### Achievements
+### Release Achievements
 
 ✅ **Complete project setup** with modern TypeScript tooling  
 ✅ **MyST Markdown parser** with full directive and math support  
 ✅ **Intelligent diff detection** using multi-strategy block matching  
-✅ **Claude Sonnet 4.5 integration** for high-quality translation  
+✅ **Claude Sonnet 4.5 integration** (claude-sonnet-4.5-20241022)  
+✅ **Built-in glossary system** with 342 terms for Simplified Chinese  
 ✅ **File processing orchestration** with dual-mode operation  
-✅ **Comprehensive documentation** with examples and diagrams  
+✅ **Comprehensive documentation** with examples and setup guides  
+✅ **Git repository initialized** and pushed to GitHub  
+✅ **v0.1.0 and v0.1 tags created** and published  
+
+### What's New in v0.1.0
+
+🎉 **Initial development release** ready for testing  
+📚 **Built-in glossary** with 342 terms (economic, math, statistical)  
+🌐 **Language-aware loading** from glossary/{language}.json  
+📖 **Complete setup documentation** for lecture-python.myst testing  
+🏗️ **Production-ready build** (2,452 KB bundle with bundled glossary)  
 
 ---
 

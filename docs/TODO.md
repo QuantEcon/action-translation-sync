@@ -2,9 +2,10 @@
 
 ## Project Status
 
-**Current Version**: v0.1.x (Development Phase)  
+**Current Version**: v0.1.0 (Released!)  
+**Repository**: https://github.com/quantecon/action-translation-sync  
 **Target Version**: v1.0 (Production Ready)  
-**Focus**: Simplicity and ease of maintenance
+**Focus**: Testing with lecture-python.myst → lecture-python.zh-cn
 
 **Note**: We are NOT maintaining backward compatibility during v0.1.x development. Breaking changes are acceptable and expected as we iterate toward the best design.
 
@@ -79,13 +80,22 @@
 - [ ] Troubleshooting guide
 - [ ] Contributing guidelines
 
-### Step 9: CI/CD
+### Step 9: Initial Release
+- [x] Initialize git repository
+- [x] Create GitHub repository (quantecon/action-translation-sync)
+- [x] Push code to GitHub
+- [x] Create v0.1.0 tag
+- [x] Create v0.1 floating tag
+- [x] Publish release to GitHub
+- [ ] Test with lecture-python.myst (next step)
+
+### Step 10: CI/CD
 - [ ] GitHub Actions workflow for testing
 - [ ] GitHub Actions workflow for building
-- [ ] Version tagging and releases
+- [ ] Automated version tagging
 - [ ] Dependabot configuration
 
-### Step 10: Enhancements
+### Step 11: Enhancements (Future)
 - [ ] Support for multiple files in single PR
 - [ ] Batch translation optimization
 - [ ] Translation memory/caching
@@ -97,11 +107,17 @@
 
 ## Known Issues 🐛
 
-None at the moment
+- GitHub PR integration not implemented (will fail at PR creation)
+- TOC management not implemented
+- Limited test coverage
+- No error recovery for partial failures
 
 ## Notes 📔
 
-- Using Claude Sonnet 4.5 (model: claude-sonnet-4-20250514)
+- **Model**: Claude Sonnet 4.5 (claude-sonnet-4.5-20241022)
+- **Built-in Glossary**: 342 terms in glossary/zh-cn.json
 - MyST parsing uses unified/remark ecosystem
 - Type errors resolved by using `any` for visit callback (remark types are complex)
-- Build successful with ncc bundling
+- Build successful with ncc bundling (2,452 KB)
+- **v0.1.0 Released**: October 16, 2025
+- Repository: https://github.com/quantecon/action-translation-sync
