@@ -137,22 +137,31 @@ class FileProcessor {
         this.log(`Applying ${translations.length} translations to ${targetBlocks.length} blocks`);
         // Create a mutable copy
         const updatedBlocks = [...targetBlocks];
+        // Create a map of original blocks to their indices for fast lookup
+        const blockIndexMap = new Map();
+        targetBlocks.forEach((block, index) => {
+            blockIndexMap.set(block, index);
+        });
         // Sort translations to apply from end to start (to preserve indices)
         const sortedTranslations = [...translations].sort((a, b) => {
             const indexA = a.mapping.targetBlock
-                ? updatedBlocks.indexOf(a.mapping.targetBlock)
-                : updatedBlocks.length;
+                ? blockIndexMap.get(a.mapping.targetBlock) ?? updatedBlocks.length
+                : a.mapping.insertAfter
+                    ? blockIndexMap.get(a.mapping.insertAfter) ?? updatedBlocks.length
+                    : updatedBlocks.length;
             const indexB = b.mapping.targetBlock
-                ? updatedBlocks.indexOf(b.mapping.targetBlock)
-                : updatedBlocks.length;
+                ? blockIndexMap.get(b.mapping.targetBlock) ?? updatedBlocks.length
+                : b.mapping.insertAfter
+                    ? blockIndexMap.get(b.mapping.insertAfter) ?? updatedBlocks.length
+                    : updatedBlocks.length;
             return indexB - indexA;
         });
         for (const translation of sortedTranslations) {
             const { mapping, translatedContent } = translation;
             if (mapping.replaceStrategy === 'exact-match' && mapping.targetBlock) {
                 // Replace existing block
-                const index = updatedBlocks.indexOf(mapping.targetBlock);
-                if (index >= 0 && translatedContent !== null) {
+                const index = blockIndexMap.get(mapping.targetBlock);
+                if (index !== undefined && index >= 0 && translatedContent !== null) {
                     this.log(`Replacing block at index ${index}`);
                     updatedBlocks[index] = {
                         ...updatedBlocks[index],
@@ -162,19 +171,28 @@ class FileProcessor {
             }
             else if (mapping.replaceStrategy === 'insert' && mapping.insertAfter) {
                 // Insert new block
-                const insertIndex = updatedBlocks.indexOf(mapping.insertAfter);
-                if (insertIndex >= 0 && translatedContent !== null && mapping.change.newBlock) {
-                    this.log(`Inserting block after index ${insertIndex}`);
-                    updatedBlocks.splice(insertIndex + 1, 0, {
+                const insertAfterIndex = blockIndexMap.get(mapping.insertAfter);
+                if (insertAfterIndex !== undefined && insertAfterIndex >= 0 && translatedContent !== null && mapping.change.newBlock) {
+                    this.log(`Inserting block after index ${insertAfterIndex}`);
+                    updatedBlocks.splice(insertAfterIndex + 1, 0, {
                         type: mapping.change.newBlock.type,
                         content: translatedContent,
                         parentHeading: mapping.change.newBlock.parentHeading,
                         startLine: 0,
                         endLine: 0,
                     });
+                    // Update the map for subsequent operations (indices have shifted)
+                    targetBlocks.forEach((block, origIndex) => {
+                        if (origIndex > insertAfterIndex) {
+                            const currentIndex = blockIndexMap.get(block);
+                            if (currentIndex !== undefined) {
+                                blockIndexMap.set(block, currentIndex + 1);
+                            }
+                        }
+                    });
                 }
-                else if (insertIndex < 0) {
-                    this.log(`Warning: Could not find insertAfter block, appending to end`);
+                else {
+                    this.log(`Warning: Could not find insertAfter block (index=${insertAfterIndex}), appending to end`);
                     if (translatedContent !== null && mapping.change.newBlock) {
                         updatedBlocks.push({
                             type: mapping.change.newBlock.type,
@@ -188,8 +206,8 @@ class FileProcessor {
             }
             else if (mapping.replaceStrategy === 'delete' && mapping.targetBlock) {
                 // Remove block
-                const deleteIndex = updatedBlocks.indexOf(mapping.targetBlock);
-                if (deleteIndex >= 0) {
+                const deleteIndex = blockIndexMap.get(mapping.targetBlock);
+                if (deleteIndex !== undefined && deleteIndex >= 0) {
                     this.log(`Deleting block at index ${deleteIndex}`);
                     updatedBlocks.splice(deleteIndex, 1);
                 }

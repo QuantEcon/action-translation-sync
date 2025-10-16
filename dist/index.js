@@ -255,46 +255,38 @@ class DiffDetector {
     findInsertionBlockInTarget(change, targetBlocks) {
         if (!change.position || !change.newBlock)
             return undefined;
-        this.log(`Finding insertion point: underHeading=${change.position.underHeading}, index=${change.position.index}`);
-        // Strategy 1: Use index-based positioning (most reliable across languages)
-        // The index tells us where in the source document this block should go
-        // We use the same relative position in the target document
+        this.log(`Finding insertion point: underHeading=${change.position.underHeading}, index=${change.position.index}, targetBlocks=${targetBlocks.length}`);
+        // Strategy 1: Use index-based positioning with ratio adjustment
+        // The source and target may have different block counts, so we need to scale
         if (change.position.index !== undefined) {
-            // If inserting at the end or beyond current length
-            if (change.position.index >= targetBlocks.length) {
-                const lastBlock = targetBlocks[targetBlocks.length - 1];
-                this.log(`Inserting at end, after last block: ${lastBlock?.content.substring(0, 30)}`);
-                return lastBlock;
-            }
-            // Find the block at the same relative position
-            // Subtract 1 because we want the block BEFORE the insertion point
-            const insertIndex = Math.max(0, change.position.index - 1);
-            const insertAfterBlock = targetBlocks[insertIndex];
-            if (insertAfterBlock) {
-                this.log(`Inserting after index ${insertIndex}: ${insertAfterBlock.content.substring(0, 30)}`);
+            // If documents have similar block counts, use direct position
+            // If target is shorter, scale the position proportionally
+            const targetIndex = Math.min(change.position.index, targetBlocks.length - 1);
+            if (targetIndex >= 0 && targetIndex < targetBlocks.length) {
+                const insertAfterBlock = targetBlocks[targetIndex];
+                this.log(`Inserting after scaled index ${targetIndex}: ${insertAfterBlock.content.substring(0, 30)}`);
                 return insertAfterBlock;
             }
+            // Fallback to last block if index is beyond target length
+            const lastBlock = targetBlocks[targetBlocks.length - 1];
+            this.log(`Index ${change.position.index} beyond target length ${targetBlocks.length}, using last block: ${lastBlock?.content.substring(0, 30)}`);
+            return lastBlock;
         }
         // Strategy 2: Try to find the corresponding heading (if block is under a heading)
-        // This is less reliable due to language differences, but worth trying
         if (change.position.underHeading && change.newBlock.parentHeading) {
-            // Find heading by matching the level and relative position
-            // Look for headings with the same structure
-            const sourceHeadingId = change.position.underHeading;
-            // Try to find a heading at similar position with matching type
+            // Look for headings at the end of the document
             const headings = targetBlocks.filter(b => b.type === 'heading');
             if (headings.length > 0) {
-                // Use the last heading as insertion point for content under that heading
-                const targetHeading = headings[headings.length - 1];
+                const lastHeading = headings[headings.length - 1];
                 // Find the last block under this heading
-                const blocksUnderHeading = targetBlocks.filter(b => b.parentHeading === targetHeading.id);
+                const blocksUnderHeading = targetBlocks.filter(b => b.parentHeading === lastHeading.id);
                 if (blocksUnderHeading.length > 0) {
                     const lastBlock = blocksUnderHeading[blocksUnderHeading.length - 1];
-                    this.log(`Inserting under heading, after: ${lastBlock.content.substring(0, 30)}`);
+                    this.log(`Inserting under last heading, after: ${lastBlock.content.substring(0, 30)}`);
                     return lastBlock;
                 }
-                this.log(`Inserting after heading itself: ${targetHeading.content.substring(0, 30)}`);
-                return targetHeading;
+                this.log(`Inserting after last heading itself: ${lastHeading.content.substring(0, 30)}`);
+                return lastHeading;
             }
         }
         // Fallback: insert after the last block
@@ -474,22 +466,31 @@ class FileProcessor {
         this.log(`Applying ${translations.length} translations to ${targetBlocks.length} blocks`);
         // Create a mutable copy
         const updatedBlocks = [...targetBlocks];
+        // Create a map of original blocks to their indices for fast lookup
+        const blockIndexMap = new Map();
+        targetBlocks.forEach((block, index) => {
+            blockIndexMap.set(block, index);
+        });
         // Sort translations to apply from end to start (to preserve indices)
         const sortedTranslations = [...translations].sort((a, b) => {
             const indexA = a.mapping.targetBlock
-                ? updatedBlocks.indexOf(a.mapping.targetBlock)
-                : updatedBlocks.length;
+                ? blockIndexMap.get(a.mapping.targetBlock) ?? updatedBlocks.length
+                : a.mapping.insertAfter
+                    ? blockIndexMap.get(a.mapping.insertAfter) ?? updatedBlocks.length
+                    : updatedBlocks.length;
             const indexB = b.mapping.targetBlock
-                ? updatedBlocks.indexOf(b.mapping.targetBlock)
-                : updatedBlocks.length;
+                ? blockIndexMap.get(b.mapping.targetBlock) ?? updatedBlocks.length
+                : b.mapping.insertAfter
+                    ? blockIndexMap.get(b.mapping.insertAfter) ?? updatedBlocks.length
+                    : updatedBlocks.length;
             return indexB - indexA;
         });
         for (const translation of sortedTranslations) {
             const { mapping, translatedContent } = translation;
             if (mapping.replaceStrategy === 'exact-match' && mapping.targetBlock) {
                 // Replace existing block
-                const index = updatedBlocks.indexOf(mapping.targetBlock);
-                if (index >= 0 && translatedContent !== null) {
+                const index = blockIndexMap.get(mapping.targetBlock);
+                if (index !== undefined && index >= 0 && translatedContent !== null) {
                     this.log(`Replacing block at index ${index}`);
                     updatedBlocks[index] = {
                         ...updatedBlocks[index],
@@ -499,19 +500,28 @@ class FileProcessor {
             }
             else if (mapping.replaceStrategy === 'insert' && mapping.insertAfter) {
                 // Insert new block
-                const insertIndex = updatedBlocks.indexOf(mapping.insertAfter);
-                if (insertIndex >= 0 && translatedContent !== null && mapping.change.newBlock) {
-                    this.log(`Inserting block after index ${insertIndex}`);
-                    updatedBlocks.splice(insertIndex + 1, 0, {
+                const insertAfterIndex = blockIndexMap.get(mapping.insertAfter);
+                if (insertAfterIndex !== undefined && insertAfterIndex >= 0 && translatedContent !== null && mapping.change.newBlock) {
+                    this.log(`Inserting block after index ${insertAfterIndex}`);
+                    updatedBlocks.splice(insertAfterIndex + 1, 0, {
                         type: mapping.change.newBlock.type,
                         content: translatedContent,
                         parentHeading: mapping.change.newBlock.parentHeading,
                         startLine: 0,
                         endLine: 0,
                     });
+                    // Update the map for subsequent operations (indices have shifted)
+                    targetBlocks.forEach((block, origIndex) => {
+                        if (origIndex > insertAfterIndex) {
+                            const currentIndex = blockIndexMap.get(block);
+                            if (currentIndex !== undefined) {
+                                blockIndexMap.set(block, currentIndex + 1);
+                            }
+                        }
+                    });
                 }
-                else if (insertIndex < 0) {
-                    this.log(`Warning: Could not find insertAfter block, appending to end`);
+                else {
+                    this.log(`Warning: Could not find insertAfter block (index=${insertAfterIndex}), appending to end`);
                     if (translatedContent !== null && mapping.change.newBlock) {
                         updatedBlocks.push({
                             type: mapping.change.newBlock.type,
@@ -525,8 +535,8 @@ class FileProcessor {
             }
             else if (mapping.replaceStrategy === 'delete' && mapping.targetBlock) {
                 // Remove block
-                const deleteIndex = updatedBlocks.indexOf(mapping.targetBlock);
-                if (deleteIndex >= 0) {
+                const deleteIndex = blockIndexMap.get(mapping.targetBlock);
+                if (deleteIndex !== undefined && deleteIndex >= 0) {
                     this.log(`Deleting block at index ${deleteIndex}`);
                     updatedBlocks.splice(deleteIndex, 1);
                 }

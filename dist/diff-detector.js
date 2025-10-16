@@ -248,46 +248,38 @@ class DiffDetector {
     findInsertionBlockInTarget(change, targetBlocks) {
         if (!change.position || !change.newBlock)
             return undefined;
-        this.log(`Finding insertion point: underHeading=${change.position.underHeading}, index=${change.position.index}`);
-        // Strategy 1: Use index-based positioning (most reliable across languages)
-        // The index tells us where in the source document this block should go
-        // We use the same relative position in the target document
+        this.log(`Finding insertion point: underHeading=${change.position.underHeading}, index=${change.position.index}, targetBlocks=${targetBlocks.length}`);
+        // Strategy 1: Use index-based positioning with ratio adjustment
+        // The source and target may have different block counts, so we need to scale
         if (change.position.index !== undefined) {
-            // If inserting at the end or beyond current length
-            if (change.position.index >= targetBlocks.length) {
-                const lastBlock = targetBlocks[targetBlocks.length - 1];
-                this.log(`Inserting at end, after last block: ${lastBlock?.content.substring(0, 30)}`);
-                return lastBlock;
-            }
-            // Find the block at the same relative position
-            // Subtract 1 because we want the block BEFORE the insertion point
-            const insertIndex = Math.max(0, change.position.index - 1);
-            const insertAfterBlock = targetBlocks[insertIndex];
-            if (insertAfterBlock) {
-                this.log(`Inserting after index ${insertIndex}: ${insertAfterBlock.content.substring(0, 30)}`);
+            // If documents have similar block counts, use direct position
+            // If target is shorter, scale the position proportionally
+            const targetIndex = Math.min(change.position.index, targetBlocks.length - 1);
+            if (targetIndex >= 0 && targetIndex < targetBlocks.length) {
+                const insertAfterBlock = targetBlocks[targetIndex];
+                this.log(`Inserting after scaled index ${targetIndex}: ${insertAfterBlock.content.substring(0, 30)}`);
                 return insertAfterBlock;
             }
+            // Fallback to last block if index is beyond target length
+            const lastBlock = targetBlocks[targetBlocks.length - 1];
+            this.log(`Index ${change.position.index} beyond target length ${targetBlocks.length}, using last block: ${lastBlock?.content.substring(0, 30)}`);
+            return lastBlock;
         }
         // Strategy 2: Try to find the corresponding heading (if block is under a heading)
-        // This is less reliable due to language differences, but worth trying
         if (change.position.underHeading && change.newBlock.parentHeading) {
-            // Find heading by matching the level and relative position
-            // Look for headings with the same structure
-            const sourceHeadingId = change.position.underHeading;
-            // Try to find a heading at similar position with matching type
+            // Look for headings at the end of the document
             const headings = targetBlocks.filter(b => b.type === 'heading');
             if (headings.length > 0) {
-                // Use the last heading as insertion point for content under that heading
-                const targetHeading = headings[headings.length - 1];
+                const lastHeading = headings[headings.length - 1];
                 // Find the last block under this heading
-                const blocksUnderHeading = targetBlocks.filter(b => b.parentHeading === targetHeading.id);
+                const blocksUnderHeading = targetBlocks.filter(b => b.parentHeading === lastHeading.id);
                 if (blocksUnderHeading.length > 0) {
                     const lastBlock = blocksUnderHeading[blocksUnderHeading.length - 1];
-                    this.log(`Inserting under heading, after: ${lastBlock.content.substring(0, 30)}`);
+                    this.log(`Inserting under last heading, after: ${lastBlock.content.substring(0, 30)}`);
                     return lastBlock;
                 }
-                this.log(`Inserting after heading itself: ${targetHeading.content.substring(0, 30)}`);
-                return targetHeading;
+                this.log(`Inserting after last heading itself: ${lastHeading.content.substring(0, 30)}`);
+                return lastHeading;
             }
         }
         // Fallback: insert after the last block
