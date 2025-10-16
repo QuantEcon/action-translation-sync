@@ -958,7 +958,7 @@ exports.TranslationService = void 0;
 const sdk_1 = __importDefault(__nccwpck_require__(121));
 const parser_1 = __nccwpck_require__(4262);
 /**
- * Translation Service using Claude Sonnet 4.5 (claude-sonnet-4.5-20241022)
+ * Translation Service using Claude Sonnet 4 (claude-sonnet-4-20250514)
  */
 class TranslationService {
     constructor(apiKey) {
@@ -1004,7 +1004,7 @@ class TranslationService {
             const blockContent = changeBlock.newBlock?.content || '';
             const prompt = this.buildDiffPrompt(blockContent, contextBefore || '', contextAfter || '', request.sourceLanguage, request.targetLanguage, glossary);
             const response = await this.client.messages.create({
-                model: 'claude-sonnet-4.5-20241022',
+                model: 'claude-sonnet-4-20250514',
                 max_tokens: 4096,
                 messages: [{ role: 'user', content: prompt }],
             });
@@ -1033,7 +1033,7 @@ class TranslationService {
         const glossary = request.glossary;
         const prompt = this.buildFullPrompt(fullContent, request.sourceLanguage, request.targetLanguage, glossary);
         const response = await this.client.messages.create({
-            model: 'claude-sonnet-4.5-20241022',
+            model: 'claude-sonnet-4-20250514',
             max_tokens: 8192,
             messages: [{ role: 'user', content: prompt }],
         });

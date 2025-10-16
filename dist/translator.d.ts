@@ -1,6 +1,6 @@
 import { TranslationRequest, TranslationResult } from './types';
 /**
- * Translation Service using Claude Sonnet 4.5 (claude-sonnet-4.5-20241022)
+ * Translation Service using Claude Sonnet 4 (claude-sonnet-4-20250514)
  */
 export declare class TranslationService {
     private client;

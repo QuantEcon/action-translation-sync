@@ -3,7 +3,7 @@ import { Glossary, TranslationRequest, TranslationResult, ChangeBlock } from './
 import { MystParser } from './parser';
 
 /**
- * Translation Service using Claude Sonnet 4.5 (claude-sonnet-4.5-20241022)
+ * Translation Service using Claude Sonnet 4 (claude-sonnet-4-20250514)
  */
 export class TranslationService {
   private client: Anthropic;
@@ -64,7 +64,7 @@ export class TranslationService {
       );
 
       const response = await this.client.messages.create({
-        model: 'claude-sonnet-4.5-20241022',
+        model: 'claude-sonnet-4-20250514',
         max_tokens: 4096,
         messages: [{ role: 'user', content: prompt }],
       });
@@ -104,7 +104,7 @@ export class TranslationService {
     );
 
     const response = await this.client.messages.create({
-      model: 'claude-sonnet-4.5-20241022',
+      model: 'claude-sonnet-4-20250514',
       max_tokens: 8192,
       messages: [{ role: 'user', content: prompt }],
     });
