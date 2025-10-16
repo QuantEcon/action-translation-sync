@@ -279,7 +279,7 @@ jobs:
           docs-folder: 'lectures/'
           source-language: 'en'
           anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
-          github-token: ${{ secrets.PAT_TRANSLATION_SYNC }}
+          github-token: ${{ secrets.QUANTECON_SERVICES_PAT }}
           pr-labels: 'translation-sync,automated,test'
           pr-reviewers: 'mmcky'
 EOF
@@ -443,7 +443,7 @@ echo ""
 echo "🔑 Next steps:"
 echo "   1. Add secrets to test-translation-sync:"
 echo "      - ANTHROPIC_API_KEY"
-echo "      - PAT_TRANSLATION_SYNC"
+echo "      - QUANTECON_SERVICES_PAT"
 echo "   2. Make a test change and create PR"
 echo "   3. Merge PR and watch action run"
 echo ""

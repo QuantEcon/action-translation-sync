@@ -45,14 +45,21 @@ export function getInputs(): ActionInputs {
 }
 
 /**
- * Validate that the event is a merged PR
+ * Validate that the event is a merged PR or manual dispatch
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function validatePREvent(context: any): { merged: boolean; prNumber: number } {
+export function validatePREvent(context: any): { merged: boolean; prNumber: number | null } {
   const { eventName, payload } = context;
 
+  // Handle workflow_dispatch for manual testing
+  if (eventName === 'workflow_dispatch') {
+    core.info('Manual workflow dispatch - will process latest commit');
+    return { merged: true, prNumber: null };
+  }
+
+  // Handle pull_request events
   if (eventName !== 'pull_request') {
-    throw new Error(`This action only works on pull_request events. Got: ${eventName}`);
+    throw new Error(`This action only works on pull_request or workflow_dispatch events. Got: ${eventName}`);
   }
 
   if (payload.action !== 'closed') {

@@ -16,7 +16,7 @@ async function run(): Promise<void> {
     core.info('Getting action inputs...');
     const inputs = getInputs();
 
-    // Validate this is a merged PR event
+    // Validate this is a merged PR event or manual dispatch
     core.info('Validating PR event...');
     const { merged, prNumber } = validatePREvent(github.context);
 
@@ -25,15 +25,33 @@ async function run(): Promise<void> {
       return;
     }
 
-    core.info(`Processing merged PR #${prNumber}`);
+    if (prNumber) {
+      core.info(`Processing merged PR #${prNumber}`);
+    } else {
+      core.info('Processing manual workflow dispatch');
+    }
 
-    // Get changed files from the PR
+    // Get changed files
     const octokit = github.getOctokit(inputs.githubToken);
-    const { data: files } = await octokit.rest.pulls.listFiles({
-      owner: github.context.repo.owner,
-      repo: github.context.repo.repo,
-      pull_number: prNumber,
-    });
+    let files: any[];
+
+    if (prNumber) {
+      // Get files from PR
+      const { data: prFiles } = await octokit.rest.pulls.listFiles({
+        owner: github.context.repo.owner,
+        repo: github.context.repo.repo,
+        pull_number: prNumber,
+      });
+      files = prFiles;
+    } else {
+      // For workflow_dispatch, get files from the latest commit
+      const { data: commit } = await octokit.rest.repos.getCommit({
+        owner: github.context.repo.owner,
+        repo: github.context.repo.repo,
+        ref: github.context.sha,
+      });
+      files = commit.files || [];
+    }
 
     // Filter for markdown files in docs folder
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

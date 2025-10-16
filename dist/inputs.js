@@ -74,13 +74,19 @@ function getInputs() {
     };
 }
 /**
- * Validate that the event is a merged PR
+ * Validate that the event is a merged PR or manual dispatch
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function validatePREvent(context) {
     const { eventName, payload } = context;
+    // Handle workflow_dispatch for manual testing
+    if (eventName === 'workflow_dispatch') {
+        core.info('Manual workflow dispatch - will process latest commit');
+        return { merged: true, prNumber: null };
+    }
+    // Handle pull_request events
     if (eventName !== 'pull_request') {
-        throw new Error(`This action only works on pull_request events. Got: ${eventName}`);
+        throw new Error(`This action only works on pull_request or workflow_dispatch events. Got: ${eventName}`);
     }
     if (payload.action !== 'closed') {
         throw new Error(`This action only runs when PRs are closed. Got action: ${payload.action}`);

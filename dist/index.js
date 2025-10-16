@@ -462,21 +462,40 @@ async function run() {
         // Get and validate inputs
         core.info('Getting action inputs...');
         const inputs = (0, inputs_1.getInputs)();
-        // Validate this is a merged PR event
+        // Validate this is a merged PR event or manual dispatch
         core.info('Validating PR event...');
         const { merged, prNumber } = (0, inputs_1.validatePREvent)(github.context);
         if (!merged) {
             core.info('PR was not merged. Exiting.');
             return;
         }
-        core.info(`Processing merged PR #${prNumber}`);
-        // Get changed files from the PR
+        if (prNumber) {
+            core.info(`Processing merged PR #${prNumber}`);
+        }
+        else {
+            core.info('Processing manual workflow dispatch');
+        }
+        // Get changed files
         const octokit = github.getOctokit(inputs.githubToken);
-        const { data: files } = await octokit.rest.pulls.listFiles({
-            owner: github.context.repo.owner,
-            repo: github.context.repo.repo,
-            pull_number: prNumber,
-        });
+        let files;
+        if (prNumber) {
+            // Get files from PR
+            const { data: prFiles } = await octokit.rest.pulls.listFiles({
+                owner: github.context.repo.owner,
+                repo: github.context.repo.repo,
+                pull_number: prNumber,
+            });
+            files = prFiles;
+        }
+        else {
+            // For workflow_dispatch, get files from the latest commit
+            const { data: commit } = await octokit.rest.repos.getCommit({
+                owner: github.context.repo.owner,
+                repo: github.context.repo.repo,
+                ref: github.context.sha,
+            });
+            files = commit.files || [];
+        }
         // Filter for markdown files in docs folder
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const changedMarkdownFiles = files.filter((file) => file.filename.startsWith(inputs.docsFolder) &&
@@ -693,13 +712,19 @@ function getInputs() {
     };
 }
 /**
- * Validate that the event is a merged PR
+ * Validate that the event is a merged PR or manual dispatch
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function validatePREvent(context) {
     const { eventName, payload } = context;
+    // Handle workflow_dispatch for manual testing
+    if (eventName === 'workflow_dispatch') {
+        core.info('Manual workflow dispatch - will process latest commit');
+        return { merged: true, prNumber: null };
+    }
+    // Handle pull_request events
     if (eventName !== 'pull_request') {
-        throw new Error(`This action only works on pull_request events. Got: ${eventName}`);
+        throw new Error(`This action only works on pull_request or workflow_dispatch events. Got: ${eventName}`);
     }
     if (payload.action !== 'closed') {
         throw new Error(`This action only runs when PRs are closed. Got action: ${payload.action}`);
