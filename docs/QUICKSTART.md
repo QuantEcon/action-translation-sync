@@ -1,22 +1,33 @@
 # Quick Start Guide
 
-## Initial Setup Complete! 🎉
+Get started with the Translation Sync Action development.
 
-You now have a working foundation for the Translation Sync GitHub Action with the MyST parser and diff detection engine implemented.
+---
 
-## What's Working
+## For Action Users
 
-✅ TypeScript project structure
-✅ MyST Markdown parser
-✅ Diff detection engine  
-✅ Translation service (Claude integration)
-✅ File processor orchestration
-✅ Build system
-✅ Basic tests
+**Want to use the action?** See the main [README.md](../README.md)
 
-## Quick Commands
+**Want to test the action?** See [TEST-REPOSITORIES.md](TEST-REPOSITORIES.md)
+
+---
+
+## For Developers
+
+### Prerequisites
+
+- Node.js 20+
+- npm
+- Git
+- TypeScript knowledge
+
+### Initial Setup
 
 ```bash
+# Clone repository
+git clone https://github.com/quantecon/action-translation-sync.git
+cd action-translation-sync
+
 # Install dependencies
 npm install
 
@@ -25,125 +36,197 @@ npm run build
 
 # Run tests
 npm test
+```
 
-# Lint code
+### Project Structure
+
+```
+action-translation-sync/
+├── src/                    # TypeScript source code
+│   ├── index.ts           # Main entry point
+│   ├── types.ts           # Type definitions
+│   ├── parser.ts          # MyST Markdown parser
+│   ├── diff-detector.ts   # Change detection
+│   ├── translator.ts      # Claude API integration
+│   ├── file-processor.ts  # Translation orchestration
+│   └── inputs.ts          # Input validation
+├── dist/                   # Built JavaScript (committed)
+├── glossary/               # Built-in glossaries
+│   ├── zh-cn.json         # Simplified Chinese (342 terms)
+│   └── README.md          # Glossary documentation
+├── docs/                   # Documentation
+└── examples/               # Example files
+```
+
+### Development Workflow
+
+```bash
+# Make changes to src/
+vim src/translator.ts
+
+# Build
+npm run build
+
+# Test
+npm test
+
+# Lint
 npm run lint
 
-# Format code
+# Format
 npm run format
+
+# Commit
+git add .
+git commit -m "feat: add new feature"
+git push
+```
+### Key Components
+
+**Parser** (`src/parser.ts`):
+- Parses MyST Markdown into semantic blocks
+- Preserves structure and metadata
+- Used by diff detector and file processor
+
+**Diff Detector** (`src/diff-detector.ts`):
+- Compares old vs new versions
+- Identifies added/modified/deleted blocks
+- Maps changes to target document
+
+**Translator** (`src/translator.ts`):
+- Integrates with Claude Sonnet 4
+- Dual mode: diff (incremental) and full (new files)
+- Uses built-in glossary for consistency
+
+**File Processor** (`src/file-processor.ts`):
+- Orchestrates the translation workflow
+- Applies translations to target documents
+- Validates MyST syntax
+
+---
+
+## Testing
+
+### Run Tests
+
+```bash
+npm test
 ```
 
-## Testing the Components
+### Test with Real Repos
 
-You can test the parser and diff detector programmatically:
+See [TEST-REPOSITORIES.md](TEST-REPOSITORIES.md) for setting up isolated test repositories.
+
+---
+
+## Making Changes
+
+### Adding a Feature
+
+1. Update relevant file in `src/`
+2. Add/update types in `src/types.ts`
+3. Run `npm run build`
+4. Add tests
+5. Update documentation
+
+### Updating the Model
 
 ```typescript
-import { MystParser } from './src/parser';
-import { DiffDetector } from './src/diff-detector';
-
-// Parse a document
-const parser = new MystParser();
-const doc = await parser.parse(content, 'test.md');
-console.log(`Found ${doc.blocks.length} blocks`);
-
-// Detect changes
-const detector = new DiffDetector();
-const changes = await detector.detectChanges(oldContent, newContent, 'test.md');
-console.log(`Detected ${changes.length} changes`);
+// src/translator.ts
+// Model is now configurable via action.yml!
 ```
 
-## File Structure
+See [CLAUDE-MODELS.md](CLAUDE-MODELS.md) for model options.
 
+### Adding Glossary Terms
+
+Edit `glossary/zh-cn.json`:
+
+```json
+{
+  "terms": [
+    {
+      "en": "new term",
+      "zh-cn": "新术语",
+      "context": "economics"
+    }
+  ]
+}
 ```
-src/
-├── index.ts           ← Main entry point
-├── parser.ts          ← MyST parser (DONE)
-├── diff-detector.ts   ← Change detection (DONE)
-├── translator.ts      ← Claude integration (DONE)
-├── file-processor.ts  ← Orchestration (DONE)
-├── inputs.ts          ← Input handling (DONE)
-└── types.ts           ← Type definitions (DONE)
-```
 
-## Next Development Steps
+Then rebuild: `npm run build`
 
-1. **GitHub PR Integration**
-   - Create branches in target repo
-   - Commit translated files
-   - Open pull requests
-
-2. **TOC Management**
-   - Parse `_toc.yml` files
-   - Add entries for new files
-
-3. **Testing**
-   - Add integration tests
-   - Mock Claude API for testing
-   - Add E2E tests
-
-4. **Documentation**
-   - API documentation
-   - Troubleshooting guide
-   - Video walkthrough
+---
 
 ## Architecture Overview
 
 ```
 PR Merged
     ↓
-[Detect Changes] → Get changed files
+[Detect Changes] → Get changed .md files
     ↓
-[Parse MyST] → Break into blocks
+[Parse MyST] → Break into semantic blocks
     ↓
-[Diff Detection] → Find what changed
+[Diff Detection] → Find what changed (added/modified/deleted)
     ↓
-[Translation] → Translate with Claude
+[Map to Target] → Match blocks in target document
     ↓
-[Apply Changes] → Reconstruct document
+[Translation] → Translate with Claude + glossary
     ↓
-[Create PR] → Open in target repo (TODO)
+[Reconstruct] → Apply translations to target
+    ↓
+[Create PR] → Open in target repo (⚠️ Not implemented in v0.1.x)
 ```
 
-## Example Usage
+---
 
-Once complete, the action will be used like:
+## Release Process
 
-```yaml
-# .github/workflows/sync-translations.yml
-on:
-  pull_request:
-    types: [closed]
-    
-jobs:
-  sync:
-    if: github.event.pull_request.merged == true
-    runs-on: ubuntu-latest
-    steps:
-      - uses: quantecon/action-translation-sync@v1
-        with:
-          target-repo: 'quantecon/lecture-python.zh-cn'
-          target-language: 'zh-cn'
-          anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+### Create a New Release
+
+```bash
+# Update version
+npm version patch  # or minor, major
+
+# Build
+npm run build
+
+# Tag
+git tag -a v0.1.x -m "Release notes"
+git push origin v0.1.x
+
+# Update floating tag
+git tag -f v0.1 -m "Latest v0.1.x"
+git push origin v0.1 --force
 ```
 
-## Development Workflow
+See [releases/](releases/) for release notes.
 
-1. Make changes in `src/`
-2. Run `npm run build` to compile
-3. Run `npm test` to verify
-4. Run `npm run lint` to check code quality
-5. Update relevant documentation in `docs/`
-6. Commit changes
-
-**Note**: We're in v0.1.x development - breaking changes are acceptable. See [../.github/copilot-instructions.md](../.github/copilot-instructions.md) for project conventions.
+---
 
 ## Resources
 
-- **Design Document**: See [PROJECT-DESIGN.md](PROJECT-DESIGN.md)
-- **Implementation Details**: See [IMPLEMENTATION.md](IMPLEMENTATION.md)
-- **TODO List**: See [TODO.md](TODO.md)
-- **Examples**: See [../examples/](../examples/)
+- **Architecture**: [ARCHITECTURE.md](ARCHITECTURE.md)
+- **Implementation**: [IMPLEMENTATION.md](IMPLEMENTATION.md)
+- **Design Decisions**: [PROJECT-DESIGN.md](PROJECT-DESIGN.md)
+- **TODO List**: [TODO.md](TODO.md)
+- **Testing Guide**: [TEST-REPOSITORIES.md](TEST-REPOSITORIES.md)
+- **Development Guidelines**: [../.github/copilot-instructions.md](../.github/copilot-instructions.md)
+
+---
+
+## Getting Help
+
+- **Issues**: https://github.com/quantecon/action-translation-sync/issues
+- **Discussions**: https://github.com/quantecon/action-translation-sync/discussions
+- **Documentation**: [INDEX.md](INDEX.md)
+
+---
+
+**Ready to develop!** 🚀
+
+Start with [TEST-REPOSITORIES.md](TEST-REPOSITORIES.md) to set up testing environment.
+
 
 ## Getting Help
 
