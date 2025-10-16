@@ -150,6 +150,8 @@ export class FileProcessor {
     targetBlocks.forEach((block, index) => {
       blockIndexMap.set(block, index);
     });
+    
+    this.log(`Built blockIndexMap with ${blockIndexMap.size} entries`);
 
     // Sort translations to apply from end to start (to preserve indices)
     const sortedTranslations = [...translations].sort((a, b) => {
@@ -182,6 +184,10 @@ export class FileProcessor {
       } else if (mapping.replaceStrategy === 'insert' && mapping.insertAfter) {
         // Insert new block
         const insertAfterIndex = blockIndexMap.get(mapping.insertAfter);
+        
+        this.log(`Looking for insertAfter block, found index: ${insertAfterIndex}`);
+        this.log(`insertAfter block content preview: ${mapping.insertAfter.content.substring(0, 50)}`);
+        this.log(`Does blockIndexMap have this block? ${blockIndexMap.has(mapping.insertAfter)}`);
         
         if (insertAfterIndex !== undefined && insertAfterIndex >= 0 && translatedContent !== null && mapping.change.newBlock) {
           this.log(`Inserting block after index ${insertAfterIndex}`);
