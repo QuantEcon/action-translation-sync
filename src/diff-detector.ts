@@ -116,7 +116,7 @@ export class DiffDetector {
     for (const change of changes) {
       let mapping: BlockMapping;
 
-      if (change.type === 'modified' && change.oldBlock) {
+      if (change.type === 'modified' && change.oldBlock && change.newBlock) {
         // Find corresponding block in target
         const targetBlock = this.findCorrespondingBlock(
           change.oldBlock,
@@ -126,12 +126,28 @@ export class DiffDetector {
 
         this.log(`MODIFIED block mapping: found=${!!targetBlock}`);
         
-        mapping = {
-          change,
-          targetBlock,
-          replaceStrategy: 'exact-match' as ReplaceStrategy,
-          confidence: targetBlock ? 1.0 : 0.0,
-        };
+        // If we can't find the block in target, treat it like an insertion
+        if (!targetBlock) {
+          const insertAfter = this.findInsertionBlockInTarget(
+            change,
+            targetDoc.blocks
+          );
+          this.log(`MODIFIED block not found, inserting after: ${insertAfter ? insertAfter.content.substring(0, 30) : 'null'}`);
+          
+          mapping = {
+            change,
+            insertAfter,
+            replaceStrategy: 'insert' as ReplaceStrategy,
+            confidence: insertAfter ? 0.8 : 0.5,
+          };
+        } else {
+          mapping = {
+            change,
+            targetBlock,
+            replaceStrategy: 'exact-match' as ReplaceStrategy,
+            confidence: 1.0,
+          };
+        }
       } else if (change.type === 'added' && change.newBlock) {
         // Find insertion point in target
         const insertAfter = this.findInsertionBlockInTarget(
