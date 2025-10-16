@@ -305,13 +305,19 @@ ${prNumber ? `- **PR**: #${prNumber}` : '- **Trigger**: Manual workflow dispatch
           
           // Request reviewers if specified
           if (inputs.prReviewers.length > 0) {
-            await octokit.rest.pulls.requestReviewers({
-              owner: targetOwner,
-              repo: targetRepoName,
-              pull_number: pr.number,
-              reviewers: inputs.prReviewers,
-            });
-            core.info(`Requested reviewers: ${inputs.prReviewers.join(', ')}`);
+            try {
+              await octokit.rest.pulls.requestReviewers({
+                owner: targetOwner,
+                repo: targetRepoName,
+                pull_number: pr.number,
+                reviewers: inputs.prReviewers,
+              });
+              core.info(`Requested reviewers: ${inputs.prReviewers.join(', ')}`);
+            } catch (reviewerError) {
+              // Don't fail the entire action if reviewer request fails
+              // (e.g., if PR author is in the reviewer list)
+              core.warning(`Could not request reviewers: ${reviewerError instanceof Error ? reviewerError.message : String(reviewerError)}`);
+            }
           }
           
           core.setOutput('pr-url', pr.html_url);
