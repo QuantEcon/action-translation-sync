@@ -10,6 +10,7 @@ export interface ActionInputs {
   glossaryPath: string;
   tocFile: string;
   anthropicApiKey: string;
+  claudeModel: string;
   githubToken: string;
   prLabels: string[];
   prReviewers: string[];

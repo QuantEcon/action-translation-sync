@@ -32,6 +32,10 @@ inputs:
   anthropic-api-key:
     description: 'Anthropic API key for Claude'
     required: true
+  claude-model:
+    description: 'Claude model to use for translation'
+    required: false
+    default: 'claude-sonnet-4-20250514'
   github-token:
     description: 'GitHub token for API access'
     required: true

@@ -1,11 +1,12 @@
 import { TranslationRequest, TranslationResult } from './types';
 /**
- * Translation Service using Claude Sonnet 4 (claude-sonnet-4-20250514)
+ * Translation Service using Claude (configurable model)
  */
 export declare class TranslationService {
     private client;
     private parser;
-    constructor(apiKey: string);
+    private model;
+    constructor(apiKey: string, model?: string);
     /**
      * Translate content using Claude
      */

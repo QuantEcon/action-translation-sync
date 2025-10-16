@@ -58,6 +58,7 @@ jobs:
 | `glossary-path` | No | - | Path to **custom** glossary (built-in glossary used by default) |
 | `toc-file` | No | `_toc.yml` | Table of contents file name |
 | `anthropic-api-key` | Yes | - | Anthropic API key for Claude |
+| `claude-model` | No | `claude-sonnet-4-20250514` | Claude model to use for translation |
 | `github-token` | Yes | - | GitHub token for API access |
 | `pr-labels` | No | `translation-sync,automated` | Comma-separated PR labels |
 | `pr-reviewers` | No | - | Comma-separated list of reviewers |

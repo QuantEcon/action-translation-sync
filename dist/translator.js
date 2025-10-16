@@ -7,12 +7,13 @@ exports.TranslationService = void 0;
 const sdk_1 = __importDefault(require("@anthropic-ai/sdk"));
 const parser_1 = require("./parser");
 /**
- * Translation Service using Claude Sonnet 4 (claude-sonnet-4-20250514)
+ * Translation Service using Claude (configurable model)
  */
 class TranslationService {
-    constructor(apiKey) {
+    constructor(apiKey, model = 'claude-sonnet-4-20250514') {
         this.client = new sdk_1.default({ apiKey });
         this.parser = new parser_1.MystParser();
+        this.model = model;
     }
     /**
      * Translate content using Claude
@@ -53,7 +54,7 @@ class TranslationService {
             const blockContent = changeBlock.newBlock?.content || '';
             const prompt = this.buildDiffPrompt(blockContent, contextBefore || '', contextAfter || '', request.sourceLanguage, request.targetLanguage, glossary);
             const response = await this.client.messages.create({
-                model: 'claude-sonnet-4-20250514',
+                model: this.model,
                 max_tokens: 4096,
                 messages: [{ role: 'user', content: prompt }],
             });
@@ -82,7 +83,7 @@ class TranslationService {
         const glossary = request.glossary;
         const prompt = this.buildFullPrompt(fullContent, request.sourceLanguage, request.targetLanguage, glossary);
         const response = await this.client.messages.create({
-            model: 'claude-sonnet-4-20250514',
+            model: this.model,
             max_tokens: 8192,
             messages: [{ role: 'user', content: prompt }],
         });

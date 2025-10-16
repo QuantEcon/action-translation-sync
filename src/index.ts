@@ -81,7 +81,7 @@ async function run(): Promise<void> {
     }
 
     // Initialize translation service
-    const translator = new TranslationService(inputs.anthropicApiKey);
+    const translator = new TranslationService(inputs.anthropicApiKey, inputs.claudeModel);
     const processor = new FileProcessor(translator);
 
     // Process each changed file

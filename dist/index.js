@@ -516,7 +516,7 @@ async function run() {
             }
         }
         // Initialize translation service
-        const translator = new translator_1.TranslationService(inputs.anthropicApiKey);
+        const translator = new translator_1.TranslationService(inputs.anthropicApiKey, inputs.claudeModel);
         const processor = new file_processor_1.FileProcessor(translator);
         // Process each changed file
         const processedFiles = [];
@@ -666,6 +666,7 @@ function getInputs() {
     const glossaryPath = core.getInput('glossary-path', { required: false }) || ''; // Empty by default - uses built-in
     const tocFile = core.getInput('toc-file', { required: false }) || '_toc.yml';
     const anthropicApiKey = core.getInput('anthropic-api-key', { required: true });
+    const claudeModel = core.getInput('claude-model', { required: false }) || 'claude-sonnet-4-20250514';
     const githubToken = core.getInput('github-token', { required: true });
     const prLabelsRaw = core.getInput('pr-labels', { required: false }) || 'translation-sync,automated';
     const prLabels = prLabelsRaw.split(',').map((l) => l.trim()).filter((l) => l.length > 0);
@@ -685,6 +686,7 @@ function getInputs() {
         glossaryPath,
         tocFile,
         anthropicApiKey,
+        claudeModel,
         githubToken,
         prLabels,
         prReviewers,
@@ -958,12 +960,13 @@ exports.TranslationService = void 0;
 const sdk_1 = __importDefault(__nccwpck_require__(121));
 const parser_1 = __nccwpck_require__(4262);
 /**
- * Translation Service using Claude Sonnet 4 (claude-sonnet-4-20250514)
+ * Translation Service using Claude (configurable model)
  */
 class TranslationService {
-    constructor(apiKey) {
+    constructor(apiKey, model = 'claude-sonnet-4-20250514') {
         this.client = new sdk_1.default({ apiKey });
         this.parser = new parser_1.MystParser();
+        this.model = model;
     }
     /**
      * Translate content using Claude
@@ -1004,7 +1007,7 @@ class TranslationService {
             const blockContent = changeBlock.newBlock?.content || '';
             const prompt = this.buildDiffPrompt(blockContent, contextBefore || '', contextAfter || '', request.sourceLanguage, request.targetLanguage, glossary);
             const response = await this.client.messages.create({
-                model: 'claude-sonnet-4-20250514',
+                model: this.model,
                 max_tokens: 4096,
                 messages: [{ role: 'user', content: prompt }],
             });
@@ -1033,7 +1036,7 @@ class TranslationService {
         const glossary = request.glossary;
         const prompt = this.buildFullPrompt(fullContent, request.sourceLanguage, request.targetLanguage, glossary);
         const response = await this.client.messages.create({
-            model: 'claude-sonnet-4-20250514',
+            model: this.model,
             max_tokens: 8192,
             messages: [{ role: 'user', content: prompt }],
         });
