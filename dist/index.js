@@ -255,22 +255,52 @@ class DiffDetector {
     findInsertionBlockInTarget(change, targetBlocks) {
         if (!change.position || !change.newBlock)
             return undefined;
-        // Try to find the heading to insert under
-        if (change.position.underHeading) {
-            const heading = targetBlocks.find(b => b.id === change.position.underHeading && b.type === 'heading');
-            if (heading) {
-                // Find the last block under this heading
-                const blocksUnderHeading = targetBlocks.filter(b => b.parentHeading === heading.id);
-                return blocksUnderHeading.length > 0
-                    ? blocksUnderHeading[blocksUnderHeading.length - 1]
-                    : heading;
+        this.log(`Finding insertion point: underHeading=${change.position.underHeading}, index=${change.position.index}`);
+        // Strategy 1: Use index-based positioning (most reliable across languages)
+        // The index tells us where in the source document this block should go
+        // We use the same relative position in the target document
+        if (change.position.index !== undefined) {
+            // If inserting at the end or beyond current length
+            if (change.position.index >= targetBlocks.length) {
+                const lastBlock = targetBlocks[targetBlocks.length - 1];
+                this.log(`Inserting at end, after last block: ${lastBlock?.content.substring(0, 30)}`);
+                return lastBlock;
+            }
+            // Find the block at the same relative position
+            // Subtract 1 because we want the block BEFORE the insertion point
+            const insertIndex = Math.max(0, change.position.index - 1);
+            const insertAfterBlock = targetBlocks[insertIndex];
+            if (insertAfterBlock) {
+                this.log(`Inserting after index ${insertIndex}: ${insertAfterBlock.content.substring(0, 30)}`);
+                return insertAfterBlock;
             }
         }
-        // Fallback to index-based
-        if (change.position.index !== undefined && change.position.index > 0) {
-            return targetBlocks[Math.min(change.position.index - 1, targetBlocks.length - 1)];
+        // Strategy 2: Try to find the corresponding heading (if block is under a heading)
+        // This is less reliable due to language differences, but worth trying
+        if (change.position.underHeading && change.newBlock.parentHeading) {
+            // Find heading by matching the level and relative position
+            // Look for headings with the same structure
+            const sourceHeadingId = change.position.underHeading;
+            // Try to find a heading at similar position with matching type
+            const headings = targetBlocks.filter(b => b.type === 'heading');
+            if (headings.length > 0) {
+                // Use the last heading as insertion point for content under that heading
+                const targetHeading = headings[headings.length - 1];
+                // Find the last block under this heading
+                const blocksUnderHeading = targetBlocks.filter(b => b.parentHeading === targetHeading.id);
+                if (blocksUnderHeading.length > 0) {
+                    const lastBlock = blocksUnderHeading[blocksUnderHeading.length - 1];
+                    this.log(`Inserting under heading, after: ${lastBlock.content.substring(0, 30)}`);
+                    return lastBlock;
+                }
+                this.log(`Inserting after heading itself: ${targetHeading.content.substring(0, 30)}`);
+                return targetHeading;
+            }
         }
-        return undefined;
+        // Fallback: insert after the last block
+        const lastBlock = targetBlocks[targetBlocks.length - 1];
+        this.log(`Fallback: inserting after last block: ${lastBlock?.content.substring(0, 30)}`);
+        return lastBlock;
     }
     /**
      * Build a map of blocks for quick lookup
