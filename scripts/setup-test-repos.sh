@@ -258,10 +258,16 @@ on:
     types: [closed]
     paths:
       - 'lectures/**/*.md'
+  workflow_dispatch:
+    inputs:
+      file-path:
+        description: 'Specific file to sync (optional, e.g., lectures/intro.md)'
+        required: false
+        default: ''
 
 jobs:
   sync-to-chinese:
-    if: github.event.pull_request.merged == true
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     
     steps:

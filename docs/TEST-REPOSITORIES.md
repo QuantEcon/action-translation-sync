@@ -323,6 +323,39 @@ In the **source repository** (`test-translation-sync`):
 
 ## Testing Scenarios
 
+### Test 0: Initial Sync (Manual Trigger)
+
+**Goal**: Sync all existing files for the first time
+
+Since the target repo is empty, you can manually trigger the workflow to do an initial sync:
+
+**Steps**:
+1. Go to https://github.com/quantecon/test-translation-sync/actions
+2. Click "Sync Translations" workflow in left sidebar
+3. Click "Run workflow" button (top right)
+4. Leave "file-path" empty to sync all files
+5. Click green "Run workflow" button
+6. Watch the workflow run in real-time
+
+**Alternative - Sync specific file**:
+1. Follow steps 1-3 above
+2. Enter file path: `lectures/intro.md`
+3. Click "Run workflow"
+
+**Expected**:
+- ✅ Workflow runs without PR trigger
+- ✅ Detects all .md files in lectures/
+- ✅ Translates both intro.md and advanced.md
+- ✅ Shows translations in logs
+- ❌ PR creation fails (not implemented in v0.1.x)
+
+**Verification**:
+- Check workflow logs for translation quality
+- Verify glossary terms are used
+- Check both files were processed
+
+---
+
 ### Test 1: Simple Text Change
 
 **Goal**: Verify basic diff translation
