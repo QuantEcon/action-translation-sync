@@ -45,6 +45,10 @@ jobs:
           glossary-path: '.github/translation-glossary.json'
           anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
+          # Optional: Request reviewers for translation PRs
+          pr-reviewers: 'username1,username2'
+          pr-team-reviewers: 'translation-team'
+          pr-labels: 'translation,automated,needs-review'
 ```
 
 ### Inputs
@@ -61,7 +65,8 @@ jobs:
 | `claude-model` | No | `claude-sonnet-4-20250514` | Claude model to use for translation |
 | `github-token` | Yes | - | GitHub token for API access |
 | `pr-labels` | No | `translation-sync,automated` | Comma-separated PR labels |
-| `pr-reviewers` | No | - | Comma-separated list of reviewers |
+| `pr-reviewers` | No | - | Comma-separated GitHub usernames (e.g., `user1,user2`) |
+| `pr-team-reviewers` | No | - | Comma-separated GitHub team slugs (e.g., `team1,team2`) |
 
 ### Outputs
 

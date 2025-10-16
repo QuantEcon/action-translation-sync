@@ -53,6 +53,8 @@ function getInputs() {
     const prLabels = prLabelsRaw.split(',').map((l) => l.trim()).filter((l) => l.length > 0);
     const prReviewersRaw = core.getInput('pr-reviewers', { required: false }) || '';
     const prReviewers = prReviewersRaw.split(',').map((r) => r.trim()).filter((r) => r.length > 0);
+    const prTeamReviewersRaw = core.getInput('pr-team-reviewers', { required: false }) || '';
+    const prTeamReviewers = prTeamReviewersRaw.split(',').map((t) => t.trim()).filter((t) => t.length > 0);
     // Validate target repo format
     if (!targetRepo.includes('/')) {
         throw new Error(`Invalid target-repo format: ${targetRepo}. Expected format: owner/repo`);
@@ -71,6 +73,7 @@ function getInputs() {
         githubToken,
         prLabels,
         prReviewers,
+        prTeamReviewers,
     };
 }
 /**

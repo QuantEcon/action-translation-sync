@@ -703,15 +703,29 @@ ${prNumber ? `- **PR**: #${prNumber}` : '- **Trigger**: Manual workflow dispatch
                         core.info(`Added labels: ${inputs.prLabels.join(', ')}`);
                     }
                     // Request reviewers if specified
-                    if (inputs.prReviewers.length > 0) {
+                    if (inputs.prReviewers.length > 0 || inputs.prTeamReviewers.length > 0) {
                         try {
+                            const reviewRequest = {};
+                            if (inputs.prReviewers.length > 0) {
+                                reviewRequest.reviewers = inputs.prReviewers;
+                            }
+                            if (inputs.prTeamReviewers.length > 0) {
+                                reviewRequest.team_reviewers = inputs.prTeamReviewers;
+                            }
                             await octokit.rest.pulls.requestReviewers({
                                 owner: targetOwner,
                                 repo: targetRepoName,
                                 pull_number: pr.number,
-                                reviewers: inputs.prReviewers,
+                                ...reviewRequest,
                             });
-                            core.info(`Requested reviewers: ${inputs.prReviewers.join(', ')}`);
+                            const reviewersList = [];
+                            if (inputs.prReviewers.length > 0) {
+                                reviewersList.push(`users: ${inputs.prReviewers.join(', ')}`);
+                            }
+                            if (inputs.prTeamReviewers.length > 0) {
+                                reviewersList.push(`teams: ${inputs.prTeamReviewers.join(', ')}`);
+                            }
+                            core.info(`Requested reviewers: ${reviewersList.join('; ')}`);
                         }
                         catch (reviewerError) {
                             // Don't fail the entire action if reviewer request fails
@@ -797,6 +811,8 @@ function getInputs() {
     const prLabels = prLabelsRaw.split(',').map((l) => l.trim()).filter((l) => l.length > 0);
     const prReviewersRaw = core.getInput('pr-reviewers', { required: false }) || '';
     const prReviewers = prReviewersRaw.split(',').map((r) => r.trim()).filter((r) => r.length > 0);
+    const prTeamReviewersRaw = core.getInput('pr-team-reviewers', { required: false }) || '';
+    const prTeamReviewers = prTeamReviewersRaw.split(',').map((t) => t.trim()).filter((t) => t.length > 0);
     // Validate target repo format
     if (!targetRepo.includes('/')) {
         throw new Error(`Invalid target-repo format: ${targetRepo}. Expected format: owner/repo`);
@@ -815,6 +831,7 @@ function getInputs() {
         githubToken,
         prLabels,
         prReviewers,
+        prTeamReviewers,
     };
 }
 /**

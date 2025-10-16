@@ -21,6 +21,9 @@ export function getInputs(): ActionInputs {
   const prReviewersRaw = core.getInput('pr-reviewers', { required: false }) || '';
   const prReviewers = prReviewersRaw.split(',').map((r: string) => r.trim()).filter((r: string) => r.length > 0);
 
+  const prTeamReviewersRaw = core.getInput('pr-team-reviewers', { required: false }) || '';
+  const prTeamReviewers = prTeamReviewersRaw.split(',').map((t: string) => t.trim()).filter((t: string) => t.length > 0);
+
   // Validate target repo format
   if (!targetRepo.includes('/')) {
     throw new Error(`Invalid target-repo format: ${targetRepo}. Expected format: owner/repo`);
@@ -41,6 +44,7 @@ export function getInputs(): ActionInputs {
     githubToken,
     prLabels,
     prReviewers,
+    prTeamReviewers,
   };
 }
 

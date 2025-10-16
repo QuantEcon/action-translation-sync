@@ -44,7 +44,11 @@ inputs:
     required: false
     default: 'translation-sync,automated'
   pr-reviewers:
-    description: 'Comma-separated list of reviewers'
+    description: 'Comma-separated list of GitHub usernames to request as reviewers (e.g., user1,user2). Leave empty for no reviewers.'
+    required: false
+    default: ''
+  pr-team-reviewers:
+    description: 'Comma-separated list of GitHub team slugs to request as reviewers (e.g., team1,team2). Leave empty for no team reviewers.'
     required: false
     default: ''
 

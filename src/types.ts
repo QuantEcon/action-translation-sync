@@ -14,6 +14,7 @@ export interface ActionInputs {
   githubToken: string;
   prLabels: string[];
   prReviewers: string[];
+  prTeamReviewers: string[];
 }
 
 export interface GlossaryTerm {

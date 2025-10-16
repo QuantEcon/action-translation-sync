@@ -304,15 +304,31 @@ ${prNumber ? `- **PR**: #${prNumber}` : '- **Trigger**: Manual workflow dispatch
           }
           
           // Request reviewers if specified
-          if (inputs.prReviewers.length > 0) {
+          if (inputs.prReviewers.length > 0 || inputs.prTeamReviewers.length > 0) {
             try {
+              const reviewRequest: { reviewers?: string[]; team_reviewers?: string[] } = {};
+              if (inputs.prReviewers.length > 0) {
+                reviewRequest.reviewers = inputs.prReviewers;
+              }
+              if (inputs.prTeamReviewers.length > 0) {
+                reviewRequest.team_reviewers = inputs.prTeamReviewers;
+              }
+              
               await octokit.rest.pulls.requestReviewers({
                 owner: targetOwner,
                 repo: targetRepoName,
                 pull_number: pr.number,
-                reviewers: inputs.prReviewers,
+                ...reviewRequest,
               });
-              core.info(`Requested reviewers: ${inputs.prReviewers.join(', ')}`);
+              
+              const reviewersList = [];
+              if (inputs.prReviewers.length > 0) {
+                reviewersList.push(`users: ${inputs.prReviewers.join(', ')}`);
+              }
+              if (inputs.prTeamReviewers.length > 0) {
+                reviewersList.push(`teams: ${inputs.prTeamReviewers.join(', ')}`);
+              }
+              core.info(`Requested reviewers: ${reviewersList.join('; ')}`);
             } catch (reviewerError) {
               // Don't fail the entire action if reviewer request fails
               // (e.g., if PR author is in the reviewer list)
