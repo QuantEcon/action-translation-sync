@@ -4,7 +4,7 @@ The `claude-model` parameter allows you to specify which Claude model to use for
 
 ## Default Model
 
-By default, the action uses **`claude-sonnet-4-20250514`** (Claude Sonnet 4).
+By default, the action uses **`claude-sonnet-4-5-20250929`** (Claude Sonnet 4.5).
 
 No configuration needed - it just works!
 
@@ -15,7 +15,7 @@ No configuration needed - it just works!
     target-language: 'zh-cn'
     anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
     github-token: ${{ secrets.GITHUB_TOKEN }}
-    # claude-model: 'claude-sonnet-4-20250514'  # This is the default
+    # claude-model: 'claude-sonnet-4-5-20250929'  # This is the default
 ```
 
 ## Using a Different Model
@@ -38,7 +38,8 @@ Check Anthropic's documentation for available models:
 https://docs.anthropic.com/en/docs/about-claude/models
 
 Common options:
-- `claude-sonnet-4-20250514` - **Recommended** (balanced speed/quality)
+- `claude-sonnet-4-5-20250929` - **Recommended** (latest, balanced speed/quality)
+- `claude-sonnet-4-20250514` - Previous Sonnet 4 version
 - `claude-opus-4-20250514` - Highest quality (slower, more expensive)
 - `claude-haiku-4-20250514` - Fastest (lower quality, cheaper)
 
