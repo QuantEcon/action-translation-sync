@@ -306,14 +306,12 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          
       - name: Sync to Chinese
         uses: quantecon/action-translation-sync@main
         with:
-          source-repo: quantecon/test-translation-sync
           target-repo: quantecon/test-translation-sync.zh-cn
           target-language: zh-cn
-          github-token: \${{ secrets.QUANTECON_ACTIONS_TOKEN }}
+          github-token: \${{ secrets.QUANTECON_SERVICES_PAT }}
           anthropic-api-key: \${{ secrets.ANTHROPIC_API_KEY }}
 EOF
 
@@ -630,14 +628,12 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          
       - name: Sync to Chinese
         uses: quantecon/action-translation-sync@main
         with:
-          source-repo: quantecon/test-translation-sync
           target-repo: quantecon/test-translation-sync.zh-cn
           target-language: zh-cn
-          github-token: \${{ secrets.QUANTECON_ACTIONS_TOKEN }}
+          github-token: \${{ secrets.QUANTECON_SERVICES_PAT }}
           anthropic-api-key: \${{ secrets.ANTHROPIC_API_KEY }}
 EOF
 
@@ -739,7 +735,7 @@ echo ""
 echo "📝 Next steps:"
 echo ""
 echo "   1. Add secrets to source repository:"
-echo "      - QUANTECON_ACTIONS_TOKEN (GitHub PAT with repo access)"
+echo "      - QUANTECON_SERVICES_PAT (GitHub PAT with repo access)"
 echo "      - ANTHROPIC_API_KEY (Claude API key)"
 echo ""
 echo "   2. Test the workflow:"
