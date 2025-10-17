@@ -62,7 +62,8 @@ export class FileProcessor {
 
     this.log(`Detected ${changes.length} section changes`);
 
-    // 2. Parse target document into sections
+    // 2. Parse source and target documents into sections
+    const sourceSections = await this.parser.parseSections(oldContent, filepath);
     const targetSections = await this.parser.parseSections(targetContent, filepath);
     this.log(`Target document has ${targetSections.sections.length} sections`);
 
@@ -134,16 +135,17 @@ export class FileProcessor {
         // Update existing section
         this.log(`Processing MODIFIED section: ${change.newSection?.heading}`);
 
-        // Find matching section in target (by position)
-        const targetSectionIndex = this.findMatchingSectionIndex(
-          updatedSections,
-          change.oldSection
-        );
-
-        if (targetSectionIndex === -1) {
-          this.log(`Warning: Could not find target section for "${change.oldSection?.heading}"`);
+        // For MODIFIED sections, match by position in the document
+        // (IDs are language-specific, so we can't match by ID across languages)
+        const sourceIndex = change.oldSection ? 
+          sourceSections.sections.findIndex((s: Section) => s.id === change.oldSection?.id) : -1;
+        
+        if (sourceIndex === -1 || sourceIndex >= updatedSections.length) {
+          this.log(`Warning: Could not find target section for "${change.oldSection?.heading}" at position ${sourceIndex}`);
           continue;
         }
+        
+        const targetSectionIndex = sourceIndex;
 
         const targetSection = updatedSections[targetSectionIndex];
 
