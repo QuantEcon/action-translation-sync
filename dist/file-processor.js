@@ -224,8 +224,13 @@ class FileProcessor {
         }
         // Add all sections
         for (const section of sections) {
-            // Add section content (includes heading and all nested content)
+            // Add section content (heading and direct content)
             parts.push(section.content);
+            // Add subsections if present
+            for (const subsection of section.subsections) {
+                parts.push(''); // Empty line before subsection
+                parts.push(subsection.content);
+            }
             parts.push(''); // Empty line between sections
         }
         return parts.join('\n').trim() + '\n';
