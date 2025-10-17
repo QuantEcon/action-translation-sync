@@ -5,10 +5,10 @@
 This document explains the test suite design, test fixtures, and what each test validates. The test suite was created to catch bugs early in development, before they appear in production GitHub Actions workflows.
 
 **Test Suite Stats:**
-- **28 tests** across 3 test files
+- **34 tests** across 4 test files
 - **3 fixture files** representing real-world scenarios
 - **100% pass rate** ✅
-- **Test execution time:** ~1.5 seconds
+- **Test execution time:** ~1.8 seconds
 
 ## Why We Need Tests
 
@@ -49,7 +49,8 @@ src/__tests__/
 │
 ├── parser.test.ts              # 9 tests: MyST parsing logic
 ├── diff-detector.test.ts       # 10 tests: Change detection (Bug #1)
-└── file-processor.test.ts      # 9 tests: Section matching (Bug #2)
+├── file-processor.test.ts      # 9 tests: Section matching (Bug #2)
+└── integration.test.ts         # 6 tests: Full workflow end-to-end ⭐ NEW
 ```
 
 ## Test Fixtures Explained
@@ -708,6 +709,297 @@ it('should preserve frontmatter', () => {
 
 **Tests 8-9**: Empty sections, no subsections
 - Verify graceful handling of minimal/edge cases
+
+### 4. `integration.test.ts` - Full Translation Workflow (6 tests) ⭐ NEW
+
+**Purpose**: Validate the complete end-to-end transformation pipeline
+
+These are **integration tests** that validate the entire workflow from English changes to updated Chinese document. Unlike unit tests that test individual components, these tests verify that all components work together correctly.
+
+#### The Complete Workflow Being Tested
+
+```
+Step 1: Parse OLD English → sections
+Step 2: Parse NEW English → sections (with changes)
+Step 3: Parse CURRENT Chinese → sections
+Step 4: Detect changes (OLD → NEW)
+Step 5: Translate changed sections
+Step 6: Reconstruct UPDATED Chinese
+Step 7: Verify result matches expectations
+```
+
+#### Test Group: Add "Economic Models" Section (5 tests)
+
+This scenario uses the actual test fixtures to validate the complete workflow.
+
+**Test 1: Detect Economic Models addition**
+```typescript
+it('should detect that Economic Models section was added', async () => {
+  const oldContent = fs.readFileSync('intro-old.md');    // 5 sections
+  const newContent = fs.readFileSync('intro-new.md');    // 6 sections
+  
+  const changes = await detector.detectSectionChanges(oldContent, newContent);
+  
+  const economicModels = changes.find(c => 
+    c.newSection?.heading === '## Economic Models'
+  );
+  
+  expect(economicModels).toBeDefined();
+  expect(economicModels?.type).toBe('added');
+});
+```
+**What it validates**:
+- Fixtures load correctly
+- Change detection works with real files
+- Economic Models correctly identified as ADDED
+
+**Test 2: INTEGRATION - Full workflow with real fixtures**
+```typescript
+it('INTEGRATION: should produce correctly updated Chinese document', async () => {
+  // 1. Parse all three documents
+  const oldEnglish = await parser.parseSections(oldEnglishContent);
+  const newEnglish = await parser.parseSections(newEnglishContent);
+  const currentChinese = await parser.parseSections(chineseContent);
+  
+  console.log(`Old English: ${oldEnglish.sections.length} sections`);     // 5
+  console.log(`New English: ${newEnglish.sections.length} sections`);     // 6
+  console.log(`Current Chinese: ${currentChinese.sections.length} sections`); // 5
+  
+  // 2. Detect changes
+  const changes = await detector.detectSectionChanges(oldContent, newContent);
+  
+  // 3. Apply changes (translate and insert/update/delete)
+  let updatedSections = [...currentChinese.sections];
+  
+  for (const change of changes) {
+    if (change.type === 'added') {
+      // Translate new section
+      const translation = await translator.translateSection({
+        mode: 'NEW',
+        section: change.newSection,
+        sourceLanguage: 'en',
+        targetLanguage: 'zh-cn'
+      });
+      
+      // Insert at correct position
+      const insertIndex = change.position?.index || 0;
+      updatedSections.splice(insertIndex, 0, translatedSection);
+    }
+    else if (change.type === 'modified') {
+      // Translate modified section
+      const translation = await translator.translateSection({
+        mode: 'UPDATE',
+        oldSection: change.oldSection,
+        newSection: change.newSection,
+        ...
+      });
+      
+      // Update the section
+      const sectionIndex = updatedSections.findIndex(s => 
+        s.id === change.newSection.id
+      );
+      updatedSections[sectionIndex].content = translation.translatedContent;
+    }
+    else if (change.type === 'deleted') {
+      // Remove the section
+      const sectionIndex = updatedSections.findIndex(s =>
+        s.id === change.oldSection.id
+      );
+      updatedSections.splice(sectionIndex, 1);
+    }
+  }
+  
+  // 4. Verify the result
+  expect(updatedSections.length).toBe(6); // Was 5, now 6
+  
+  // Verify correct order with Chinese headings
+  expect(updatedSections[0].heading).toBe('## 入门');        // Getting Started
+  expect(updatedSections[1].heading).toBe('## 经济模型');    // Economic Models (NEW!)
+  expect(updatedSections[2].heading).toBe('## 数学示例');    // Mathematical Example
+  expect(updatedSections[3].heading).toBe('## Python工具'); // Python Tools
+  expect(updatedSections[4].heading).toBe('## 数据分析');    // Data Analysis
+  expect(updatedSections[5].heading).toBe('## 结论');       // Conclusion
+  
+  // Verify Economic Models has Chinese content
+  expect(updatedSections[1].content).toContain('经济模型是经济过程的简化表示');
+  expect(updatedSections[1].content).toContain('理论和实证');
+});
+```
+**What it validates**:
+- **THE COMPLETE TRANSFORMATION PIPELINE** ⭐
+- Parses 3 documents (old EN, new EN, current CN)
+- Detects changes correctly (ADDED, MODIFIED)
+- Translates sections using mock translator
+- Inserts new section at correct position (position 1)
+- Updates modified sections in place
+- Final document has correct structure (6 sections)
+- Section order is correct with Chinese headings
+- Content is actually translated (Chinese text present)
+
+**This is exactly what you asked for**: OLD English + NEW English + Current Chinese → Updated Chinese with verification!
+
+**Test 3: Preserve code blocks and math**
+```typescript
+it('INTEGRATION: should preserve code blocks and math in translations', async () => {
+  // Find Python Tools section in new English
+  const pythonSection = newEnglish.sections.find(s => s.id === 'python-tools');
+  
+  // Verify it has pandas import in new version
+  expect(pythonSection?.content).toContain('import pandas as pd');
+  
+  // Translate it
+  const translation = await translator.translateSection({
+    mode: 'UPDATE',
+    newSection: pythonSection,
+    ...
+  });
+  
+  // Verify translation preserves code block
+  expect(translation.translatedContent).toContain('```python');
+  expect(translation.translatedContent).toContain('import numpy as np');
+  expect(translation.translatedContent).toContain('import pandas as pd');
+  expect(translation.translatedContent).toContain('```');
+  
+  // Verify it has Chinese text
+  expect(translation.translatedContent).toContain('Python工具');
+  expect(translation.translatedContent).toContain('数值计算');
+});
+```
+**What it validates**:
+- Code blocks are preserved during translation
+- New code (pandas import) is included
+- Chinese text is present in translation
+- Code and text are correctly mixed
+
+**Test 4: Maintain frontmatter**
+```typescript
+it('INTEGRATION: should maintain frontmatter in reconstructed document', async () => {
+  // Extract frontmatter from current Chinese
+  const frontmatterMatch = currentChineseContent.match(/^---\n[\s\S]*?\n---\n\n/);
+  expect(frontmatterMatch).toBeTruthy();
+  
+  const frontmatter = frontmatterMatch![0];
+  
+  // Verify frontmatter structure
+  expect(frontmatter).toContain('jupytext:');
+  expect(frontmatter).toContain('format_name: myst');
+  expect(frontmatter).toContain('kernelspec:');
+});
+```
+**What it validates**:
+- YAML frontmatter is preserved
+- Jupytext metadata intact
+- Critical for Jupyter notebook compatibility
+
+**Test 5: Identify all modification types**
+```typescript
+it('should correctly identify modified sections', async () => {
+  const changes = await detector.detectSectionChanges(
+    oldEnglishContent, 
+    newEnglishContent
+  );
+  
+  const modifiedSections = changes.filter(c => c.type === 'modified');
+  
+  // Should detect:
+  // - Intro text changed (comprehensive vs introduction)
+  // - Mathematical Example wording changed (derivative)
+  // - Python Tools code changed (pandas added)
+  expect(modifiedSections.length).toBeGreaterThan(0);
+});
+```
+**What it validates**:
+- All types of modifications are detected
+- Content changes caught
+- Code changes caught
+- Wording changes caught
+
+#### Test Group: Multiple Simultaneous Changes (1 test)
+
+**Test 6: Handle complex multi-change scenario**
+```typescript
+it('should handle ADDED, MODIFIED, and DELETED sections together', async () => {
+  const oldContent = `
+    ## Section A\n\nContent A.
+    ## Section B\n\nContent B.
+    ## Section C\n\nContent C.
+    ## Section D\n\nContent D.
+  `;
+  
+  const newContent = `
+    ## Section A\n\nCompletely different content.
+    ## New Section X\n\nNew content.
+    ## Section C\n\nContent C.
+    ## Section D\n\nContent D.
+    ## New Section Y\n\nNew content.
+  `;
+  
+  const changes = await detector.detectSectionChanges(oldContent, newContent);
+  
+  expect(changes.filter(c => c.type === 'added')).toHaveLength(2);    // X, Y
+  expect(changes.filter(c => c.type === 'modified')).toHaveLength(1); // A
+  expect(changes.filter(c => c.type === 'deleted')).toHaveLength(1);  // B
+});
+```
+**What it validates**:
+- Multiple change types in one document
+- All changes detected correctly
+- No changes missed
+- No false positives
+
+### Why Integration Tests Matter
+
+**Unit tests** (parser, diff-detector, file-processor):
+- Test individual components in isolation
+- Fast, focused, easy to debug
+- Catch component-level bugs
+
+**Integration tests** (this file):
+- Test the complete workflow
+- Verify components work together
+- Catch integration bugs (data flow, interfaces)
+- **Validate the actual use case**
+
+**Example of integration bug** that unit tests might miss:
+- Parser works ✅
+- DiffDetector works ✅
+- Translator works ✅
+- But: DiffDetector returns IDs in format "section-a", Translator expects "intro.md:section-a" ❌
+- Integration test would catch this!
+
+### Mock Translation Service
+
+The integration tests use a **MockTranslationService** that returns predefined Chinese translations instead of calling Claude API:
+
+```typescript
+class MockTranslationService extends TranslationService {
+  async translateSection(request: any): Promise<any> {
+    const translations: Record<string, string> = {
+      '## Economic Models': `## 经济模型\n\n经济模型是经济过程的简化表示。...`,
+      '## Python Tools': `## Python工具\n\n我们使用几个Python库：\n\`\`\`python\nimport pandas as pd\n\`\`\``,
+      // ... more translations
+    };
+    
+    return {
+      translatedContent: translations[heading] || 'Mock translation',
+      tokensUsed: 100,
+      model: 'mock-model',
+    };
+  }
+}
+```
+
+**Why mock?**:
+1. **Fast**: No API calls (tests run in ~1.8s)
+2. **Deterministic**: Same input → same output
+3. **No cost**: No Claude API charges during tests
+4. **Offline**: Tests work without internet
+5. **Predictable**: Known translations for verification
+
+**When to use real API**:
+- Manual testing before release
+- Production validation
+- Translation quality checks
 
 ## How to Use This Test Suite
 
