@@ -74,16 +74,18 @@ export class FileProcessor {
     this.log(`Loaded heading map with ${headingMap.size} entries`);
     
     // 3. Parse source and target documents into sections
-    const sourceSections = await this.parser.parseSections(oldContent, filepath);
+    const oldSourceSections = await this.parser.parseSections(oldContent, filepath);
+    const newSourceSections = await this.parser.parseSections(newContent, filepath);
     const targetSections = await this.parser.parseSections(targetContent, filepath);
     this.log(`Target document has ${targetSections.sections.length} sections`);
 
-    // 3. Process each change
-    const updatedSections = [...targetSections.sections];
+    // 4. Build new target document by processing new source sections in order
+    // This avoids position tracking issues from in-place modifications
+    const resultSections: Section[] = [];
     let updatedPreamble = targetSections.preamble;
 
+    // Process preamble changes first
     for (const change of changes) {
-      // Handle preamble changes (special section with ID '_preamble')
       if (change.newSection?.id === '_preamble' || change.oldSection?.id === '_preamble') {
         this.log(`Processing PREAMBLE change`);
 
@@ -103,17 +105,42 @@ export class FileProcessor {
 
         updatedPreamble = result.translatedSection;
         this.log(`Updated preamble`);
+        break;
+      }
+    }
+
+    // 5. Process each section from NEW source document
+    for (let i = 0; i < newSourceSections.sections.length; i++) {
+      const newSection = newSourceSections.sections[i];
+      
+      // Find the change for this section
+      const change = changes.find(c => 
+        c.newSection?.id === newSection.id &&
+        c.newSection?.id !== '_preamble'
+      );
+
+      if (!change) {
+        // Section unchanged - find matching target section and copy it
+        const targetSection = this.findTargetSectionByHeadingMap(
+          newSection,
+          targetSections.sections,
+          headingMap
+        );
+        
+        if (targetSection) {
+          resultSections.push(targetSection);
+          this.log(`Keeping unchanged section: ${newSection.heading}`);
+        } else {
+          this.log(`Warning: No target found for unchanged section: ${newSection.heading}`);
+        }
         continue;
       }
 
       if (change.type === 'added') {
         // Translate new section
-        this.log(`Processing ADDED section: ${change.newSection?.heading}`);
+        this.log(`Processing ADDED section: ${newSection.heading}`);
         
-        // Serialize section with all subsections
-        const fullSectionContent = change.newSection 
-          ? this.serializeSection(change.newSection)
-          : '';
+        const fullSectionContent = this.serializeSection(newSection);
         
         const result = await this.translator.translateSection({
           mode: 'new',
@@ -127,52 +154,71 @@ export class FileProcessor {
           throw new Error(`Translation failed for new section: ${result.error}`);
         }
 
-        // Insert at correct position
-        const insertIndex = change.position?.index ?? updatedSections.length;
-        
-        // Extract heading from translated content (first line should be the heading)
+        // Extract heading from translated content
         const translatedLines = (result.translatedSection || '').split('\n');
         const translatedHeading = translatedLines[0] || '';
         
-        const newSection: Section = {
+        const translatedSection: Section = {
           heading: translatedHeading,
-          level: change.newSection?.level || 2,
-          id: change.newSection?.id || '',
+          level: newSection.level,
+          id: newSection.id,
           content: result.translatedSection || '',
           startLine: 0,
           endLine: 0,
           subsections: [],
         };
 
-        updatedSections.splice(insertIndex, 0, newSection);
-        this.log(`Inserted new section at position ${insertIndex}`);
+        resultSections.push(translatedSection);
+        this.log(`Added new section at position ${i}`);
 
       } else if (change.type === 'modified') {
         // Update existing section
-        this.log(`Processing MODIFIED section: ${change.newSection?.heading}`);
+        this.log(`Processing MODIFIED section: ${newSection.heading}`);
 
-        // Match section using heading map (preferred) or fallback to position
-        const targetSectionIndex = this.findTargetSectionIndex(
-          change.oldSection,
-          updatedSections,
-          sourceSections.sections,
+        // Find matching target section
+        const targetSection = this.findTargetSectionByHeadingMap(
+          change.oldSection!,
+          targetSections.sections,
           headingMap
         );
         
-        if (targetSectionIndex === -1) {
-          this.log(`Warning: Could not find target section for "${change.oldSection?.heading}"`);
+        if (!targetSection) {
+          this.log(`Warning: Could not find target section for "${change.oldSection?.heading}", treating as new`);
+          
+          // Treat as new section
+          const fullSectionContent = this.serializeSection(newSection);
+          
+          const result = await this.translator.translateSection({
+            mode: 'new',
+            sourceLanguage,
+            targetLanguage,
+            glossary,
+            englishSection: fullSectionContent,
+          });
+
+          if (!result.success) {
+            throw new Error(`Translation failed for section: ${result.error}`);
+          }
+
+          const translatedLines = (result.translatedSection || '').split('\n');
+          const translatedHeading = translatedLines[0] || '';
+          
+          resultSections.push({
+            heading: translatedHeading,
+            level: newSection.level,
+            id: newSection.id,
+            content: result.translatedSection || '',
+            startLine: 0,
+            endLine: 0,
+            subsections: [],
+          });
+          
           continue;
         }
 
-        const targetSection = updatedSections[targetSectionIndex];
-
         // Serialize sections with all subsections
-        const oldFullContent = change.oldSection 
-          ? this.serializeSection(change.oldSection)
-          : '';
-        const newFullContent = change.newSection 
-          ? this.serializeSection(change.newSection)
-          : '';
+        const oldFullContent = this.serializeSection(change.oldSection!);
+        const newFullContent = this.serializeSection(newSection);
         const currentFullContent = this.serializeSection(targetSection);
 
         const result = await this.translator.translateSection({
@@ -189,47 +235,33 @@ export class FileProcessor {
           throw new Error(`Translation failed for modified section: ${result.error}`);
         }
 
-        // Replace the section
-        updatedSections[targetSectionIndex] = {
+        // Use updated content
+        resultSections.push({
           ...targetSection,
           content: result.translatedSection || targetSection.content,
-        };
+        });
 
-        this.log(`Updated section at position ${targetSectionIndex}`);
-
-      } else if (change.type === 'deleted') {
-        // Remove section
-        this.log(`Processing DELETED section: ${change.oldSection?.heading}`);
-
-        const targetSectionIndex = this.findMatchingSectionIndex(
-          updatedSections,
-          change.oldSection
-        );
-
-        if (targetSectionIndex !== -1) {
-          updatedSections.splice(targetSectionIndex, 1);
-          this.log(`Deleted section at position ${targetSectionIndex}`);
-        }
+        this.log(`Updated section at position ${i}`);
       }
     }
 
-    // 4. Update heading map with new/changed sections
+    // 6. Update heading map with new/changed sections
     const updatedHeadingMap = updateHeadingMap(
       headingMap,
-      await (await this.parser.parseSections(newContent, filepath)).sections,
-      updatedSections
+      newSourceSections.sections,
+      resultSections
     );
     this.log(`Updated heading map to ${updatedHeadingMap.size} entries`);
     
-    // 5. Reconstruct document from sections
-    this.log(`Reconstructing document from ${updatedSections.length} sections`);
+    // 7. Reconstruct document from sections
+    this.log(`Reconstructing document from ${resultSections.length} sections`);
     const reconstructed = this.reconstructFromSections(
-      updatedSections,
+      resultSections,
       targetSections.frontmatter,
       updatedPreamble
     );
     
-    // 6. Inject updated heading map into frontmatter
+    // 8. Inject updated heading map into frontmatter
     return injectHeadingMap(reconstructed, updatedHeadingMap);
   }
 
@@ -260,12 +292,49 @@ export class FileProcessor {
   }
 
   /**
+   * Find target section using heading map (preferred) or ID fallback
+   * Returns the actual section object or undefined if not found
+   */
+  private findTargetSectionByHeadingMap(
+    sourceSection: Section,
+    targetSections: Section[],
+    headingMap: HeadingMap
+  ): Section | undefined {
+    // Strategy 1: Use heading map to find translated heading
+    const translatedHeading = lookupTargetHeading(sourceSection.heading, headingMap);
+    if (translatedHeading) {
+      this.log(`Looking for translated heading: "${translatedHeading}"`);
+      
+      // Search for the translated heading in target sections
+      for (const targetSection of targetSections) {
+        const cleanTargetHeading = targetSection.heading.replace(/^#+\s+/, '').trim();
+        if (cleanTargetHeading === translatedHeading) {
+          this.log(`Found by heading map: "${translatedHeading}"`);
+          return targetSection;
+        }
+      }
+    }
+
+    // Strategy 2: Fall back to ID-based matching
+    for (const targetSection of targetSections) {
+      if (targetSection.id === sourceSection.id) {
+        this.log(`Found by ID: ${sourceSection.id}`);
+        return targetSection;
+      }
+    }
+
+    return undefined;
+  }
+
+  /**
    * Find target section index using heading map (preferred) or position fallback
    * 
    * Strategy:
    * 1. Look up translated heading in heading map
    * 2. Search for that heading in target sections
    * 3. If not found, fall back to position-based matching
+   * 
+   * @deprecated Use findTargetSectionByHeadingMap instead - this version has position tracking bugs
    */
   private findTargetSectionIndex(
     sourceSection: Section | undefined,

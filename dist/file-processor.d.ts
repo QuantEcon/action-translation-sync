@@ -30,12 +30,19 @@ export declare class FileProcessor {
      */
     processFull(content: string, filepath: string, sourceLanguage: string, targetLanguage: string, glossary?: Glossary): Promise<string>;
     /**
+     * Find target section using heading map (preferred) or ID fallback
+     * Returns the actual section object or undefined if not found
+     */
+    private findTargetSectionByHeadingMap;
+    /**
      * Find target section index using heading map (preferred) or position fallback
      *
      * Strategy:
      * 1. Look up translated heading in heading map
      * 2. Search for that heading in target sections
      * 3. If not found, fall back to position-based matching
+     *
+     * @deprecated Use findTargetSectionByHeadingMap instead - this version has position tracking bugs
      */
     private findTargetSectionIndex;
     /**

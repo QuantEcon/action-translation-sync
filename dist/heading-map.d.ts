@@ -10,7 +10,7 @@ export type HeadingMap = Map<string, string>;
 export declare function extractHeadingMap(content: string): HeadingMap;
 /**
  * Update heading map with new translations
- * - Adds new English→Translation pairs
+ * - Adds new English→Translation pairs for ALL headings (sections and subsections)
  * - Removes deleted sections
  * - Preserves existing mappings
  */

@@ -40,7 +40,7 @@ export function extractHeadingMap(content: string): HeadingMap {
 
 /**
  * Update heading map with new translations
- * - Adds new English→Translation pairs
+ * - Adds new English→Translation pairs for ALL headings (sections and subsections)
  * - Removes deleted sections
  * - Preserves existing mappings
  */
@@ -59,7 +59,7 @@ export function updateHeadingMap(
   // Build set of current source headings (for cleanup)
   const currentSourceHeadings = new Set<string>();
   
-  // Process all sections and subsections
+  // Process all sections and subsections recursively
   const processSections = (
     sourceSecs: Section[],
     targetSecs: Section[]
@@ -68,29 +68,41 @@ export function updateHeadingMap(
       const sourceHeading = cleanHeading(sourceSection.heading);
       currentSourceHeadings.add(sourceHeading);
       
-      // Add to map if not present
-      if (!updated.has(sourceHeading)) {
-        // Try to match by position for new sections
-        const targetSection = targetSecs[i];
-        if (targetSection) {
-          const targetHeading = cleanHeading(targetSection.heading);
-          updated.set(sourceHeading, targetHeading);
-        }
-      }
+      // Find matching target section (same position or by ID)
+      const targetSection = targetSecs[i];
       
-      // Process subsections recursively
-      if (sourceSection.subsections.length > 0) {
-        const targetSection = targetSecs[i];
-        if (targetSection && targetSection.subsections.length > 0) {
+      // Add to map if we have a matching target
+      if (targetSection) {
+        const targetHeading = cleanHeading(targetSection.heading);
+        // Always update to ensure latest translation is captured
+        updated.set(sourceHeading, targetHeading);
+        
+        // Process subsections recursively
+        if (sourceSection.subsections.length > 0 && targetSection.subsections.length > 0) {
           processSections(sourceSection.subsections, targetSection.subsections);
+        } else if (sourceSection.subsections.length > 0) {
+          // Source has subsections but target doesn't - add subsection headings to tracking
+          // (they'll be removed later if truly missing)
+          addSourceSubsections(sourceSection.subsections);
         }
       }
     });
   };
   
+  // Helper to add all subsection headings to the tracking set
+  const addSourceSubsections = (subsections: Section[]) => {
+    for (const sub of subsections) {
+      const subHeading = cleanHeading(sub.heading);
+      currentSourceHeadings.add(subHeading);
+      if (sub.subsections.length > 0) {
+        addSourceSubsections(sub.subsections);
+      }
+    }
+  };
+  
   processSections(sourceSections, targetSections);
   
-  // Remove deleted headings from map
+  // Remove deleted headings from map (headings that existed before but not in current source)
   for (const [sourceHeading] of updated) {
     if (!currentSourceHeadings.has(sourceHeading)) {
       updated.delete(sourceHeading);
