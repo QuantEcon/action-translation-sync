@@ -190,7 +190,7 @@ Detects section-level changes between old and new English versions.
 
 ### 3. Translation Service (257 lines)
 
-Uses Claude Sonnet 4.5 (`claude-sonnet-4-20250514`) with two modes:
+Uses Claude Sonnet 4.5 (`claude-sonnet-4.5-20241022`) with two modes:
 
 #### UPDATE Mode (for MODIFIED sections)
 

@@ -51,7 +51,7 @@ exports.TranslationService = void 0;
 const sdk_1 = __importDefault(require("@anthropic-ai/sdk"));
 const core = __importStar(require("@actions/core"));
 class TranslationService {
-    constructor(apiKey, model = 'claude-sonnet-4-20250514', debug = false) {
+    constructor(apiKey, model = 'claude-sonnet-4.5-20241022', debug = false) {
         this.client = new sdk_1.default({ apiKey });
         this.model = model;
         this.debug = debug;

@@ -346,7 +346,7 @@ Formats glossary terms for inclusion in prompts:
 
 #### Claude Model
 
-Uses **Claude Sonnet 4.5** (`claude-sonnet-4-20250514`):
+Uses **Claude Sonnet 4.5** (`claude-sonnet-4.5-20241022`):
 - Latest and most capable model
 - Best at following complex instructions
 - Excellent at preserving formatting
@@ -734,7 +734,7 @@ We examine household optimization problems...
 `;
 
 const response = await claude.messages.create({
-  model: 'claude-sonnet-4-20250514',
+  model: 'claude-sonnet-4.5-20241022',
   messages: [{ role: 'user', content: prompt }]
 });
 
