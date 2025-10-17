@@ -1,26 +1,40 @@
 # 🎯 Project Status Report
 
-**Date**: January 2025  
+**Date**: October 2025  
 **Project**: Translation Sync GitHub Action  
-**Version**: v0.2.2 (Released!)  
+**Version**: v0.4.0 (Ready for Release)  
 **Repository**: https://github.com/quantecon/action-translation-sync  
-**Status**: PR Creation & Team Reviewers Complete ✅
+**Status**: Heading-Map System Complete ✅
 
 ---
 
 ## Executive Summary
 
-We have successfully completed and **released v0.2.2** of the Translation Sync GitHub Action, implementing a sophisticated system for automatically synchronizing translations between repositories using AI-powered diff detection, translation, and automated PR creation with full team reviewer support.
+We have successfully completed **v0.4.0** of the Translation Sync GitHub Action, implementing a robust heading-map system that provides language-independent section matching. This solves the fragile position-based matching problem and makes the system resilient to section reordering and restructuring.
 
-### Latest Release Achievements (v0.2.2)
+### Latest Development (v0.4.0)
 
+✅ **Heading-map system** for robust cross-language section matching  
+✅ **Automatic population** - bootstraps on first run, no setup needed  
+✅ **Self-maintaining** - updates automatically with each translation  
+✅ **Simple design** - ~200 lines vs abandoned 1000+ line AST approach  
+✅ **Comprehensive tests** - 28 new tests, 77 total tests passing  
+✅ **Complete documentation** - new HEADING-MAPS.md guide  
+
+### Previous Milestones
+
+#### v0.3.0 - Critical Bug Fixes (Released!)
+✅ **6 bug fixes** including critical parser bug losing subsections  
+✅ **Preamble change detection** for content before first ## heading  
+✅ **49 comprehensive tests** with full coverage  
+✅ **Production tested** with PR #9 - subsections correctly preserved  
+
+#### v0.2.2 - Team Reviewers
 ✅ **Team reviewer support** for requesting reviews from GitHub teams  
 ✅ **Flexible review requests** - both individual users and teams  
 ✅ **Proper API handling** - correctly separates reviewers and team_reviewers  
 ✅ **Backward compatible** - fully compatible with previous versions  
 ✅ **Production tested** - successful PR creation in test repositories  
-
-### Previous Milestones
 
 #### v0.2.1 - Error Handling Enhancement
 ✅ **Graceful reviewer errors** - warnings instead of failures  
@@ -40,20 +54,23 @@ We have successfully completed and **released v0.2.2** of the Translation Sync G
 ✅ **Complete project setup** with modern TypeScript tooling  
 ✅ **MyST Markdown parser** with full directive and math support  
 ✅ **Intelligent diff detection** using multi-strategy block matching  
-✅ **Claude Sonnet 4 integration** (claude-sonnet-4-20250514)  
-✅ **Built-in glossary system** with 355 terms for Simplified Chinese  
+✅ **Claude Sonnet 4.5 integration** (claude-sonnet-4.5-20241022)  
+✅ **Built-in glossary system** with 342 terms for Simplified Chinese  
 ✅ **File processing orchestration** with dual-mode operation  
 ✅ **Comprehensive documentation** with examples and setup guides  
 
 ### Current Capabilities
 
-🎉 **Production-ready PR workflow** with automated translation sync  
-📚 **Built-in glossary** with 355 terms (economic, math, statistical)  
+🎉 **Production-ready** with 6 bug fixes from live testing  
+🗺️ **Heading-map system** for robust section matching across languages  
+🔄 **Automatic maintenance** - maps populate and update automatically  
+📚 **Built-in glossary** with 342 terms (economic, math, statistical)  
 🌐 **Language-aware loading** from glossary/{language}.json  
 🤖 **Automated PR creation** with branches, labels, and reviewer requests  
 👥 **Team reviewer support** for collaborative review workflows  
-📖 **Complete documentation** for setup and usage  
-🏗️ **Production-tested** in QuantEcon test repositories  
+✅ **77 comprehensive tests** covering all features  
+📖 **Complete documentation** including heading-maps guide  
+🏗️ **Production-tested** in QuantEcon lecture repositories  
 
 ---
 
@@ -63,16 +80,17 @@ We have successfully completed and **released v0.2.2** of the Translation Sync G
 
 | Component | File | Status | Lines | Description |
 |-----------|------|--------|-------|-------------|
-| **Type System** | `types.ts` | ✅ | ~100 | Complete type definitions |
-| **MyST Parser** | `parser.ts` | ✅ | ~250 | Block-based markdown parser |
-| **Diff Detector** | `diff-detector.ts` | ✅ | ~350 | Change detection engine |
-| **Translator** | `translator.ts` | ✅ | ~200 | Claude API integration |
-| **File Processor** | `file-processor.ts` | ✅ | ~150 | Orchestration layer |
-| **Input Handler** | `inputs.ts` | ✅ | ~60 | Configuration management |
-| **Main Entry** | `index.ts` | ✅ | ~180 | GitHub Action entry point |
-| **Tests** | `__tests__/` | ✅ | ~50 | Basic test suite |
+| **Type System** | `types.ts` | ✅ | ~164 | Complete type definitions |
+| **MyST Parser** | `parser.ts` | ✅ | ~280 | Section-based markdown parser |
+| **Diff Detector** | `diff-detector.ts` | ✅ | ~420 | Section-level change detection |
+| **Translator** | `translator.ts` | ✅ | ~220 | Claude Sonnet 4.5 integration |
+| **File Processor** | `file-processor.ts` | ✅ | ~360 | Orchestration with heading-map |
+| **Heading Map** | `heading-map.ts` | ✅ | ~190 | Language-independent matching |
+| **Input Handler** | `inputs.ts` | ✅ | ~80 | Configuration management |
+| **Main Entry** | `index.ts` | ✅ | ~240 | GitHub Action entry point |
+| **Tests** | `__tests__/` | ✅ | ~1300 | 77 comprehensive tests |
 
-**Total Source Code**: ~1,340 lines of TypeScript
+**Total Source Code**: ~3,254 lines of TypeScript
 
 ### 2. Documentation (100% Complete)
 
@@ -80,13 +98,15 @@ We have successfully completed and **released v0.2.2** of the Translation Sync G
 |----------|---------|-------|--------|
 | **README.md** | User guide | 4 | ✅ |
 | **PROJECT-DESIGN.md** | Architecture & design | 12 | ✅ |
-| **IMPLEMENTATION.md** | Build details | 9 | ✅ |
+| **IMPLEMENTATION.md** | Technical details | 10 | ✅ |
 | **ARCHITECTURE.md** | System diagrams | 12 | ✅ |
+| **HEADING-MAPS.md** | Heading-map guide | 15 | ✅ |
 | **QUICKSTART.md** | Getting started | 4 | ✅ |
 | **TODO.md** | Development roadmap | 3 | ✅ |
-| **BUILD-SUMMARY.md** | This summary | 9 | ✅ |
+| **STATUS-REPORT.md** | This summary | 10 | ✅ |
+| **TEST-REPOSITORIES.md** | Testing guide | 5 | ✅ |
 
-**Total Documentation**: ~50 pages
+**Total Documentation**: ~75 pages
 
 ### 3. Configuration Files (100% Complete)
 

@@ -8,10 +8,11 @@ This action monitors a source repository for merged pull requests and automatica
 
 ## Features
 
+- **Heading-Map System** (v0.4.0): Robust cross-language section matching that survives reordering
 - **Intelligent Diff Translation**: Only translates changed sections, preserving existing translations
 - **Full File Translation**: Handles new files with complete translation
 - **MyST Markdown Support**: Preserves code blocks, math equations, and MyST directives
-- **Glossary Support**: Use custom terminology glossaries for consistent translations
+- **Glossary Support**: Built-in glossaries for consistent technical terminology
 - **Automatic TOC Updates**: Updates `_toc.yml` when new files are added
 - **PR-Based Workflow**: All translations go through pull request review
 
@@ -131,16 +132,41 @@ Glossary format:
 3. **Analysis**: For each file:
    - If file exists in target: Detects specific changes (diff mode)
    - If file is new: Translates entire file (full mode)
-4. **Translation**: Uses Claude Sonnet 4.5 with glossary support
-5. **Validation**: Verifies MyST syntax of translated content
-6. **PR Creation**: Opens a pull request in the target repository
-7. **Review**: Team reviews and merges the translation
+4. **Section Matching**: Uses heading-map system for robust cross-language matching
+5. **Translation**: Uses Claude Sonnet 4.5 with glossary support
+6. **Heading-Map Update**: Automatically maintains English→Translation mappings
+7. **Validation**: Verifies MyST syntax of translated content
+8. **PR Creation**: Opens a pull request in the target repository
+9. **Review**: Team reviews and merges the translation
+
+### Heading-Map System (v0.4.0)
+
+The action uses a **heading-map system** to reliably match sections across language versions:
+
+```yaml
+---
+title: Dynamic Programming
+heading-map:
+  Introduction: 简介
+  Economic Model: 经济模型
+  Python Setup: Python 设置
+---
+```
+
+**Benefits:**
+- 🎯 **Robust matching**: Finds sections even if reordered or restructured
+- 🔄 **Self-maintaining**: Automatically populated and updated
+- 👁️ **Transparent**: Visible in document frontmatter
+- 📖 **Human-readable**: Easy to inspect and manually correct if needed
+
+See [docs/HEADING-MAPS.md](docs/HEADING-MAPS.md) for detailed guide.
 
 ## Documentation
 
 For comprehensive documentation, see the [`docs/`](docs/) directory:
 
 - **[Getting Started](docs/QUICKSTART.md)** - Quick setup and development guide
+- **[Heading Maps Guide](docs/HEADING-MAPS.md)** - Robust section matching system
 - **[Project Design](docs/PROJECT-DESIGN.md)** - Architecture and design decisions
 - **[Architecture](docs/ARCHITECTURE.md)** - System diagrams and data flow
 - **[Implementation](docs/IMPLEMENTATION.md)** - What's been built and how it works

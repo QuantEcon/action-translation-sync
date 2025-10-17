@@ -22,9 +22,10 @@ Complete documentation for the Translation Sync GitHub Action.
 
 ## 📚 Feature Guides
 
-1. **[Claude Models](CLAUDE-MODELS.md)** - Choosing and configuring Claude models
-2. **[Translation Glossary](../glossary/README.md)** - Built-in glossary system (342 terms)
-3. **[Action Configuration](../README.md#inputs)** - Inputs, outputs, and parameters
+1. **[Heading Maps](HEADING-MAPS.md)** - Robust cross-language section matching (v0.4.0) ⭐ NEW
+2. **[Claude Models](CLAUDE-MODELS.md)** - Choosing and configuring Claude models
+3. **[Translation Glossary](../glossary/README.md)** - Built-in glossary system (342 terms)
+4. **[Action Configuration](../README.md#inputs)** - Inputs, outputs, and parameters
 
 ---
 
@@ -49,7 +50,8 @@ Complete documentation for the Translation Sync GitHub Action.
 
 **Need to...**
 
-- **Understand the tests?** → [TESTING.md](TESTING.md) ⭐ NEW
+- **Understand heading-maps?** → [HEADING-MAPS.md](HEADING-MAPS.md) ⭐ NEW
+- **Understand the tests?** → [TESTING.md](TESTING.md)
 - **Set up testing?** → [TEST-REPOSITORIES.md](TEST-REPOSITORIES.md)
 - **Choose a model?** → [CLAUDE-MODELS.md](CLAUDE-MODELS.md)
 - **Add glossary terms?** → [glossary/README.md](../glossary/README.md)
@@ -66,6 +68,7 @@ Complete documentation for the Translation Sync GitHub Action.
 docs/
 ├── INDEX.md                  # This file - documentation hub
 ├── QUICKSTART.md             # Developer onboarding guide
+├── HEADING-MAPS.md           # Heading-map system guide (v0.4.0)
 ├── TEST-REPOSITORIES.md      # Testing with isolated repos
 ├── QUICK-REFERENCE.md        # Command cheat sheet
 ├── PROJECT-DESIGN.md         # Design decisions
@@ -76,7 +79,9 @@ docs/
 ├── STATUS-REPORT.md          # Project status
 └── releases/                 # Release notes archive
     ├── v0.1.0.md
-    └── v0.1.1.md
+    ├── v0.1.1.md
+    ├── v0.1.2.md
+    └── v0.3.0.md
 ```
 
 ---
