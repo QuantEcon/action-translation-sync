@@ -119,21 +119,16 @@ export class DiffDetector {
 
   /**
    * Check if two sections match (for position-based matching)
-   * Sections match if they have similar structure (same level, similar subsection count)
+   * Sections match if they have the same ID (heading)
+   * 
+   * Note: We used to check structural similarity (level + subsection count),
+   * but this caused false matches when inserting new sections.
+   * Now we require ID match for position-based matching.
    */
   private sectionsMatch(section1: Section, section2: Section): boolean {
-    // Same heading level
-    if (section1.level !== section2.level) {
-      return false;
-    }
-
-    // Similar subsection count (allow some variance for translations)
-    const subsectionDiff = Math.abs(section1.subsections.length - section2.subsections.length);
-    if (subsectionDiff > 2) {
-      return false;
-    }
-
-    return true;
+    // Sections must have the same ID to be considered a match
+    // This prevents false matches when sections shift positions
+    return section1.id === section2.id;
   }
 
   /**

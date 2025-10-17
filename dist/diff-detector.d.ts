@@ -21,7 +21,11 @@ export declare class DiffDetector {
     detectSectionChanges(oldContent: string, newContent: string, filepath: string): Promise<SectionChange[]>;
     /**
      * Check if two sections match (for position-based matching)
-     * Sections match if they have similar structure (same level, similar subsection count)
+     * Sections match if they have the same ID (heading)
+     *
+     * Note: We used to check structural similarity (level + subsection count),
+     * but this caused false matches when inserting new sections.
+     * Now we require ID match for position-based matching.
      */
     private sectionsMatch;
     /**
