@@ -28,16 +28,19 @@ Complete documentation for the Translation Sync GitHub Action.
 
 ---
 
-## 🧪 Development
+## 🧪 Development & Testing
 
-1. **[TODO List](TODO.md)** - Development roadmap and task tracking
-2. **[Status Report](STATUS-REPORT.md)** - Current project status and progress
+1. **[Testing Guide](TESTING.md)** - Test suite design, fixtures, and how to write tests
+2. **[TODO List](TODO.md)** - Development roadmap and task tracking
+3. **[Status Report](STATUS-REPORT.md)** - Current project status and progress
 
 ---
 
-## � Release Notes
+## 📦 Release Notes
 
-- **[v0.1.1](releases/v0.1.1.md)** - Bug fixes and configurable model (Latest)
+- **[v0.3.0](releases/v0.3.0.md)** - Section-based refactor, Claude 4.5, test suite (In Development)
+- **[v0.1.2](releases/v0.1.2.md)** - Documentation and glossary updates
+- **[v0.1.1](releases/v0.1.1.md)** - Bug fixes and configurable model
 - **[v0.1.0](releases/v0.1.0.md)** - Initial development release
 
 ---
@@ -46,6 +49,7 @@ Complete documentation for the Translation Sync GitHub Action.
 
 **Need to...**
 
+- **Understand the tests?** → [TESTING.md](TESTING.md) ⭐ NEW
 - **Set up testing?** → [TEST-REPOSITORIES.md](TEST-REPOSITORIES.md)
 - **Choose a model?** → [CLAUDE-MODELS.md](CLAUDE-MODELS.md)
 - **Add glossary terms?** → [glossary/README.md](../glossary/README.md)
