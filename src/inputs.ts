@@ -12,7 +12,7 @@ export function getInputs(): ActionInputs {
   const glossaryPath = core.getInput('glossary-path', { required: false }) || '';  // Empty by default - uses built-in
   const tocFile = core.getInput('toc-file', { required: false }) || '_toc.yml';
   const anthropicApiKey = core.getInput('anthropic-api-key', { required: true });
-  const claudeModel = core.getInput('claude-model', { required: false }) || 'claude-sonnet-4-20250514';
+  const claudeModel = core.getInput('claude-model', { required: false }) || 'claude-sonnet-4.5-20241022';
   const githubToken = core.getInput('github-token', { required: true });
   
   const prLabelsRaw = core.getInput('pr-labels', { required: false }) || 'translation-sync,automated';
