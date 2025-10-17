@@ -123,11 +123,6 @@ class MystParser {
                 sub.content = sub.content.trimEnd();
             });
         });
-        // Debug logging
-        console.log(`[Parser] Parsed ${sections.length} sections from ${filepath}`);
-        sections.forEach((s, i) => {
-            console.log(`[Parser]   Section ${i}: "${s.heading}" with ${s.subsections.length} subsections`);
-        });
         return {
             sections,
             frontmatter,

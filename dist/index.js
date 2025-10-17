@@ -450,14 +450,11 @@ class FileProcessor {
             parts.push(''); // Empty line after preamble
         }
         // Add all sections
-        for (let i = 0; i < sections.length; i++) {
-            const section = sections[i];
-            this.log(`[Reconstruct] Section ${i}: "${section.heading}" with ${section.subsections.length} subsections`);
+        for (const section of sections) {
             // Add section content (heading and direct content)
             parts.push(section.content);
             // Add subsections if present
             for (const subsection of section.subsections) {
-                this.log(`[Reconstruct]   Subsection: "${subsection.heading}"`);
                 parts.push(''); // Empty line before subsection
                 parts.push(subsection.content);
             }
@@ -1066,11 +1063,6 @@ class MystParser {
             section.subsections.forEach(sub => {
                 sub.content = sub.content.trimEnd();
             });
-        });
-        // Debug logging
-        console.log(`[Parser] Parsed ${sections.length} sections from ${filepath}`);
-        sections.forEach((s, i) => {
-            console.log(`[Parser]   Section ${i}: "${s.heading}" with ${s.subsections.length} subsections`);
         });
         return {
             sections,
