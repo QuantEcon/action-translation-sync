@@ -22,6 +22,7 @@ export declare class DiffDetector {
     private findCorrespondingBlock;
     /**
      * Find best matching block by content similarity
+     * Note: Caller is responsible for applying threshold
      */
     private findBestMatchByContent;
     /**

@@ -220,20 +220,29 @@ export class DiffDetector {
       }
     }
 
-    // Strategy 3: Match by position (for blocks without clear anchors)
-    if (approximateIndex >= 0 && approximateIndex < blocks.length) {
-      const candidate = blocks[approximateIndex];
-      if (candidate.type === block.type) {
-        return candidate;
-      }
-    }
+    // Strategy 3: Match by position (REMOVED - causes false positives)
+    // Position-based matching is too aggressive when content is inserted in middle of document.
+    // It incorrectly matches new blocks at index N with existing blocks at index N.
 
-    // Strategy 4: Fuzzy match by content similarity
-    return this.findBestMatchByContent(block, blocks.filter(b => b.type === block.type));
+    // Strategy 4: Fuzzy match by content similarity (stricter threshold)
+    const matchByContent = this.findBestMatchByContent(
+      block, 
+      blocks.filter(b => b.type === block.type)
+    );
+    
+    // Only return if we have high confidence it's the same block
+    // Use stricter threshold (0.8 instead of 0.7) to reduce false positives
+    if (matchByContent) {
+      const similarity = this.calculateSimilarity(block.content, matchByContent.content);
+      return similarity > 0.8 ? matchByContent : undefined;
+    }
+    
+    return undefined;
   }
 
   /**
    * Find best matching block by content similarity
+   * Note: Caller is responsible for applying threshold
    */
   private findBestMatchByContent(block: Block, candidates: Block[]): Block | undefined {
     if (candidates.length === 0) return undefined;
@@ -249,8 +258,8 @@ export class DiffDetector {
       }
     }
 
-    // Only return if similarity is high enough
-    return bestScore > 0.7 ? bestMatch : undefined;
+    // Return best match (caller applies threshold)
+    return bestMatch;
   }
 
   /**
