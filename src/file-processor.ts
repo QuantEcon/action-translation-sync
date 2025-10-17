@@ -158,6 +158,12 @@ export class FileProcessor {
         const translatedLines = (result.translatedSection || '').split('\n');
         const translatedHeading = translatedLines[0] || '';
         
+        // Parse subsections from translated content
+        const subsections = await this.parseTranslatedSubsections(
+          result.translatedSection || '',
+          newSection
+        );
+        
         const translatedSection: Section = {
           heading: translatedHeading,
           level: newSection.level,
@@ -165,7 +171,7 @@ export class FileProcessor {
           content: result.translatedSection || '',
           startLine: 0,
           endLine: 0,
-          subsections: [],
+          subsections: subsections,
         };
 
         resultSections.push(translatedSection);
@@ -203,6 +209,12 @@ export class FileProcessor {
           const translatedLines = (result.translatedSection || '').split('\n');
           const translatedHeading = translatedLines[0] || '';
           
+          // Parse subsections from translated content
+          const subsections = await this.parseTranslatedSubsections(
+            result.translatedSection || '',
+            newSection
+          );
+          
           resultSections.push({
             heading: translatedHeading,
             level: newSection.level,
@@ -210,7 +222,7 @@ export class FileProcessor {
             content: result.translatedSection || '',
             startLine: 0,
             endLine: 0,
-            subsections: [],
+            subsections: subsections,
           });
           
           continue;
@@ -235,10 +247,17 @@ export class FileProcessor {
           throw new Error(`Translation failed for modified section: ${result.error}`);
         }
 
+        // Parse subsections from translated content
+        const subsections = await this.parseTranslatedSubsections(
+          result.translatedSection || '',
+          newSection
+        );
+
         // Use updated content
         resultSections.push({
           ...targetSection,
           content: result.translatedSection || targetSection.content,
+          subsections: subsections,
         });
 
         this.log(`Updated section at position ${i}`);
@@ -292,6 +311,39 @@ export class FileProcessor {
   }
 
   /**
+   * Parse translated content to extract subsections
+   * This ensures subsections are properly populated in the heading-map
+   */
+  private async parseTranslatedSubsections(
+    translatedContent: string,
+    sourceSection: Section
+  ): Promise<Section[]> {
+    try {
+      // Wrap in minimal MyST document for parsing
+      const wrappedContent = `---
+jupytext:
+  text_representation:
+    extension: .md
+    format_name: myst
+---
+
+${translatedContent}`;
+      
+      const parsed = await this.parser.parseSections(wrappedContent, 'temp.md');
+      
+      // Extract subsections from the first section
+      if (parsed.sections.length > 0 && parsed.sections[0].subsections.length > 0) {
+        this.log(`Extracted ${parsed.sections[0].subsections.length} subsections from translated content`);
+        return parsed.sections[0].subsections;
+      }
+    } catch (error) {
+      this.log(`Warning: Failed to parse subsections from translated content: ${error}`);
+    }
+    
+    return [];
+  }
+
+  /**
    * Find target section using heading map (preferred) or ID fallback
    * Returns the actual section object or undefined if not found
    */
@@ -300,27 +352,39 @@ export class FileProcessor {
     targetSections: Section[],
     headingMap: HeadingMap
   ): Section | undefined {
+    this.log(`Finding target for source section: "${sourceSection.heading}" (id: ${sourceSection.id})`);
+    
     // Strategy 1: Use heading map to find translated heading
     const translatedHeading = lookupTargetHeading(sourceSection.heading, headingMap);
     if (translatedHeading) {
-      this.log(`Looking for translated heading: "${translatedHeading}"`);
+      this.log(`  Strategy 1: Looking for translated heading: "${translatedHeading}"`);
       
       // Search for the translated heading in target sections
       for (const targetSection of targetSections) {
         const cleanTargetHeading = targetSection.heading.replace(/^#+\s+/, '').trim();
         if (cleanTargetHeading === translatedHeading) {
-          this.log(`Found by heading map: "${translatedHeading}"`);
+          this.log(`  ✓ Found by heading map: "${translatedHeading}"`);
           return targetSection;
         }
       }
+      this.log(`  ✗ Not found by heading map`);
+    } else {
+      this.log(`  Strategy 1: No heading map entry for "${sourceSection.heading.replace(/^#+\s+/, '').trim()}"`);
     }
 
     // Strategy 2: Fall back to ID-based matching
+    this.log(`  Strategy 2: Looking for ID: "${sourceSection.id}"`);
     for (const targetSection of targetSections) {
       if (targetSection.id === sourceSection.id) {
-        this.log(`Found by ID: ${sourceSection.id}`);
+        this.log(`  ✓ Found by ID: ${sourceSection.id}`);
         return targetSection;
       }
+    }
+    this.log(`  ✗ Not found by ID`);
+    
+    // Log target section IDs for debugging
+    if (targetSections.length <= 10) {
+      this.log(`  Available target IDs: ${targetSections.map(s => s.id).join(', ')}`);
     }
 
     return undefined;
