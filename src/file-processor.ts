@@ -511,14 +511,10 @@ ${translatedContent}`;
 
     // Add all sections
     for (const section of sections) {
-      // Add section content (heading and direct content)
+      // Add section content (which already includes subsections from translation)
+      // Note: section.subsections is populated for heading-map purposes, but the
+      // actual subsection content is already in section.content from translation
       parts.push(section.content);
-      
-      // Add subsections if present
-      for (const subsection of section.subsections) {
-        parts.push(''); // Empty line before subsection
-        parts.push(subsection.content);
-      }
       
       parts.push(''); // Empty line between sections
     }
