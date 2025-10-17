@@ -1,41 +1,40 @@
-import { Block, ParsedDocument } from './types';
 /**
- * MyST Markdown Parser
- * Parses MyST markdown into semantic blocks for translation
+ * MyST Markdown Section Parser
+ *
+ * Parses MyST markdown documents into sections based on ## headings.
+ * Each section includes all content until the next ## heading, including
+ * any nested ### subsections.
+ *
+ * This simplified parser replaces the previous block-based approach with
+ * a cleaner section-based structure that's easier to work with for translations.
  */
+import { Section, ParsedSections } from './types';
 export declare class MystParser {
-    private processor;
-    constructor();
     /**
-     * Parse markdown content into structured blocks
+     * Parse markdown content into sections based on ## headings
+     * Each section includes all content until the next ## heading
      */
-    parse(content: string, filepath: string): Promise<ParsedDocument>;
-    /**
-     * Reconstruct markdown from blocks
-     */
-    reconstructMarkdown(blocks: Block[]): string;
-    /**
-     * Extract content between line numbers
-     */
-    private extractContent;
+    parseSections(content: string, filepath: string): Promise<ParsedSections>;
     /**
      * Generate heading ID/anchor from heading text
+     * Follows the same rules as MyST/Sphinx for consistency
      */
     private generateHeadingId;
     /**
-     * Find a block by its ID (for headings)
+     * Find a section by ID (searches recursively through subsections)
      */
-    findBlockById(blocks: Block[], id: string): Block | undefined;
+    findSectionById(sections: Section[], id: string): Section | undefined;
     /**
-     * Find blocks under a specific heading
+     * Find section by position/index
      */
-    findBlocksUnderHeading(blocks: Block[], headingId: string): Block[];
+    findSectionByPosition(sections: Section[], index: number): Section | undefined;
     /**
-     * Get context around a block (before and after)
+     * Validate MyST syntax by attempting to parse
+     * Returns true if valid, false otherwise
      */
-    getBlockContext(blocks: Block[], block: Block, contextLines?: number): {
-        before: string;
-        after: string;
-    };
+    validateMyST(content: string, filepath: string): Promise<{
+        valid: boolean;
+        error?: string;
+    }>;
 }
 //# sourceMappingURL=parser.d.ts.map

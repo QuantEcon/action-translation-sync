@@ -1,13 +1,23 @@
+/**
+ * Section-Based File Processor
+ * 
+ * Orchestrates the translation process for a single file using section-based approach.
+ * 
+ * Key operations:
+ * 1. Detect section-level changes between old and new English documents
+ * 2. Match sections to target document (by position)
+ * 3. Translate changed sections (update mode for modified, new mode for added)
+ * 4. Reconstruct target document with translated sections
+ * 
+ * This is much simpler than the old block-based approach!
+ */
+
 import { MystParser } from './parser';
 import { DiffDetector } from './diff-detector';
 import { TranslationService } from './translator';
-import { Block, BlockMapping, TranslatedBlock, Glossary } from './types';
+import { Section, Glossary } from './types';
 import * as core from '@actions/core';
 
-/**
- * File Processor
- * Orchestrates the translation process for a single file
- */
 export class FileProcessor {
   private parser: MystParser;
   private diffDetector: DiffDetector;
@@ -28,9 +38,10 @@ export class FileProcessor {
   }
 
   /**
-   * Process a file in diff mode (existing file with changes)
+   * Process a file using section-based approach
+   * This is the main method for handling existing files with changes
    */
-  async processDiff(
+  async processSectionBased(
     oldContent: string,
     newContent: string,
     targetContent: string,
@@ -39,78 +50,124 @@ export class FileProcessor {
     targetLanguage: string,
     glossary?: Glossary
   ): Promise<string> {
-    this.log(`Processing diff for ${filepath}`);
-    
-    // 1. Detect changes between old and new
-    const changes = await this.diffDetector.detectChanges(oldContent, newContent, filepath);
+    this.log(`Processing file using section-based approach: ${filepath}`);
+
+    // 1. Detect section-level changes
+    const changes = await this.diffDetector.detectSectionChanges(oldContent, newContent, filepath);
 
     if (changes.length === 0) {
-      // No changes, return target as-is
-      this.log('No changes detected, returning target content unchanged');
+      this.log('No section changes detected, returning target content unchanged');
       return targetContent;
     }
 
-    this.log(`Detected ${changes.length} changes`);
+    this.log(`Detected ${changes.length} section changes`);
 
-    // 2. Map changes to target document
-    const mappings = await this.diffDetector.mapToTarget(changes, targetContent, filepath);
-    
-    this.log(`Created ${mappings.length} mappings`);
+    // 2. Parse target document into sections
+    const targetSections = await this.parser.parseSections(targetContent, filepath);
+    this.log(`Target document has ${targetSections.sections.length} sections`);
 
-    // 3. Translate changed blocks
-    const translations: TranslatedBlock[] = [];
-    const targetDoc = await this.parser.parse(targetContent, filepath);
+    // 3. Process each change
+    const updatedSections = [...targetSections.sections];
 
-    for (const mapping of mappings) {
-      if (mapping.change.type === 'deleted') {
-        this.log('Processing DELETED block - will be removed');
-        translations.push({
-          mapping,
-          translatedContent: null, // Will be deleted
+    for (const change of changes) {
+      if (change.type === 'added') {
+        // Translate new section
+        this.log(`Processing ADDED section: ${change.newSection?.heading}`);
+        
+        const result = await this.translator.translateSection({
+          mode: 'new',
+          sourceLanguage,
+          targetLanguage,
+          glossary,
+          englishSection: change.newSection?.content,
         });
-        continue;
+
+        if (!result.success) {
+          throw new Error(`Translation failed for new section: ${result.error}`);
+        }
+
+        // Insert at correct position
+        const insertIndex = change.position?.index ?? updatedSections.length;
+        
+        // Extract heading from translated content (first line should be the heading)
+        const translatedLines = (result.translatedSection || '').split('\n');
+        const translatedHeading = translatedLines[0] || '';
+        
+        const newSection: Section = {
+          heading: translatedHeading,
+          level: change.newSection?.level || 2,
+          id: change.newSection?.id || '',
+          content: result.translatedSection || '',
+          startLine: 0,
+          endLine: 0,
+          subsections: [],
+        };
+
+        updatedSections.splice(insertIndex, 0, newSection);
+        this.log(`Inserted new section at position ${insertIndex}`);
+
+      } else if (change.type === 'modified') {
+        // Update existing section
+        this.log(`Processing MODIFIED section: ${change.newSection?.heading}`);
+
+        // Find matching section in target (by position)
+        const targetSectionIndex = this.findMatchingSectionIndex(
+          updatedSections,
+          change.oldSection
+        );
+
+        if (targetSectionIndex === -1) {
+          this.log(`Warning: Could not find target section for "${change.oldSection?.heading}"`);
+          continue;
+        }
+
+        const targetSection = updatedSections[targetSectionIndex];
+
+        const result = await this.translator.translateSection({
+          mode: 'update',
+          sourceLanguage,
+          targetLanguage,
+          glossary,
+          oldEnglish: change.oldSection?.content,
+          newEnglish: change.newSection?.content,
+          currentTranslation: targetSection.content,
+        });
+
+        if (!result.success) {
+          throw new Error(`Translation failed for modified section: ${result.error}`);
+        }
+
+        // Replace the section
+        updatedSections[targetSectionIndex] = {
+          ...targetSection,
+          content: result.translatedSection || targetSection.content,
+        };
+
+        this.log(`Updated section at position ${targetSectionIndex}`);
+
+      } else if (change.type === 'deleted') {
+        // Remove section
+        this.log(`Processing DELETED section: ${change.oldSection?.heading}`);
+
+        const targetSectionIndex = this.findMatchingSectionIndex(
+          updatedSections,
+          change.oldSection
+        );
+
+        if (targetSectionIndex !== -1) {
+          updatedSections.splice(targetSectionIndex, 1);
+          this.log(`Deleted section at position ${targetSectionIndex}`);
+        }
       }
-
-      // Get context for better translation
-      const context = mapping.targetBlock
-        ? this.parser.getBlockContext(targetDoc.blocks, mapping.targetBlock, 2)
-        : { before: '', after: '' };
-
-      this.log(`Translating ${mapping.change.type} block...`);
-      this.log(`Context before length: ${context.before.length}, after length: ${context.after.length}`);
-
-      // Translate the block
-      const result = await this.translator.translate({
-        mode: 'diff',
-        sourceLanguage,
-        targetLanguage,
-        glossary,
-        content: {
-          blocks: [mapping.change],
-          contextBefore: context.before,
-          contextAfter: context.after,
-        },
-      });
-
-      if (!result.success) {
-        throw new Error(`Translation failed: ${result.error}`);
-      }
-
-      this.log(`Translation result length: ${result.translatedContent?.length || 0}`);
-
-      translations.push({
-        mapping,
-        translatedContent: result.translatedContent || '',
-      });
     }
 
-    // 4. Apply translations to target document
-    this.log('Applying translations to target document...');
-    return this.applyTranslations(targetDoc.blocks, translations);
+    // 4. Reconstruct document from sections
+    this.log(`Reconstructing document from ${updatedSections.length} sections`);
+    return this.reconstructFromSections(updatedSections);
   }
 
   /**
-   * Process a file in full mode (new file)
+   * Process a full document (for new files)
    */
   async processFull(
     content: string,
@@ -119,135 +176,68 @@ export class FileProcessor {
     targetLanguage: string,
     glossary?: Glossary
   ): Promise<string> {
-    const result = await this.translator.translate({
-      mode: 'full',
+    this.log(`Processing full document: ${filepath}`);
+
+    const result = await this.translator.translateFullDocument({
       sourceLanguage,
       targetLanguage,
       glossary,
-      content: {
-        fullContent: content,
-      },
+      content,
     });
 
     if (!result.success) {
       throw new Error(`Full translation failed: ${result.error}`);
     }
 
-    return result.translatedContent || '';
+    return result.translatedSection || '';
   }
 
   /**
-   * Apply translated blocks to target document
+   * Find matching section index in target document
+   * Use position-based matching for translations
    */
-  private applyTranslations(targetBlocks: Block[], translations: TranslatedBlock[]): string {
-    this.log(`Applying ${translations.length} translations to ${targetBlocks.length} blocks`);
-    
-    // Create a mutable copy
-    const updatedBlocks = [...targetBlocks];
+  private findMatchingSectionIndex(
+    targetSections: Section[],
+    sourceSection?: Section
+  ): number {
+    if (!sourceSection) {
+      return -1;
+    }
 
-    // Create a map of original blocks to their indices for fast lookup
-    const blockIndexMap = new Map<Block, number>();
-    targetBlocks.forEach((block, index) => {
-      blockIndexMap.set(block, index);
-    });
-    
-    this.log(`Built blockIndexMap with ${blockIndexMap.size} entries`);
-
-    // Sort translations to apply from end to start (to preserve indices)
-    const sortedTranslations = [...translations].sort((a, b) => {
-      const indexA = a.mapping.targetBlock
-        ? blockIndexMap.get(a.mapping.targetBlock) ?? updatedBlocks.length
-        : a.mapping.insertAfter
-        ? blockIndexMap.get(a.mapping.insertAfter) ?? updatedBlocks.length
-        : updatedBlocks.length;
-      const indexB = b.mapping.targetBlock
-        ? blockIndexMap.get(b.mapping.targetBlock) ?? updatedBlocks.length
-        : b.mapping.insertAfter
-        ? blockIndexMap.get(b.mapping.insertAfter) ?? updatedBlocks.length
-        : updatedBlocks.length;
-      return indexB - indexA;
-    });
-
-    for (const translation of sortedTranslations) {
-      const { mapping, translatedContent } = translation;
-
-      if (mapping.replaceStrategy === 'exact-match' && mapping.targetBlock) {
-        // Replace existing block
-        const index = blockIndexMap.get(mapping.targetBlock);
-        if (index !== undefined && index >= 0 && translatedContent !== null) {
-          this.log(`Replacing block at index ${index}`);
-          updatedBlocks[index] = {
-            ...updatedBlocks[index],
-            content: translatedContent,
-          };
-        }
-      } else if (mapping.replaceStrategy === 'insert' && mapping.insertAfter) {
-        // Insert new block
-        const insertAfterIndex = blockIndexMap.get(mapping.insertAfter);
-        
-        this.log(`Looking for insertAfter block, found index: ${insertAfterIndex}`);
-        this.log(`insertAfter block content preview: ${mapping.insertAfter.content.substring(0, 50)}`);
-        this.log(`Does blockIndexMap have this block? ${blockIndexMap.has(mapping.insertAfter)}`);
-        
-        if (insertAfterIndex !== undefined && insertAfterIndex >= 0 && translatedContent !== null && mapping.change.newBlock) {
-          this.log(`Inserting block after index ${insertAfterIndex}`);
-          updatedBlocks.splice(insertAfterIndex + 1, 0, {
-            type: mapping.change.newBlock.type,
-            content: translatedContent,
-            parentHeading: mapping.change.newBlock.parentHeading,
-            startLine: 0,
-            endLine: 0,
-          });
-          
-          // Update the map for subsequent operations (indices have shifted)
-          targetBlocks.forEach((block, origIndex) => {
-            if (origIndex > insertAfterIndex) {
-              const currentIndex = blockIndexMap.get(block);
-              if (currentIndex !== undefined) {
-                blockIndexMap.set(block, currentIndex + 1);
-              }
-            }
-          });
-        } else {
-          this.log(`Warning: Could not find insertAfter block (index=${insertAfterIndex}), appending to end`);
-          if (translatedContent !== null && mapping.change.newBlock) {
-            updatedBlocks.push({
-              type: mapping.change.newBlock.type,
-              content: translatedContent,
-              parentHeading: mapping.change.newBlock.parentHeading,
-              startLine: 0,
-              endLine: 0,
-            });
-          }
-        }
-      } else if (mapping.replaceStrategy === 'delete' && mapping.targetBlock) {
-        // Remove block
-        const deleteIndex = blockIndexMap.get(mapping.targetBlock);
-        if (deleteIndex !== undefined && deleteIndex >= 0) {
-          this.log(`Deleting block at index ${deleteIndex}`);
-          updatedBlocks.splice(deleteIndex, 1);
-        }
+    // Try to find by position (most reliable for translations)
+    // The section structure should be similar between source and target
+    for (let i = 0; i < targetSections.length; i++) {
+      const targetSection = targetSections[i];
+      
+      // Match by level and relative position
+      if (targetSection.level === sourceSection.level &&
+          Math.abs(targetSection.subsections.length - sourceSection.subsections.length) <= 1) {
+        return i;
       }
     }
 
-    this.log(`Final document has ${updatedBlocks.length} blocks`);
-    
-    // Reconstruct markdown
-    return this.parser.reconstructMarkdown(updatedBlocks);
+    return -1;
+  }
+
+  /**
+   * Reconstruct markdown document from sections
+   */
+  private reconstructFromSections(sections: Section[]): string {
+    const parts: string[] = [];
+
+    for (const section of sections) {
+      // Add section content (includes heading and all nested content)
+      parts.push(section.content);
+      parts.push(''); // Empty line between sections
+    }
+
+    return parts.join('\n').trim() + '\n';
   }
 
   /**
    * Validate the translated content has valid MyST syntax
    */
   async validateMyST(content: string, filepath: string): Promise<{ valid: boolean; error?: string }> {
-    try {
-      await this.parser.parse(content, filepath);
-      return { valid: true };
-    } catch (error) {
-      return {
-        valid: false,
-        error: error instanceof Error ? error.message : 'Unknown validation error',
-      };
-    }
+    return await this.parser.validateMyST(content, filepath);
   }
 }

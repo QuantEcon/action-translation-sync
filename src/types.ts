@@ -1,6 +1,16 @@
 /**
  * Types and interfaces for the translation sync action
+ * 
+ * This action uses a SECTION-BASED approach:
+ * - Documents are parsed into sections based on ## headings
+ * - Changes are detected at the section level
+ * - Translations are performed on entire sections with full context
+ * - Documents are reconstructed from translated sections
  */
+
+// ============================================================================
+// ACTION CONFIGURATION
+// ============================================================================
 
 export interface ActionInputs {
   targetRepo: string;
@@ -17,10 +27,14 @@ export interface ActionInputs {
   prTeamReviewers: string[];
 }
 
+// ============================================================================
+// GLOSSARY
+// ============================================================================
+
 export interface GlossaryTerm {
   en: string;
   context?: string;
-  [key: string]: string | undefined; // Support for multiple target languages
+  [key: string]: string | undefined; // Support for multiple target languages (zh-cn, ja, etc.)
 }
 
 export interface Glossary {
@@ -34,93 +48,96 @@ export interface Glossary {
   };
 }
 
-export type BlockType = 
-  | 'heading' 
-  | 'paragraph' 
-  | 'code' 
-  | 'list' 
-  | 'math' 
-  | 'directive'
-  | 'blockquote'
-  | 'table'
-  | 'thematic_break'
-  | 'html';
+// ============================================================================
+// SECTION-BASED PARSING
+// ============================================================================
 
-export interface Block {
-  type: BlockType;
-  content: string;
-  id?: string;              // For headings (anchor)
-  parentHeading?: string;   // Structural context
-  startLine: number;
-  endLine: number;
-  level?: number;           // For headings
-  language?: string;        // For code blocks
-  meta?: string;            // For code blocks metadata
-  depth?: number;           // Nesting level
+/**
+ * A section represents a ## heading and all its content (including subsections)
+ * until the next ## heading
+ */
+export interface Section {
+  heading: string;          // Full heading text: "## Economic Models"
+  level: number;            // Heading level: 2 (for ##)
+  id: string;               // Anchor/slug: "economic-models"
+  content: string;          // Full markdown content of section (including subsections)
+  startLine: number;        // Starting line in original document
+  endLine: number;          // Ending line in original document
+  parentId?: string;        // ID of parent section (for nested sections)
+  subsections: Section[];   // Nested subsections (### headings)
 }
 
-export interface ParsedDocument {
-  blocks: Block[];
+export interface ParsedSections {
+  sections: Section[];
   metadata: {
     filepath: string;
     totalLines: number;
-    hasDirectives: boolean;
-    hasMath: boolean;
-    hasCode: boolean;
+    sectionCount: number;
   };
 }
 
-export type ChangeType = 'added' | 'modified' | 'deleted';
+// ============================================================================
+// SECTION-BASED DIFF DETECTION
+// ============================================================================
 
-export interface ChangeBlock {
-  type: ChangeType;
-  oldBlock?: Block;
-  newBlock?: Block;
-  anchor?: string;          // Reference point in document
-  position?: {
-    afterId?: string;
-    underHeading?: string;
-    index?: number;
+export type SectionChangeType = 'added' | 'modified' | 'deleted';
+
+/**
+ * Represents a change at the section level
+ */
+export interface SectionChange {
+  type: SectionChangeType;
+  oldSection?: Section;     // For modified/deleted
+  newSection?: Section;     // For modified/added
+  position?: {              // For added sections
+    afterSectionId?: string;
+    parentSectionId?: string;
+    index?: number;         // Position among siblings
   };
 }
 
-export type ReplaceStrategy = 'exact-match' | 'insert' | 'delete';
+// ============================================================================
+// SECTION-BASED TRANSLATION
+// ============================================================================
 
-export interface BlockMapping {
-  change: ChangeBlock;
-  targetBlock?: Block;
-  insertAfter?: Block;
-  replaceStrategy: ReplaceStrategy;
-  confidence?: number;      // For fuzzy matching
-}
-
-export interface TranslatedBlock {
-  mapping: BlockMapping;
-  translatedContent: string | null; // null for deletions
-}
-
-export interface TranslationRequest {
-  mode: 'diff' | 'full';
+/**
+ * Request to translate a section
+ * - 'update' mode: Claude sees old/new English + current translation → produces updated translation
+ * - 'new' mode: Claude sees new English → produces new translation
+ */
+export interface SectionTranslationRequest {
+  mode: 'update' | 'new';
   sourceLanguage: string;
   targetLanguage: string;
   glossary?: Glossary;
-  content: {
-    // For diff mode
-    blocks?: ChangeBlock[];
-    existingTranslation?: string;
-    contextBefore?: string;
-    contextAfter?: string;
-    // For full mode
-    fullContent?: string;
-  };
+  // For update mode
+  oldEnglish?: string;      // Current English section
+  newEnglish?: string;      // Updated English section
+  currentTranslation?: string;  // Current translation (generalized from currentChinese)
+  // For new mode
+  englishSection?: string;  // New English section to translate
 }
 
-export interface TranslationResult {
+export interface SectionTranslationResult {
   success: boolean;
-  translatedContent?: string;
+  translatedSection?: string;
   error?: string;
   tokensUsed?: number;
 }
+
+/**
+ * Request to translate a full document (for new files)
+ */
+export interface FullDocumentTranslationRequest {
+  sourceLanguage: string;
+  targetLanguage: string;
+  glossary?: Glossary;
+  content: string;
+}
+
+// ============================================================================
+// FILE PROCESSING & GITHUB
+// ============================================================================
 
 export interface FileChange {
   filename: string;

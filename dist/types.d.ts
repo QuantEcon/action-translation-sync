@@ -1,5 +1,11 @@
 /**
  * Types and interfaces for the translation sync action
+ *
+ * This action uses a SECTION-BASED approach:
+ * - Documents are parsed into sections based on ## headings
+ * - Changes are detected at the section level
+ * - Translations are performed on entire sections with full context
+ * - Documents are reconstructed from translated sections
  */
 export interface ActionInputs {
     targetRepo: string;
@@ -30,71 +36,71 @@ export interface Glossary {
         preserve_myst_directives?: boolean;
     };
 }
-export type BlockType = 'heading' | 'paragraph' | 'code' | 'list' | 'math' | 'directive' | 'blockquote' | 'table' | 'thematic_break' | 'html';
-export interface Block {
-    type: BlockType;
+/**
+ * A section represents a ## heading and all its content (including subsections)
+ * until the next ## heading
+ */
+export interface Section {
+    heading: string;
+    level: number;
+    id: string;
     content: string;
-    id?: string;
-    parentHeading?: string;
     startLine: number;
     endLine: number;
-    level?: number;
-    language?: string;
-    meta?: string;
-    depth?: number;
+    parentId?: string;
+    subsections: Section[];
 }
-export interface ParsedDocument {
-    blocks: Block[];
+export interface ParsedSections {
+    sections: Section[];
     metadata: {
         filepath: string;
         totalLines: number;
-        hasDirectives: boolean;
-        hasMath: boolean;
-        hasCode: boolean;
+        sectionCount: number;
     };
 }
-export type ChangeType = 'added' | 'modified' | 'deleted';
-export interface ChangeBlock {
-    type: ChangeType;
-    oldBlock?: Block;
-    newBlock?: Block;
-    anchor?: string;
+export type SectionChangeType = 'added' | 'modified' | 'deleted';
+/**
+ * Represents a change at the section level
+ */
+export interface SectionChange {
+    type: SectionChangeType;
+    oldSection?: Section;
+    newSection?: Section;
     position?: {
-        afterId?: string;
-        underHeading?: string;
+        afterSectionId?: string;
+        parentSectionId?: string;
         index?: number;
     };
 }
-export type ReplaceStrategy = 'exact-match' | 'insert' | 'delete';
-export interface BlockMapping {
-    change: ChangeBlock;
-    targetBlock?: Block;
-    insertAfter?: Block;
-    replaceStrategy: ReplaceStrategy;
-    confidence?: number;
-}
-export interface TranslatedBlock {
-    mapping: BlockMapping;
-    translatedContent: string | null;
-}
-export interface TranslationRequest {
-    mode: 'diff' | 'full';
+/**
+ * Request to translate a section
+ * - 'update' mode: Claude sees old/new English + current translation → produces updated translation
+ * - 'new' mode: Claude sees new English → produces new translation
+ */
+export interface SectionTranslationRequest {
+    mode: 'update' | 'new';
     sourceLanguage: string;
     targetLanguage: string;
     glossary?: Glossary;
-    content: {
-        blocks?: ChangeBlock[];
-        existingTranslation?: string;
-        contextBefore?: string;
-        contextAfter?: string;
-        fullContent?: string;
-    };
+    oldEnglish?: string;
+    newEnglish?: string;
+    currentTranslation?: string;
+    englishSection?: string;
 }
-export interface TranslationResult {
+export interface SectionTranslationResult {
     success: boolean;
-    translatedContent?: string;
+    translatedSection?: string;
     error?: string;
     tokensUsed?: number;
+}
+/**
+ * Request to translate a full document (for new files)
+ */
+export interface FullDocumentTranslationRequest {
+    sourceLanguage: string;
+    targetLanguage: string;
+    glossary?: Glossary;
+    content: string;
 }
 export interface FileChange {
     filename: string;

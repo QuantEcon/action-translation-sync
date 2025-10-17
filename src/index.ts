@@ -167,7 +167,7 @@ async function run(): Promise<void> {
           core.info(`${file.filename} does not exist in target repo - will create it`);
         }
 
-        // Process the file
+        // Process the file using section-based approach
         let translatedContent: string;
         if (isNewFile) {
           translatedContent = await processor.processFull(
@@ -178,7 +178,8 @@ async function run(): Promise<void> {
             glossary
           );
         } else {
-          translatedContent = await processor.processDiff(
+          // Use new section-based processing
+          translatedContent = await processor.processSectionBased(
             oldContent,
             newContent,
             targetContent,

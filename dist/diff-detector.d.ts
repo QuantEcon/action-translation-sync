@@ -1,53 +1,36 @@
-import { ChangeBlock, BlockMapping } from './types';
 /**
- * Diff Detection Engine
- * Detects and tracks changes between two versions of a MyST document
+ * Section-Based Diff Detection Engine
+ *
+ * Detects changes at the section level (## headings) rather than individual blocks.
+ * This approach is much simpler and more reliable for translation workflows.
+ *
+ * Key principles:
+ * - Sections are matched by position (most reliable for translations)
+ * - Changes are: added section, modified section, deleted section
+ * - No complex block matching or insertion point logic needed
  */
+import { SectionChange } from './types';
 export declare class DiffDetector {
     private parser;
     private debug;
     constructor(debug?: boolean);
     private log;
     /**
-     * Detect changes between old and new versions
+     * Detect section-level changes between old and new documents
      */
-    detectChanges(oldContent: string, newContent: string, filepath: string): Promise<ChangeBlock[]>;
+    detectSectionChanges(oldContent: string, newContent: string, filepath: string): Promise<SectionChange[]>;
     /**
-     * Map changes to corresponding blocks in target document
+     * Check if two sections match (for position-based matching)
+     * Sections match if they have similar structure (same level, similar subsection count)
      */
-    mapToTarget(changes: ChangeBlock[], targetContent: string, filepath: string): Promise<BlockMapping[]>;
+    private sectionsMatch;
     /**
-     * Find corresponding block between two versions
+     * Check if section content has changed
      */
-    private findCorrespondingBlock;
+    private sectionContentEqual;
     /**
-     * Find best matching block by content similarity
-     * Note: Caller is responsible for applying threshold
+     * Extract code blocks from content
      */
-    private findBestMatchByContent;
-    /**
-     * Calculate similarity between two strings (simple Jaccard similarity)
-     */
-    private calculateSimilarity;
-    /**
-     * Check if two blocks are equal
-     */
-    private blocksEqual;
-    /**
-     * Find insertion point for a new block
-     */
-    private findInsertionPoint;
-    /**
-     * Find where to insert a new block in the target document
-     */
-    private findInsertionBlockInTarget;
-    /**
-     * Build a map of blocks for quick lookup
-     */
-    private buildBlockMap;
-    /**
-     * Get a unique key for a block
-     */
-    private getBlockKey;
+    private extractCodeBlocks;
 }
 //# sourceMappingURL=diff-detector.d.ts.map

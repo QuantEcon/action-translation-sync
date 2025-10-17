@@ -1,34 +1,39 @@
-import { TranslationRequest, TranslationResult } from './types';
 /**
- * Translation Service using Claude (configurable model)
+ * Section-Based Translation Service
+ *
+ * Uses Claude Sonnet 4.5 to translate sections of MyST Markdown documents.
+ *
+ * Two modes:
+ * 1. UPDATE: Claude sees old English, new English, current translation → produces updated translation
+ * 2. NEW: Claude sees new English → produces new translation
+ *
+ * For full documents (new files), translates the entire content in one pass.
  */
+import { SectionTranslationRequest, SectionTranslationResult, FullDocumentTranslationRequest } from './types';
 export declare class TranslationService {
     private client;
-    private parser;
     private model;
     private debug;
     constructor(apiKey: string, model?: string, debug?: boolean);
     private log;
     /**
-     * Translate content using Claude
+     * Translate a section (update or new)
      */
-    translate(request: TranslationRequest): Promise<TranslationResult>;
+    translateSection(request: SectionTranslationRequest): Promise<SectionTranslationResult>;
     /**
-     * Translate only changed blocks (diff mode)
+     * Update existing section (mode='update')
+     * Claude sees: old English, new English, current translation → produces updated translation
      */
-    private translateDiff;
+    private translateSectionUpdate;
     /**
-     * Translate entire document (full mode)
+     * Translate new section (mode='new')
+     * Claude sees: English section → produces translation
      */
-    private translateFull;
+    private translateNewSection;
     /**
-     * Build prompt for diff translation
+     * Translate full document (for new files)
      */
-    private buildDiffPrompt;
-    /**
-     * Build prompt for full document translation
-     */
-    private buildFullPrompt;
+    translateFullDocument(request: FullDocumentTranslationRequest): Promise<SectionTranslationResult>;
     /**
      * Format glossary for inclusion in prompt
      */

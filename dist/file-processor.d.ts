@@ -1,9 +1,18 @@
+/**
+ * Section-Based File Processor
+ *
+ * Orchestrates the translation process for a single file using section-based approach.
+ *
+ * Key operations:
+ * 1. Detect section-level changes between old and new English documents
+ * 2. Match sections to target document (by position)
+ * 3. Translate changed sections (update mode for modified, new mode for added)
+ * 4. Reconstruct target document with translated sections
+ *
+ * This is much simpler than the old block-based approach!
+ */
 import { TranslationService } from './translator';
 import { Glossary } from './types';
-/**
- * File Processor
- * Orchestrates the translation process for a single file
- */
 export declare class FileProcessor {
     private parser;
     private diffDetector;
@@ -12,17 +21,23 @@ export declare class FileProcessor {
     constructor(translationService: TranslationService, debug?: boolean);
     private log;
     /**
-     * Process a file in diff mode (existing file with changes)
+     * Process a file using section-based approach
+     * This is the main method for handling existing files with changes
      */
-    processDiff(oldContent: string, newContent: string, targetContent: string, filepath: string, sourceLanguage: string, targetLanguage: string, glossary?: Glossary): Promise<string>;
+    processSectionBased(oldContent: string, newContent: string, targetContent: string, filepath: string, sourceLanguage: string, targetLanguage: string, glossary?: Glossary): Promise<string>;
     /**
-     * Process a file in full mode (new file)
+     * Process a full document (for new files)
      */
     processFull(content: string, filepath: string, sourceLanguage: string, targetLanguage: string, glossary?: Glossary): Promise<string>;
     /**
-     * Apply translated blocks to target document
+     * Find matching section index in target document
+     * Use position-based matching for translations
      */
-    private applyTranslations;
+    private findMatchingSectionIndex;
+    /**
+     * Reconstruct markdown document from sections
+     */
+    private reconstructFromSections;
     /**
      * Validate the translated content has valid MyST syntax
      */

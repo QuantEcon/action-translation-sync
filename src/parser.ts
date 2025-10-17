@@ -1,212 +1,120 @@
-import { unified } from 'unified';
-import remarkParse from 'remark-parse';
-import remarkStringify from 'remark-stringify';
-import remarkDirective from 'remark-directive';
-import remarkMath from 'remark-math';
-import remarkGfm from 'remark-gfm';
-import { visit } from 'unist-util-visit';
-import { toString } from 'mdast-util-to-string';
-import type { Root, RootContent, Heading, Code } from 'mdast';
-import { Block, BlockType, ParsedDocument } from './types';
-
 /**
- * MyST Markdown Parser
- * Parses MyST markdown into semantic blocks for translation
+ * MyST Markdown Section Parser
+ * 
+ * Parses MyST markdown documents into sections based on ## headings.
+ * Each section includes all content until the next ## heading, including
+ * any nested ### subsections.
+ * 
+ * This simplified parser replaces the previous block-based approach with
+ * a cleaner section-based structure that's easier to work with for translations.
  */
+
+import { Section, ParsedSections } from './types';
+
 export class MystParser {
-  private processor;
-
-  constructor() {
-    this.processor = unified()
-      .use(remarkParse)
-      .use(remarkDirective)
-      .use(remarkMath)
-      .use(remarkGfm)
-      .use(remarkStringify);
-  }
-
   /**
-   * Parse markdown content into structured blocks
+   * Parse markdown content into sections based on ## headings
+   * Each section includes all content until the next ## heading
    */
-  async parse(content: string, filepath: string): Promise<ParsedDocument> {
-    const tree = this.processor.parse(content) as Root;
-    const blocks: Block[] = [];
-    let currentHeading: string | undefined = undefined;
-    let lineOffset = 0;
-
-    const metadata = {
-      filepath,
-      totalLines: content.split('\n').length,
-      hasDirectives: false,
-      hasMath: false,
-      hasCode: false,
-    };
-
-    // Visit each node in the tree
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    visit(tree, (node: any, index: number | undefined, parent: any) => {
-      const position = node.position;
-      if (!position) return;
-
-      const startLine = position.start.line;
-      const endLine = position.end.line;
-      const nodeContent = this.extractContent(content, startLine, endLine);
-
-      let block: Block | null = null;
-
-      switch (node.type) {
-        case 'heading':
-          const heading = node as Heading;
-          const headingText = toString(heading);
-          const headingId = this.generateHeadingId(headingText);
-          
-          // For headings, parentHeading should be undefined for top-level (# and ##)
-          // Only ### and deeper should have a parent heading
-          block = {
-            type: 'heading',
-            content: nodeContent,
-            id: headingId,
-            level: heading.depth,
-            startLine,
-            endLine,
-            parentHeading: heading.depth > 2 ? currentHeading : undefined,
-          };
-          
-          // Update current heading context for non-heading blocks that follow
-          // Level 1 and 2 headings set the context
-          if (heading.depth === 1 || heading.depth === 2) {
-            currentHeading = headingId;
-          }
-          break;
-
-        case 'code':
-          const code = node as Code;
-          metadata.hasCode = true;
-          block = {
-            type: 'code',
-            content: nodeContent,
-            language: code.lang || undefined,
-            meta: code.meta || undefined,
-            startLine,
-            endLine,
-            parentHeading: currentHeading,
-          };
-          break;
-
-        case 'paragraph':
-          block = {
-            type: 'paragraph',
-            content: nodeContent,
-            startLine,
-            endLine,
-            parentHeading: currentHeading,
-          };
-          break;
-
-        case 'list':
-          block = {
-            type: 'list',
-            content: nodeContent,
-            startLine,
-            endLine,
-            parentHeading: currentHeading,
-          };
-          break;
-
-        case 'blockquote':
-          block = {
-            type: 'blockquote',
-            content: nodeContent,
-            startLine,
-            endLine,
-            parentHeading: currentHeading,
-          };
-          break;
-
-        case 'table':
-          block = {
-            type: 'table',
-            content: nodeContent,
-            startLine,
-            endLine,
-            parentHeading: currentHeading,
-          };
-          break;
-
-        case 'thematicBreak':
-          block = {
-            type: 'thematic_break',
-            content: nodeContent,
-            startLine,
-            endLine,
-            parentHeading: currentHeading,
-          };
-          break;
-
-        case 'html':
-          block = {
-            type: 'html',
-            content: nodeContent,
-            startLine,
-            endLine,
-            parentHeading: currentHeading,
-          };
-          break;
-
-        case 'math':
-          metadata.hasMath = true;
-          block = {
-            type: 'math',
-            content: nodeContent,
-            startLine,
-            endLine,
-            parentHeading: currentHeading,
-          };
-          break;
-
-        // MyST directives (like {note}, {warning}, etc.)
-        case 'textDirective':
-        case 'leafDirective':
-        case 'containerDirective':
-          metadata.hasDirectives = true;
-          block = {
-            type: 'directive',
-            content: nodeContent,
-            startLine,
-            endLine,
-            parentHeading: currentHeading,
-          };
-          break;
+  async parseSections(content: string, filepath: string): Promise<ParsedSections> {
+    const lines = content.split('\n');
+    const sections: Section[] = [];
+    let currentSection: Section | null = null;
+    let currentSubsection: Section | null = null;
+    
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const lineNum = i + 1;
+      
+      // Check for ## heading (top-level section)
+      const h2Match = line.match(/^##\s+(.+)$/);
+      if (h2Match) {
+        // Save previous section if exists
+        if (currentSection) {
+          currentSection.endLine = lineNum - 1;
+          sections.push(currentSection);
+        }
+        
+        // Start new section
+        const headingText = h2Match[1];
+        const id = this.generateHeadingId(headingText);
+        currentSection = {
+          heading: line,
+          level: 2,
+          id,
+          content: line + '\n',
+          startLine: lineNum,
+          endLine: lineNum,
+          subsections: [],
+        };
+        currentSubsection = null;
+        continue;
       }
-
-      if (block) {
-        blocks.push(block);
+      
+      // Check for ### heading (subsection)
+      const h3Match = line.match(/^###\s+(.+)$/);
+      if (h3Match && currentSection) {
+        // Save previous subsection if exists
+        if (currentSubsection) {
+          currentSubsection.endLine = lineNum - 1;
+          currentSection.subsections.push(currentSubsection);
+        }
+        
+        // Start new subsection
+        const headingText = h3Match[1];
+        const id = this.generateHeadingId(headingText);
+        currentSubsection = {
+          heading: line,
+          level: 3,
+          id,
+          content: line + '\n',
+          startLine: lineNum,
+          endLine: lineNum,
+          parentId: currentSection.id,
+          subsections: [],
+        };
+        continue;
       }
+      
+      // Add content to current section/subsection
+      if (currentSubsection) {
+        currentSubsection.content += line + '\n';
+        currentSubsection.endLine = lineNum;
+      } else if (currentSection) {
+        currentSection.content += line + '\n';
+        currentSection.endLine = lineNum;
+      }
+    }
+    
+    // Save last section
+    if (currentSection) {
+      if (currentSubsection) {
+        currentSection.subsections.push(currentSubsection);
+      }
+      sections.push(currentSection);
+    }
+    
+    // Trim trailing newlines from content
+    sections.forEach(section => {
+      section.content = section.content.trimEnd();
+      section.subsections.forEach(sub => {
+        sub.content = sub.content.trimEnd();
+      });
     });
-
+    
     return {
-      blocks,
-      metadata,
+      sections,
+      metadata: {
+        filepath,
+        totalLines: lines.length,
+        sectionCount: sections.length,
+      },
     };
-  }
-
-  /**
-   * Reconstruct markdown from blocks
-   */
-  reconstructMarkdown(blocks: Block[]): string {
-    return blocks.map(block => block.content).join('\n\n');
-  }
-
-  /**
-   * Extract content between line numbers
-   */
-  private extractContent(fullContent: string, startLine: number, endLine: number): string {
-    const lines = fullContent.split('\n');
-    return lines.slice(startLine - 1, endLine).join('\n');
   }
 
   /**
    * Generate heading ID/anchor from heading text
+   * Follows the same rules as MyST/Sphinx for consistency
    */
   private generateHeadingId(text: string): string {
     return text
@@ -218,34 +126,41 @@ export class MystParser {
   }
 
   /**
-   * Find a block by its ID (for headings)
+   * Find a section by ID (searches recursively through subsections)
    */
-  findBlockById(blocks: Block[], id: string): Block | undefined {
-    return blocks.find(b => b.id === id);
+  findSectionById(sections: Section[], id: string): Section | undefined {
+    for (const section of sections) {
+      if (section.id === id) {
+        return section;
+      }
+      const found = this.findSectionById(section.subsections, id);
+      if (found) {
+        return found;
+      }
+    }
+    return undefined;
   }
 
   /**
-   * Find blocks under a specific heading
+   * Find section by position/index
    */
-  findBlocksUnderHeading(blocks: Block[], headingId: string): Block[] {
-    return blocks.filter(b => b.parentHeading === headingId);
+  findSectionByPosition(sections: Section[], index: number): Section | undefined {
+    return sections[index];
   }
 
   /**
-   * Get context around a block (before and after)
+   * Validate MyST syntax by attempting to parse
+   * Returns true if valid, false otherwise
    */
-  getBlockContext(blocks: Block[], block: Block, contextLines: number = 3): {
-    before: string;
-    after: string;
-  } {
-    const blockIndex = blocks.indexOf(block);
-    
-    const beforeBlocks = blocks.slice(Math.max(0, blockIndex - contextLines), blockIndex);
-    const afterBlocks = blocks.slice(blockIndex + 1, blockIndex + 1 + contextLines);
-
-    return {
-      before: beforeBlocks.map(b => b.content).join('\n\n'),
-      after: afterBlocks.map(b => b.content).join('\n\n'),
-    };
+  async validateMyST(content: string, filepath: string): Promise<{ valid: boolean; error?: string }> {
+    try {
+      await this.parseSections(content, filepath);
+      return { valid: true };
+    } catch (error) {
+      return {
+        valid: false,
+        error: error instanceof Error ? error.message : 'Unknown validation error',
+      };
+    }
   }
 }

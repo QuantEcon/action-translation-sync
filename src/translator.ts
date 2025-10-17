@@ -1,20 +1,26 @@
+/**
+ * Section-Based Translation Service
+ * 
+ * Uses Claude Sonnet 4.5 to translate sections of MyST Markdown documents.
+ * 
+ * Two modes:
+ * 1. UPDATE: Claude sees old English, new English, current translation → produces updated translation
+ * 2. NEW: Claude sees new English → produces new translation
+ * 
+ * For full documents (new files), translates the entire content in one pass.
+ */
+
 import Anthropic from '@anthropic-ai/sdk';
-import { Glossary, TranslationRequest, TranslationResult, ChangeBlock } from './types';
-import { MystParser } from './parser';
+import { Glossary, SectionTranslationRequest, SectionTranslationResult, FullDocumentTranslationRequest } from './types';
 import * as core from '@actions/core';
 
-/**
- * Translation Service using Claude (configurable model)
- */
 export class TranslationService {
   private client: Anthropic;
-  private parser: MystParser;
   private model: string;
   private debug: boolean;
 
   constructor(apiKey: string, model: string = 'claude-sonnet-4-20250514', debug: boolean = false) {
     this.client = new Anthropic({ apiKey });
-    this.parser = new MystParser();
     this.model = model;
     this.debug = debug;
   }
@@ -26,14 +32,14 @@ export class TranslationService {
   }
 
   /**
-   * Translate content using Claude
+   * Translate a section (update or new)
    */
-  async translate(request: TranslationRequest): Promise<TranslationResult> {
+  async translateSection(request: SectionTranslationRequest): Promise<SectionTranslationResult> {
     try {
-      if (request.mode === 'diff') {
-        return await this.translateDiff(request);
+      if (request.mode === 'update') {
+        return await this.translateSectionUpdate(request);
       } else {
-        return await this.translateFull(request);
+        return await this.translateNewSection(request);
       }
     } catch (error) {
       return {
@@ -44,87 +50,54 @@ export class TranslationService {
   }
 
   /**
-   * Translate only changed blocks (diff mode)
+   * Update existing section (mode='update')
+   * Claude sees: old English, new English, current translation → produces updated translation
    */
-  private async translateDiff(request: TranslationRequest): Promise<TranslationResult> {
-    const { blocks, contextBefore, contextAfter } = request.content;
-    
-    if (!blocks || blocks.length === 0) {
-      return {
-        success: true,
-        translatedContent: '',
-      };
-    }
+  private async translateSectionUpdate(request: SectionTranslationRequest): Promise<SectionTranslationResult> {
+    const { oldEnglish, newEnglish, currentTranslation, sourceLanguage, targetLanguage, glossary } = request;
 
-    const glossary = request.glossary;
-    const translatedBlocks: string[] = [];
-
-    for (const changeBlock of blocks) {
-      if (changeBlock.type === 'deleted') {
-        continue; // Skip deleted blocks
-      }
-
-      const blockContent = changeBlock.newBlock?.content || '';
-      
-      this.log(`Translating block type=${changeBlock.type}, content length=${blockContent.length}`);
-      this.log(`Block content preview: ${blockContent.substring(0, 100)}...`);
-      
-      const prompt = this.buildDiffPrompt(
-        blockContent,
-        contextBefore || '',
-        contextAfter || '',
-        request.sourceLanguage,
-        request.targetLanguage,
-        glossary
-      );
-
-      this.log(`Prompt length: ${prompt.length}`);
-      this.log(`Full prompt:\n${prompt}\n--- END PROMPT ---`);
-
-      const response = await this.client.messages.create({
-        model: this.model,
-        max_tokens: 4096,
-        messages: [{ role: 'user', content: prompt }],
-      });
-
-      const content = response.content[0];
-      if (content.type === 'text') {
-        this.log(`Claude response length: ${content.text.length}`);
-        this.log(`Claude response:\n${content.text}\n--- END RESPONSE ---`);
-        translatedBlocks.push(content.text.trim());
-      }
-    }
-
-    const finalResult = translatedBlocks.join('\n\n');
-    this.log(`Final combined translation length: ${finalResult.length}`);
-
-    return {
-      success: true,
-      translatedContent: finalResult,
-      tokensUsed: undefined, // Could extract from response if needed
-    };
-  }
-
-  /**
-   * Translate entire document (full mode)
-   */
-  private async translateFull(request: TranslationRequest): Promise<TranslationResult> {
-    const { fullContent } = request.content;
-    
-    if (!fullContent) {
+    if (!oldEnglish || !newEnglish || !currentTranslation) {
       return {
         success: false,
-        error: 'No content provided for full translation',
+        error: 'Update mode requires oldEnglish, newEnglish, and currentTranslation',
       };
     }
 
-    const glossary = request.glossary;
-    const prompt = this.buildFullPrompt(
-      fullContent,
-      request.sourceLanguage,
-      request.targetLanguage,
-      glossary
-    );
+    const glossarySection = glossary ? this.formatGlossary(glossary, targetLanguage) : '';
+
+    const prompt = `You are updating a translation of a technical document section from ${sourceLanguage} to ${targetLanguage}.
+
+TASK: The ${sourceLanguage} section has been modified. Update the existing ${targetLanguage} translation to reflect these changes.
+
+CRITICAL RULES:
+1. Compare the OLD and NEW ${sourceLanguage} versions to understand what changed
+2. Update the CURRENT ${targetLanguage} translation to reflect these changes
+3. Maintain consistency with the existing ${targetLanguage} style and terminology
+4. Preserve all MyST Markdown formatting, code blocks, math equations, and directives
+5. DO NOT translate code, math, URLs, or technical identifiers
+6. Use the glossary for consistent terminology
+7. Return ONLY the updated ${targetLanguage} section, no explanations
+
+${glossarySection}
+
+[OLD ${sourceLanguage} VERSION]
+${oldEnglish}
+[/OLD ${sourceLanguage} VERSION]
+
+[NEW ${sourceLanguage} VERSION]
+${newEnglish}
+[/NEW ${sourceLanguage} VERSION]
+
+[CURRENT ${targetLanguage} TRANSLATION]
+${currentTranslation}
+[/CURRENT ${targetLanguage} TRANSLATION]
+
+Provide ONLY the updated ${targetLanguage} translation. Do not include any markers, explanations, or comments.`;
+
+    this.log(`Translating section update, mode=update`);
+    this.log(`Old ${sourceLanguage} length: ${oldEnglish.length}`);
+    this.log(`New ${sourceLanguage} length: ${newEnglish.length}`);
+    this.log(`Current ${targetLanguage} length: ${currentTranslation.length}`);
 
     const response = await this.client.messages.create({
       model: this.model,
@@ -140,57 +113,86 @@ export class TranslationService {
       };
     }
 
+    this.log(`Translated section length: ${content.text.length}`);
+
     return {
       success: true,
-      translatedContent: content.text.trim(),
+      translatedSection: content.text.trim(),
+      tokensUsed: response.usage.input_tokens + response.usage.output_tokens,
     };
   }
 
   /**
-   * Build prompt for diff translation
+   * Translate new section (mode='new')
+   * Claude sees: English section → produces translation
    */
-  private buildDiffPrompt(
-    blockContent: string,
-    contextBefore: string,
-    contextAfter: string,
-    sourceLanguage: string,
-    targetLanguage: string,
-    glossary?: Glossary
-  ): string {
+  private async translateNewSection(request: SectionTranslationRequest): Promise<SectionTranslationResult> {
+    const { englishSection, sourceLanguage, targetLanguage, glossary } = request;
+
+    if (!englishSection) {
+      return {
+        success: false,
+        error: 'New mode requires englishSection',
+      };
+    }
+
     const glossarySection = glossary ? this.formatGlossary(glossary, targetLanguage) : '';
 
-    return `You are translating changes from ${sourceLanguage} to ${targetLanguage} for technical documentation.
+    const prompt = `You are translating a new section of technical documentation from ${sourceLanguage} to ${targetLanguage}.
 
-CRITICAL RULES:
-1. ONLY translate the section marked as [CHANGED]
-2. DO NOT modify sections marked as [CONTEXT]
-3. Maintain exact MyST Markdown formatting
-4. Preserve all code blocks, math equations, and directives unchanged
-5. Use the provided glossary for consistent terminology
-6. Do not include any explanations, only return the translated content
+RULES:
+1. Translate all prose content accurately
+2. Preserve all MyST Markdown formatting, structure, and directives
+3. DO NOT translate code blocks (keep code as-is)
+4. DO NOT translate mathematical equations (keep LaTeX as-is)
+5. DO NOT translate URLs, file paths, or technical identifiers
+6. Use the glossary for consistent terminology
+7. Maintain heading structure and levels
+8. Return ONLY the translated section, no explanations
 
 ${glossarySection}
 
-${contextBefore ? `[CONTEXT - for reference only]\n${contextBefore}\n[/CONTEXT]\n\n` : ''}[CHANGED - translate this section]
-${blockContent}
-[/CHANGED]
-${contextAfter ? `\n\n[CONTEXT - for reference only]\n${contextAfter}\n[/CONTEXT]` : ''}
+[${sourceLanguage} SECTION TO TRANSLATE]
+${englishSection}
+[/END SECTION]
 
-Provide ONLY the translated version of the [CHANGED] section. Do not include any markers or explanations.`;
+Provide ONLY the ${targetLanguage} translation. Do not include any markers, explanations, or comments.`;
+
+    this.log(`Translating new section, mode=new`);
+    this.log(`${sourceLanguage} section length: ${englishSection.length}`);
+
+    const response = await this.client.messages.create({
+      model: this.model,
+      max_tokens: 8192,
+      messages: [{ role: 'user', content: prompt }],
+    });
+
+    const content = response.content[0];
+    if (content.type !== 'text') {
+      return {
+        success: false,
+        error: 'Unexpected response format from Claude',
+      };
+    }
+
+    this.log(`Translated section length: ${content.text.length}`);
+
+    return {
+      success: true,
+      translatedSection: content.text.trim(),
+      tokensUsed: response.usage.input_tokens + response.usage.output_tokens,
+    };
   }
 
   /**
-   * Build prompt for full document translation
+   * Translate full document (for new files)
    */
-  private buildFullPrompt(
-    content: string,
-    sourceLanguage: string,
-    targetLanguage: string,
-    glossary?: Glossary
-  ): string {
+  async translateFullDocument(request: FullDocumentTranslationRequest): Promise<SectionTranslationResult> {
+    const { content, sourceLanguage, targetLanguage, glossary } = request;
+
     const glossarySection = glossary ? this.formatGlossary(glossary, targetLanguage) : '';
 
-    return `You are translating a complete technical lecture from ${sourceLanguage} to ${targetLanguage}.
+    const prompt = `You are translating a complete technical lecture from ${sourceLanguage} to ${targetLanguage}.
 
 RULES:
 1. Translate all prose content
@@ -207,6 +209,29 @@ CONTENT:
 ${content}
 
 Provide the complete translated document maintaining exact MyST structure.`;
+
+    this.log(`Translating full document`);
+    this.log(`Content length: ${content.length}`);
+
+    const response = await this.client.messages.create({
+      model: this.model,
+      max_tokens: 8192,
+      messages: [{ role: 'user', content: prompt }],
+    });
+
+    const result = response.content[0];
+    if (result.type !== 'text') {
+      return {
+        success: false,
+        error: 'Unexpected response format from Claude',
+      };
+    }
+
+    return {
+      success: true,
+      translatedSection: result.text.trim(),
+      tokensUsed: response.usage.input_tokens + response.usage.output_tokens,
+    };
   }
 
   /**
