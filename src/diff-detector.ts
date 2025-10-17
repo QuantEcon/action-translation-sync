@@ -318,66 +318,50 @@ export class DiffDetector {
 
     this.log(`Finding insertion point: underHeading=${change.position.underHeading}, index=${change.position.index}, targetBlocks=${targetBlocks.length}`);
 
-    // For modified blocks treated as insertions, we need to find the block BEFORE the change
-    // Look for the previous block that exists in both documents
-    if (change.type === 'modified' && change.position.index !== undefined && change.position.index > 0) {
-      // Try to find a stable anchor point before this position
-      // Look for the nearest heading before the changed block
-      for (let i = change.position.index - 1; i >= 0; i--) {
-        // We need to search in the OLD doc blocks for a heading that exists in target
-        // For now, just use a position slightly before the change
-        const safeIndex = Math.max(0, change.position.index - 2);
-        const adjustedTargetIndex = Math.min(safeIndex, targetBlocks.length - 1);
-        
-        if (adjustedTargetIndex >= 0 && adjustedTargetIndex < targetBlocks.length) {
-          const insertAfterBlock = targetBlocks[adjustedTargetIndex];
-          this.log(`Modified block: inserting after adjusted index ${adjustedTargetIndex}: ${insertAfterBlock.content.substring(0, 30)}`);
-          return insertAfterBlock;
-        }
-        break;
+    // Strategy 1: If the new block is under a heading, find that heading in the target
+    // and insert after the last block under that heading
+    if (change.position.underHeading && change.newBlock) {
+      const targetHeadingId = change.position.underHeading;
+      this.log(`Looking for heading with ID: ${targetHeadingId}`);
+      
+      // Find all blocks under this heading in the target document
+      const blocksUnderHeading = targetBlocks.filter(
+        b => b.parentHeading === targetHeadingId
+      );
+      
+      if (blocksUnderHeading.length > 0) {
+        const lastBlock = blocksUnderHeading[blocksUnderHeading.length - 1];
+        this.log(`Found ${blocksUnderHeading.length} blocks under heading "${targetHeadingId}", inserting after: ${lastBlock.content.substring(0, 50)}`);
+        return lastBlock;
       }
+      
+      // If no blocks under this heading, find the heading itself
+      const headingBlock = targetBlocks.find(
+        b => b.type === 'heading' && b.id === targetHeadingId
+      );
+      
+      if (headingBlock) {
+        this.log(`Found heading "${targetHeadingId}", inserting after it`);
+        return headingBlock;
+      }
+      
+      this.log(`Heading "${targetHeadingId}" not found in target, will try fallback strategies`);
     }
 
-    // Strategy 1: Use index-based positioning with ratio adjustment
-    // The source and target may have different block counts, so we need to scale
-    if (change.position.index !== undefined) {
-      // If documents have similar block counts, use direct position
-      // If target is shorter, scale the position proportionally
-      const targetIndex = Math.min(change.position.index, targetBlocks.length - 1);
+    // Strategy 2: For modified blocks or when heading not found, look for the previous 
+    // heading/section that exists in the target
+    // This handles the case where we're inserting a NEW section between existing sections
+    if (change.position.index !== undefined && change.position.index > 0) {
+      // The new block doesn't have a corresponding heading in target yet
+      // Find the last heading that exists in BOTH documents
+      // by looking backwards from the insertion point
+      this.log(`Heading not found in target, looking for previous anchor point from index ${change.position.index}`);
       
-      if (targetIndex >= 0 && targetIndex < targetBlocks.length) {
-        const insertAfterBlock = targetBlocks[targetIndex];
-        this.log(`Inserting after scaled index ${targetIndex}: ${insertAfterBlock.content.substring(0, 30)}`);
-        return insertAfterBlock;
-      }
-      
-      // Fallback to last block if index is beyond target length
+      // Simply append to the end of the document for now
+      // TODO: Implement proper "find previous matching heading" logic
       const lastBlock = targetBlocks[targetBlocks.length - 1];
-      this.log(`Index ${change.position.index} beyond target length ${targetBlocks.length}, using last block: ${lastBlock?.content.substring(0, 30)}`);
+      this.log(`Using end of document as insertion point: ${lastBlock.content.substring(0, 50)}`);
       return lastBlock;
-    }
-
-    // Strategy 2: Try to find the corresponding heading (if block is under a heading)
-    if (change.position.underHeading && change.newBlock.parentHeading) {
-      // Look for headings at the end of the document
-      const headings = targetBlocks.filter(b => b.type === 'heading');
-      if (headings.length > 0) {
-        const lastHeading = headings[headings.length - 1];
-        
-        // Find the last block under this heading
-        const blocksUnderHeading = targetBlocks.filter(
-          b => b.parentHeading === lastHeading.id
-        );
-        
-        if (blocksUnderHeading.length > 0) {
-          const lastBlock = blocksUnderHeading[blocksUnderHeading.length - 1];
-          this.log(`Inserting under last heading, after: ${lastBlock.content.substring(0, 30)}`);
-          return lastBlock;
-        }
-        
-        this.log(`Inserting after last heading itself: ${lastHeading.content.substring(0, 30)}`);
-        return lastHeading;
-      }
     }
 
     // Fallback: insert after the last block
