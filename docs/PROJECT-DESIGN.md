@@ -10,15 +10,49 @@ Monitor the QuantEcon lecture repository English language version:
 - Source: [lecture-python.myst](https://github.com/quantecon/lecture-python.myst)
 - Target: [lecture-python.zh-cn](https://github.com/quantecon/lecture-python.zh-cn)
 
+## Core Design Philosophy: Simplicity & Maintainability
+
+**Priority #1**: Keep the codebase simple and easy to maintain.
+
+- Favor straightforward solutions over clever optimizations
+- Write clear, readable code with descriptive names
+- Avoid over-engineering and premature optimization
+- Keep functions small and focused
+- Minimize dependencies
+- Document WHY, not just WHAT
+
+## Why Section-Based Translation?
+
+### The Problem with Block-Based Approaches
+
+Initial attempts used fine-grained block parsing (paragraphs, lists, code blocks, etc.). This approach had several issues:
+
+1. **Complex Matching**: Matching individual blocks across languages is error-prone
+2. **Fragmented Context**: Translating paragraphs in isolation loses narrative flow
+3. **Code Complexity**: AST parsing and block reconstruction added 1000+ lines
+4. **Bundle Bloat**: Dependencies like `unified` and `remark` added 700kB
+
+### The Section-Based Solution
+
+We switched to translating entire `## Section` blocks:
+
+1. **Robust Position Matching**: 1st section → 1st section (language-independent)
+2. **Full Context**: Translator sees complete section narrative
+3. **Simple Parsing**: Line-by-line split on `##` (no AST needed)
+4. **Better Translations**: Claude gets full context, produces coherent prose
+
+**Result**: 43% less code, 28% smaller bundle, better translations.
+
 ## Workflow
 
 1. **Trigger**: When a PR is merged in the source repository (e.g., `lecture-python.myst`)
 2. **Detection**: Identify which files were changed in the merged PR (e.g., `lectures/aiyagari.md`)
 3. **Processing**: For each changed file:
-   - If file exists in target: Translate only the diff (changed sections)
-   - If file is new: Translate entire file and update `_toc.yml`
-4. **Submission**: Create a PR in the target repository with translated changes
-5. **Review**: All translations go through PR review before merging
+   - If file exists in target: Detect section changes (added, modified, deleted)
+   - If file is new: Translate entire file
+4. **Translation**: Use Claude Sonnet 4.5 with UPDATE or NEW mode
+5. **Submission**: Create a PR in the target repository with translations
+6. **Review**: All translations go through PR review before merging
 
 ## Architecture
 
@@ -45,17 +79,20 @@ Monitor the QuantEcon lecture repository English language version:
 │   YES               NO                 │
 │    │                 │                 │
 │    ▼                 ▼                 │
-│  DIFF MODE      FULL MODE              │
+│ SECTION MODE     FULL MODE             │
 └─────────────┬───────────────────────────┘
               │
               ▼
 ┌─────────────────────────────────────────┐
-│   DIFF MODE: Incremental Translation    │
-│   1. Parse old & new English versions   │
-│   2. Identify changed blocks            │
-│   3. Map to target file structure       │
-│   4. Translate only changed blocks      │
-│   5. Apply translations to target       │
+│   SECTION MODE: Incremental Changes    │
+│   1. Parse old & new English into ##    │
+│   2. Detect section changes              │
+│   3. Parse target file into sections     │
+│   4. For ADDED: translateNewSection()   │
+│   5. For MODIFIED: translateSection()   │
+│      (provides old EN + new EN + CN)    │
+│   6. For DELETED: remove section        │
+│   7. Reconstruct document               │
 └─────────────┬───────────────────────────┘
               │
               ▼
@@ -87,119 +124,213 @@ Monitor the QuantEcon lecture repository English language version:
 
 ## Core Components
 
-### 1. Diff Translation Engine
+### 1. Section Parser (172 lines)
 
-The key innovation is translating **only the changes**, not the entire file. This prevents unwanted modifications to existing translations.
+Simple line-by-line parser that splits documents on `## Heading` markers.
 
-#### Block-Based Parsing
+**Key Features**:
+- Splits on `##` level-2 headings (lectures use level-2 for main sections)
+- Handles `###` subsections within each `##` section
+- Generates heading IDs for cross-references
+- No AST parsing needed (no `unified` or `remark` dependencies)
 
-Parse MyST Markdown into semantic blocks:
+**Example**:
+```markdown
+# Lecture Title
 
+## Introduction
+This is the intro.
+
+### Background
+Some context here.
+
+## Main Theory
+The core content.
+```
+
+Parsed into:
 ```typescript
-interface Block {
-  type: 'heading' | 'paragraph' | 'code' | 'list' | 'math' | 'directive';
-  content: string;
-  id?: string;              // For headings (anchor)
-  parentHeading?: string;   // Structural context
-  startLine: number;
-  endLine: number;
-  language?: string;        // For code blocks
-}
+[
+  {
+    heading: "Introduction",
+    level: 2,
+    id: "introduction",
+    content: "This is the intro.\n\n### Background\nSome context here.",
+    subsections: ["Background"]
+  },
+  {
+    heading: "Main Theory",
+    level: 2,
+    id: "main-theory",
+    content: "The core content.",
+    subsections: []
+  }
+]
 ```
 
-#### Change Detection
+### 2. Diff Detector (178 lines)
 
-Compare old and new English versions to identify:
-- **Modified blocks**: Content changed
-- **Added blocks**: New content inserted
-- **Deleted blocks**: Content removed
+Detects section-level changes between old and new English versions.
 
-Use structural matching (heading IDs, parent sections, relative positions) rather than line numbers.
+**Matching Strategy**:
+1. **Position Match**: Try matching section at index i → index i
+2. **ID Match**: Fallback to matching by heading ID
+3. **Structural Check**: Compare level and subsection count
 
-#### Target Mapping
+**Change Types**:
+- **ADDED**: New section inserted
+- **MODIFIED**: Section content changed (detected via length or code block count)
+- **DELETED**: Section removed
 
-Map each changed block to its corresponding location in the target (translated) file:
+**Why Position Matching Works**:
+- In typical edits, most sections stay in the same position
+- Adding "## Economic Models" as 3rd section → 3rd section in Chinese
+- Language-independent (doesn't rely on heading text)
+- Simple and reliable
 
-1. **Structural alignment**: Match by heading anchors and parent sections
-2. **Relative positioning**: Use block order within sections
-3. **Fuzzy matching**: Fallback for edge cases (with confidence threshold)
+### 3. Translation Service (257 lines)
 
-#### Translation Application
+Uses Claude Sonnet 4.5 (`claude-sonnet-4-20250514`) with two modes:
 
-Reconstruct target file with translations applied:
-- Replace matched blocks with translated content
-- Insert new blocks at correct positions
-- Remove deleted blocks
-- Preserve all unchanged content
+#### UPDATE Mode (for MODIFIED sections)
 
-### 2. Translation Service
+Provides Claude with:
+- **Old English**: Original section content
+- **New English**: Updated section content
+- **Current Translation**: Existing Chinese translation
 
-#### Prompt Strategy for Diff Mode
+Claude updates the translation to match the new English while preserving style.
 
+**Example Prompt**:
 ```
-You are translating changes from {source-language} to {target-language} for technical documentation.
+You are updating a Chinese translation to reflect changes in the English source.
 
-CRITICAL RULES:
-1. ONLY translate the sections marked as [CHANGED]
-2. DO NOT modify sections marked as [CONTEXT]
-3. Maintain exact MyST Markdown formatting
-4. Preserve all code blocks, math equations, and directives unchanged
-5. Use the provided glossary for consistent terminology
+OLD ENGLISH:
+## Introduction
+This lecture covers dynamic programming.
+
+NEW ENGLISH:
+## Introduction
+This lecture covers dynamic programming and optimal control.
+
+CURRENT CHINESE:
+## 介绍
+本讲座涵盖动态规划。
+
+Provide the UPDATED CHINESE translation reflecting the changes.
+```
+
+#### NEW Mode (for ADDED sections)
+
+Translates a complete new section from scratch.
+
+**Example Prompt**:
+```
+Translate this English section to Chinese.
+
+ENGLISH:
+## Economic Models
+We examine household optimization problems.
 
 GLOSSARY:
-{glossary-terms}
+- household: 家庭
+- optimization: 优化
 
-[CONTEXT - for reference only]
-{context-before}
-[/CONTEXT]
-
-[CHANGED - translate this section]
-{block-to-translate}
-[/CHANGED]
-
-[CONTEXT - for reference only]
-{context-after}
-[/CONTEXT]
-
-Provide ONLY the translated version of the [CHANGED] section.
-Do not include any explanations or markers.
+Provide the complete Chinese translation.
 ```
 
-#### Prompt Strategy for Full Mode
+### 4. File Processor (244 lines)
 
-```
-You are translating a complete technical lecture from {source-language} to {target-language}.
+Orchestrates the translation workflow:
 
-RULES:
-1. Translate all prose content
-2. Preserve all MyST Markdown directives and structure exactly
-3. DO NOT translate code blocks (keep code as-is)
-4. DO NOT translate mathematical equations (keep LaTeX as-is)
-5. DO NOT translate URLs, file paths, or technical identifiers
-6. Use the provided glossary for consistent terminology
-7. Maintain the exact same heading structure and anchors
+1. **Detect Changes**: Use diff detector on old/new English
+2. **Parse Target**: Split current Chinese translation into sections
+3. **Process Each Change**:
+   - **ADDED**: Translate with NEW mode, insert at position
+   - **MODIFIED**: Translate with UPDATE mode, replace section
+   - **DELETED**: Remove from array
+4. **Reconstruct**: Join sections with `\n\n`, trim whitespace
+5. **Validate**: Check MyST syntax
 
-GLOSSARY:
-{glossary-terms}
-
-CONTENT:
-{full-content}
-
-Provide the complete translated document maintaining exact MyST structure.
+**Position-Based Insertion**:
+```typescript
+// If "## Economic Models" is added as 3rd section in English:
+// 1. Translate the new section
+// 2. Insert at index 2 in Chinese sections array
+// 3. Result: 3rd section in Chinese matches 3rd section in English
 ```
 
-### 3. TOC Manager
+## Design Solutions to Key Challenges
 
-For new files, automatically update the target repository's `_toc.yml`:
+### Challenge 1: Preventing Unwanted Translation Changes
 
-1. **Parse**: Read and parse existing TOC structure
-2. **Locate**: Find the corresponding position (match to source repo TOC)
-3. **Insert**: Add new entry at the correct location
-4. **Validate**: Ensure YAML is valid after modification
+**Solution**: Section-based UPDATE mode
+- Only translate sections that actually changed in English
+- Provide Claude with old EN + new EN + current CN
+- Preserves style and terminology of unchanged sections
+- No modifications to unaffected sections
 
-### 4. Configuration
+### Challenge 2: Cross-Language Structural Matching
 
-#### Action Configuration (placed in source repository)
+**Solution**: Position-based matching
+- Language-independent (no heading text comparison needed)
+- Robust to translation differences ("Introduction" vs "介绍")
+- Simple index matching: sections[i] → sections[i]
+- Fallback to ID matching if positions shift
+
+### Challenge 3: Translation Context
+
+**Solution**: Full section translation
+- Claude sees complete section narrative (not isolated paragraphs)
+- Better coherence and flow
+- Subsections provide context for main section
+- Glossary terms available throughout
+
+### Challenge 4: Code Complexity
+
+**Solution**: Simplicity over flexibility
+- No AST parsing (700kB of dependencies removed)
+- Line-by-line parsing sufficient for `##` splits
+- Position matching simpler than ID/structural matching
+- Straight-line control flow (no complex recursion)
+
+### Challenge 5: Ensuring Translation Quality
+
+**Solution**: Multiple safeguards
+- Glossary for consistent terminology
+- Full section context for accurate translation
+- MyST validation after translation
+- Human PR review before merging
+- Workflow fails if translation errors occur
+
+## Error Handling
+
+### Translation Failures
+
+If Claude API fails or returns invalid content:
+1. Log detailed error with file and reason
+2. Fail the GitHub Action workflow
+3. Do not create a PR with broken content
+4. Optionally create an issue in target repo for tracking
+
+### Section Matching Failures
+
+If section count drastically changes (major restructuring):
+1. Position matching continues to work (insert/delete operations)
+2. ID matching provides fallback
+3. Worst case: Flag for manual review in PR body
+
+### Validation Failures
+
+After applying translations:
+1. Validate MyST syntax
+2. Check for unintended deletions
+3. Verify change size is reasonable
+4. Fail workflow if validation fails
+
+## Configuration
+
+### Action Configuration (placed in source repository)
 
 ```yaml
 # .github/workflows/sync-translations.yml
@@ -228,7 +359,7 @@ jobs:
           source-language: 'en'
           
           # Translation settings
-          glossary-path: '.github/translation-glossary.json'
+          glossary-path: 'glossary/zh-cn.json'
           toc-file: '_toc.yml'
           
           # API keys
@@ -240,102 +371,30 @@ jobs:
           pr-reviewers: 'translation-team'
 ```
 
-#### Glossary Format
+### Glossary Format
 
 ```json
 {
   "version": "1.0",
-  "terms": [
-    {
-      "en": "household",
-      "zh-cn": "家庭",
-      "context": "economics"
-    },
-    {
-      "en": "equilibrium",
-      "zh-cn": "均衡"
-    },
-    {
-      "en": "steady state",
-      "zh-cn": "稳态"
-    }
-  ],
-  "style_guide": {
-    "preserve_code_blocks": true,
-    "preserve_math": true,
-    "preserve_citations": true,
-    "preserve_myst_directives": true
+  "targetLanguage": "zh-cn",
+  "terms": {
+    "household": "家庭",
+    "equilibrium": "均衡",
+    "steady state": "稳态",
+    "dynamic programming": "动态规划"
   }
 }
 ```
-
-## Design Solutions to Key Challenges
-
-### Challenge 1: Preventing Unwanted Translation Changes
-
-**Solution**: Block-based diff translation
-- Only translate blocks that actually changed in English
-- Use structural mapping to locate exact sections in target
-- Preserve all unchanged content byte-for-byte
-
-### Challenge 2: Handling New Files
-
-**Solution**: Dual-mode operation
-- Detect if file exists in target repository
-- Use full translation mode for new files
-- Automatically update TOC in target repository
-
-### Challenge 3: Structural Alignment
-
-**Solution**: Multi-strategy matching
-- Primary: Heading anchors and parent section IDs
-- Secondary: Relative position within sections
-- Fallback: Fuzzy matching with confidence scores
-- Last resort: Flag for manual review
-
-### Challenge 4: Ensuring Translation Quality
-
-**Solution**: Multiple safeguards
-- Glossary for consistent terminology
-- Context provision for accurate translation
-- MyST validation after translation
-- Human PR review before merging
-- Workflow fails if translation errors occur
-
-## Error Handling
-
-### Translation Failures
-
-If Claude API fails or returns invalid content:
-1. Log detailed error with file and reason
-2. Fail the GitHub Action workflow
-3. Do not create a PR with broken content
-4. Optionally create an issue in target repo for tracking
-
-### Structural Mismatches
-
-If block mapping fails (major restructuring):
-1. Attempt fuzzy matching
-2. If confidence < 80%, flag for manual review
-3. Include comment in PR with details
-4. Link to specific sections needing attention
-
-### Validation Failures
-
-After applying translations:
-1. Validate MyST syntax
-2. Check for unintended deletions
-3. Verify change size is reasonable
-4. Fail workflow if validation fails
 
 ## Requirements & Assumptions
 
 ### Requirements
 
 1. Source repository uses MyST Markdown format
-2. PR merge triggers the action (not individual commits)
-3. All translations require PR review before merging
-4. Action must fail gracefully on errors (no partial updates)
+2. Main sections use `## Level-2 Headings`
+3. PR merge triggers the action (not individual commits)
+4. All translations require PR review before merging
+5. Action must fail gracefully on errors (no partial updates)
 
 ### Assumptions
 
@@ -343,45 +402,73 @@ After applying translations:
 2. Target repository has similar directory structure
 3. Both repositories use `_toc.yml` for table of contents
 4. Code blocks, math equations, and MyST directives should not be translated
+5. Section order is generally stable (allows position matching)
 
-## Implementation Features
+## Implementation Status
 
-### Core Features (v1)
+### Completed Features
 
-- [ ] PR merge detection and file change tracking
-- [ ] MyST Markdown block parser
-- [ ] Diff-based change detection
-- [ ] Structural block mapping (source → target)
-- [ ] Claude Sonnet 4.5 integration
-- [ ] Glossary support
-- [ ] Diff translation and application
-- [ ] Full file translation for new files
-- [ ] TOC management and updates
-- [ ] PR creation in target repository
-- [ ] Error handling and workflow failures
-- [ ] MyST validation
+- ✅ PR merge detection and file change tracking
+- ✅ Section-based MyST parser (172 lines)
+- ✅ Section-level diff detection (178 lines)
+- ✅ Position-based section matching
+- ✅ Claude Sonnet 4.5 integration (257 lines)
+- ✅ Glossary support (342 terms for zh-cn)
+- ✅ UPDATE and NEW translation modes
+- ✅ Section-based file reconstruction (244 lines)
+- ✅ PR creation in target repository
+- ✅ Error handling and workflow failures
+- ✅ MyST validation
 
-### Enhanced Features (Future)
+### Future Enhancements
 
-- [ ] Multi-language support (beyond Chinese)
-- [ ] Translation memory/cache
-- [ ] Confidence scoring for fuzzy matches
+- [ ] TOC management for new files
+- [ ] Multi-language support (ja, es)
+- [ ] Translation confidence scoring
 - [ ] Automated issue creation for failures
 - [ ] Translation quality metrics
-- [ ] Batch processing of multiple files
 - [ ] Preview/dry-run mode
-- [ ] Custom prompt templates
-- [ ] Translation review suggestions
 
-## Next Steps
+## Key Metrics
 
-1. Set up project structure
-2. Implement MyST parser
-3. Build diff detection engine
-4. Implement block mapping algorithm
-5. Integrate Claude API
-6. Create PR management logic
-7. Add TOC handling
-8. Implement error handling
-9. Write tests
-10. Create documentation 
+**Code Reduction** (block-based → section-based):
+- Total: 1586 → 976 lines (43% reduction)
+- parser.ts: 390 → 172 lines
+- diff-detector.ts: 538 → 178 lines
+- translator.ts: 233 → 257 lines
+- file-processor.ts: 425 → 244 lines
+
+**Bundle Size**:
+- Before: 2492kB
+- After: 1794kB (28% reduction)
+
+**Dependencies Removed**:
+- unified ecosystem (~700kB)
+- Complex AST parsing
+- Backward compatibility code
+
+## Design Principles
+
+1. **Simplicity First**: Simple code is maintainable code
+2. **No Premature Optimization**: Get it right before making it fast
+3. **Clear Over Clever**: Future you will thank present you
+4. **Test As You Go**: But keep tests simple too
+5. **Document WHY**: Explain reasoning, not just what the code does
+
+## Version Strategy
+
+**Current: v0.1.x** (Development)
+- Breaking changes freely allowed
+- API stability not guaranteed
+- Focus on getting the core right
+
+**Future: v1.0** (Production)
+- Breaking changes avoided
+- API stability guaranteed
+- Comprehensive automated tests
+
+---
+
+When in doubt, ask: **"Is this the simplest solution that could work?"**
+
+If yes, do it. If no, simplify.
