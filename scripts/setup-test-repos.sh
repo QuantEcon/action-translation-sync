@@ -1,5 +1,10 @@
 #!/bin/bash
-# Setup script for test translation sync repositories
+# Unified script to setup/reset test repositories for action-translation-sync
+# This script will:
+# 1. Delete existing test repos (if they exist)
+# 2. Create fresh English source repo with test content
+# 3. Create fresh Chinese target repo with Chinese translations
+# 4. Setup GitHub Actions workflow
 
 set -e  # Exit on error
 
@@ -13,19 +18,51 @@ if ! command -v gh &> /dev/null; then
     exit 1
 fi
 
-# Create temporary directory
+# Configuration
+ORG="quantecon"
+SOURCE_REPO="test-translation-sync"
+TARGET_REPO="test-translation-sync.zh-cn"
 TEMP_DIR=$(mktemp -d)
-echo "📁 Working in: $TEMP_DIR"
 
-#
-# SOURCE REPOSITORY
-#
+echo "📁 Working in: $TEMP_DIR"
 echo ""
-echo "1️⃣  Creating source repository: test-translation-sync"
+
+################################################################################
+# STEP 0: Check for existing repositories
+################################################################################
+
+echo "0️⃣  Checking for existing repositories..."
+echo ""
+
+if gh repo view ${ORG}/${SOURCE_REPO} &> /dev/null; then
+    echo "⚠️  Repository ${ORG}/${SOURCE_REPO} already exists"
+    echo "   Please delete it manually first:"
+    echo "   https://github.com/${ORG}/${SOURCE_REPO}/settings"
+    echo ""
+    exit 1
+fi
+
+if gh repo view ${ORG}/${TARGET_REPO} &> /dev/null; then
+    echo "⚠️  Repository ${ORG}/${TARGET_REPO} already exists"
+    echo "   Please delete it manually first:"
+    echo "   https://github.com/${ORG}/${TARGET_REPO}/settings"
+    echo ""
+    exit 1
+fi
+
+echo "✅ No existing repositories found - ready to create fresh repos"
+echo ""
+
+################################################################################
+# STEP 1: Create English (source) repository
+################################################################################
+
+echo "1️⃣  Creating source repository: ${SOURCE_REPO}"
+echo ""
 
 cd "$TEMP_DIR"
-mkdir test-translation-sync
-cd test-translation-sync
+mkdir ${SOURCE_REPO}
+cd ${SOURCE_REPO}
 
 # Initialize git
 git init
@@ -34,7 +71,7 @@ git branch -M main
 # Create directory structure
 mkdir -p lectures .github/workflows
 
-# Create intro.md
+# Create intro.md (English)
 cat > lectures/intro.md << 'EOF'
 ---
 jupytext:
@@ -132,7 +169,7 @@ This lecture covered:
 - Solow, Robert M. "A Contribution to the Theory of Economic Growth" (1956)
 EOF
 
-# Create advanced.md
+# Create advanced.md (English)
 cat > lectures/advanced.md << 'EOF'
 ---
 jupytext:
@@ -249,39 +286,35 @@ chapters:
   - file: advanced
 EOF
 
-# Create workflow
-cat > .github/workflows/sync-translations.yml << 'EOF'
-name: Sync Translations
+# Create translation sync workflow
+cat > .github/workflows/translation-sync.yml << 'EOF'
+name: Translation Sync
 
 on:
   pull_request:
     types: [closed]
-    paths:
-      - 'lectures/**/*.md'
+    branches:
+      - main
   workflow_dispatch:
-    inputs:
-      file-path:
-        description: 'Specific file to sync (optional, e.g., lectures/intro.md)'
-        required: false
-        default: ''
 
 jobs:
-  sync-to-chinese:
+  sync-translations:
     if: github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     
     steps:
-      - name: Sync to Chinese Repository
-        uses: quantecon/action-translation-sync@v0.1
+      - uses: actions/checkout@v4
         with:
-          target-repo: 'quantecon/test-translation-sync.zh-cn'
-          target-language: 'zh-cn'
-          docs-folder: 'lectures/'
-          source-language: 'en'
-          anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
-          github-token: ${{ secrets.QUANTECON_SERVICES_PAT }}
-          pr-labels: 'translation-sync,automated,test'
-          pr-reviewers: 'mmcky'
+          fetch-depth: 0
+          
+      - name: Sync to Chinese
+        uses: quantecon/action-translation-sync@main
+        with:
+          source-repo: quantecon/test-translation-sync
+          target-repo: quantecon/test-translation-sync.zh-cn
+          target-language: zh-cn
+          github-token: \${{ secrets.QUANTECON_ACTIONS_TOKEN }}
+          anthropic-api-key: \${{ secrets.ANTHROPIC_API_KEY }}
 EOF
 
 # Create README
@@ -316,19 +349,12 @@ Translations are synced to: [`quantecon/test-translation-sync.zh-cn`](https://gi
 4. Action runs automatically
 5. Check target repo for translation PR
 
-## Secrets Required
-
-Add these secrets in repository settings:
-
-- `ANTHROPIC_API_KEY` - Claude API key
-- `PAT_TRANSLATION_SYNC` - GitHub Personal Access Token with `repo` scope
-
 ## Testing
 
 See [action-translation-sync documentation](https://github.com/quantecon/action-translation-sync/blob/main/docs/TEST-REPOSITORIES.md) for testing guide.
 EOF
 
-# Commit and create repo
+# Commit
 git add .
 git commit -m "Initial test repository setup
 
@@ -337,31 +363,39 @@ Test repository for translation-sync action development.
 Content:
 - lectures/intro.md - Basic economics with math/code
 - lectures/advanced.md - Dynamic programming
+- lectures/_toc.yml - Table of contents
 - .github/workflows/ - Translation sync workflow
 
 This is a testing repository - not for production use."
 
+# Create GitHub repository
 echo "   Creating GitHub repository..."
-gh repo create quantecon/test-translation-sync --public --source=. --remote=origin --push
+gh repo create ${ORG}/${SOURCE_REPO} --public --source=. --remote=origin --push
 
 echo "   ✅ Source repository created"
-
-#
-# TARGET REPOSITORY  
-#
 echo ""
-echo "2️⃣  Creating target repository: test-translation-sync.zh-cn"
+
+# Continue in next part due to length...
+
+################################################################################
+# STEP 2: Create Chinese (target) repository
+################################################################################
+
+echo "2️⃣  Creating target repository: ${TARGET_REPO}"
+echo ""
 
 cd "$TEMP_DIR"
-mkdir test-translation-sync.zh-cn
-cd test-translation-sync.zh-cn
+mkdir ${TARGET_REPO}
+cd ${TARGET_REPO}
 
-# Initialize
+# Initialize git
 git init
 git branch -M main
-mkdir -p lectures
 
-# Create initial Chinese translations (for testing updates)
+# Create directory structure
+mkdir -p lectures .github/workflows
+
+# Create intro.md (Chinese)
 cat > lectures/intro.md << 'EOF'
 ---
 jupytext:
@@ -376,17 +410,17 @@ kernelspec:
 
 # 经济学导论
 
-这是用于翻译同步操作的测试讲座。
+这是一个用于测试翻译同步操作的讲座。
 
 ## 基本概念
 
-经济学是研究社会如何分配稀缺资源的学科。
+经济学是研究社会如何配置稀缺资源的学科。
 
 ### 关键术语
 
 - **稀缺性**：有限的资源
 - **机会成本**：次优选择的价值
-- **供需关系**：决定价格的市场力量
+- **供给与需求**：决定价格的市场力量
 
 ## 数学示例
 
@@ -398,7 +432,7 @@ $$
 
 其中：
 - $Y$ 是产出
-- $K$ 是资本  
+- $K$ 是资本
 - $L$ 是劳动力
 - $A$ 是全要素生产率
 
@@ -416,9 +450,9 @@ def calculate_gdp(capital, labor, productivity=1.0, alpha=0.3):
     labor : float
         劳动力
     productivity : float
-        全要素生产率（默认值：1.0）
+        全要素生产率（默认：1.0）
     alpha : float
-        资本份额（默认值：0.3）
+        资本份额（默认：0.3）
         
     返回：
     --------
@@ -426,7 +460,7 @@ def calculate_gdp(capital, labor, productivity=1.0, alpha=0.3):
     """
     return productivity * (capital ** alpha) * (labor ** (1 - alpha))
 
-# 示例用法
+# 使用示例
 gdp = calculate_gdp(capital=100, labor=50)
 print(f"GDP: {gdp:.2f}")
 ```
@@ -438,7 +472,7 @@ print(f"GDP: {gdp:.2f}")
 ```
 
 ```{warning}
-在经济模型中要小心假设！
+小心经济模型中的假设！
 ```
 
 ```{tip}
@@ -447,7 +481,7 @@ print(f"GDP: {gdp:.2f}")
 
 ## 总结
 
-本讲座涵盖了：
+本讲座涵盖：
 1. 基本经济概念
 2. 生产函数
 3. 计算方法
@@ -459,6 +493,7 @@ print(f"GDP: {gdp:.2f}")
 - Solow, Robert M. "A Contribution to the Theory of Economic Growth" (1956)
 EOF
 
+# Create advanced.md (Chinese)
 cat > lectures/advanced.md << 'EOF'
 ---
 jupytext:
@@ -473,18 +508,18 @@ jupytext:
 
 ## 动态规划
 
-价值迭代的贝尔曼方程：
+值迭代的贝尔曼方程：
 
 $$
 V(s) = \max_{a \in A(s)} \left\{ r(s,a) + \beta \sum_{s' \in S} P(s'|s,a) V(s') \right\}
 $$
 
 其中：
-- $V(s)$ 是价值函数
+- $V(s)$ 是值函数
 - $s$ 是当前状态
 - $a$ 是行动
 - $r(s,a)$ 是奖励函数
-- $\beta$ 是折扣因子
+- $\beta$ 是折现因子
 - $P(s'|s,a)$ 是转移概率
 
 ## 实现
@@ -494,25 +529,25 @@ import numpy as np
 
 def value_iteration(reward, transition, beta=0.95, tol=1e-6, max_iter=1000):
     """
-    使用价值迭代求解动态规划问题
+    使用值迭代求解动态规划问题
     
     参数：
     -----------
     reward : ndarray
-        奖励矩阵（n_states x n_actions）
+        奖励矩阵 (n_states x n_actions)
     transition : ndarray  
-        转移概率矩阵（n_states x n_actions x n_states）
+        转移概率矩阵 (n_states x n_actions x n_states)
     beta : float
-        折扣因子（默认值：0.95）
+        折现因子（默认：0.95）
     tol : float
-        收敛容差（默认值：1e-6）
+        收敛容忍度（默认：1e-6）
     max_iter : int
-        最大迭代次数（默认值：1000）
+        最大迭代次数（默认：1000）
         
     返回：
     --------
     V : ndarray
-        最优价值函数
+        最优值函数
     policy : ndarray
         最优策略
     """
@@ -546,27 +581,28 @@ def value_iteration(reward, transition, beta=0.95, tol=1e-6, max_iter=1000):
 动态规划是以下领域的基础：
 
 1. **最优增长模型** - 确定最优储蓄和消费
-2. **求职理论** - 寻找最优保留工资  
-3. **资产定价** - 金融工具估值
+2. **工作搜索理论** - 寻找最优保留工资
+3. **资产定价** - 评估金融工具价值
 4. **库存管理** - 优化库存水平
 
 ```{admonition} 关键见解
 :class: important
 
 动态规划将复杂的序列决策问题分解为更简单的子问题。
-这种"最优性原理"是动态规划如此强大的原因。
+这种"最优性原理"是使DP如此强大的原因。
 ```
 
 ## 计算考虑
 
 ```{note}
-价值迭代以 $\beta$ 的速率几何收敛。可以通过以下方法实现更快的收敛：
+值迭代以速率 $\beta$ 几何收敛。可以通过以下方法实现更快的收敛：
 - 策略迭代
-- 修正策略迭代
+- 修改策略迭代
 - 线性规划方法
 ```
 EOF
 
+# Create _toc.yml (same as English)
 cat > lectures/_toc.yml << 'EOF'
 format: jb-book
 root: intro
@@ -574,95 +610,149 @@ chapters:
   - file: advanced
 EOF
 
-# Create README
-cat > README.md << 'EOF'
-# Test Translation Sync (Chinese Target)
+# Create translation sync workflow (same as English)
+cat > .github/workflows/translation-sync.yml << 'EOF'
+name: Translation Sync
 
-**⚠️ Testing Repository - Not for Production Use**
+on:
+  pull_request:
+    types: [closed]
+    branches:
+      - main
+  workflow_dispatch:
 
-This repository receives automated Chinese translations from the source repository.
-
-## Purpose
-
-Target repository for testing Chinese translations generated by `quantecon/action-translation-sync`.
-
-## Structure
-
-- `lectures/` - Translated lecture content (auto-generated)
-
-## Source Repository
-
-Translations come from: [`quantecon/test-translation-sync`](https://github.com/quantecon/test-translation-sync)
-
-## Process
-
-1. PR merged in source repo → Translation action runs
-2. Action generates Chinese translations
-3. Action creates PR in this repo
-4. Review translation quality
-5. Merge or provide feedback
-
-## Manual Setup
-
-If translations need to be added manually:
-
-```bash
-# Add a translated file
-# (Normally done automatically by the action)
-```
-
-## Testing
-
-See [action-translation-sync documentation](https://github.com/quantecon/action-translation-sync/blob/main/docs/TEST-REPOSITORIES.md) for testing guide.
+jobs:
+  sync-translations:
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          
+      - name: Sync to Chinese
+        uses: quantecon/action-translation-sync@main
+        with:
+          source-repo: quantecon/test-translation-sync
+          target-repo: quantecon/test-translation-sync.zh-cn
+          target-language: zh-cn
+          github-token: \${{ secrets.QUANTECON_ACTIONS_TOKEN }}
+          anthropic-api-key: \${{ secrets.ANTHROPIC_API_KEY }}
 EOF
 
-# Commit and create repo
+# Create README
+cat > README.md << 'EOF'
+# 测试翻译同步（目标）
+
+**⚠️ 测试仓库 - 不用于生产环境**
+
+此仓库用于测试 `quantecon/action-translation-sync` GitHub 操作。
+
+## 目的
+
+翻译同步操作开发和验证的测试平台。
+
+## 结构
+
+- `lectures/` - MyST Markdown 格式的测试讲座内容
+  - `intro.md` - 基本概念与数学和代码
+  - `advanced.md` - 动态规划等高级主题
+  - `_toc.yml` - 目录
+- `.github/workflows/` - 翻译同步工作流
+
+## 源仓库
+
+翻译从以下仓库同步：[`quantecon/test-translation-sync`](https://github.com/quantecon/test-translation-sync)
+
+## 工作流程
+
+1. 源仓库发生更改
+2. 创建并合并拉取请求
+3. 操作自动运行
+4. 在此仓库中检查翻译PR
+
+## 测试
+
+有关测试指南，请参阅 [action-translation-sync 文档](https://github.com/quantecon/action-translation-sync/blob/main/docs/TEST-REPOSITORIES.md)。
+EOF
+
+# Commit
 git add .
-git commit -m "Initial target repository setup with Chinese translations
+git commit -m "Initial test repository setup (Chinese)
 
-Target repository for Chinese translations.
+Test repository for translation-sync action development.
 
-Includes initial Chinese translations of:
-- lectures/intro.md - Economics introduction
-- lectures/advanced.md - Advanced economic theory
-- lectures/_toc.yml - Table of contents
-
-This allows testing of diff-based translation updates.
+Content:
+- lectures/intro.md - 经济学导论（中文）
+- lectures/advanced.md - 高级经济理论（中文）
+- lectures/_toc.yml - 目录
+- .github/workflows/ - Translation sync workflow
 
 This is a testing repository - not for production use."
 
+# Create GitHub repository
 echo "   Creating GitHub repository..."
-gh repo create quantecon/test-translation-sync.zh-cn --public --source=. --remote=origin --push
+gh repo create ${ORG}/${TARGET_REPO} --public --source=. --remote=origin --push
 
 echo "   ✅ Target repository created"
-
-#
-# CLEANUP
-#
 echo ""
-echo "🧹 Cleaning up..."
+
+################################################################################
+# STEP 3: Verification and Cleanup
+################################################################################
+
+echo "3️⃣  Verification"
+echo ""
+
+echo "   Checking source repository..."
+SOURCE_FILES=$(gh api repos/${ORG}/${SOURCE_REPO}/contents/lectures --jq '.[].name' | wc -l)
+echo "   Source repo has ${SOURCE_FILES} files in lectures/"
+
+echo "   Checking target repository..."
+TARGET_FILES=$(gh api repos/${ORG}/${TARGET_REPO}/contents/lectures --jq '.[].name' | wc -l)
+echo "   Target repo has ${TARGET_FILES} files in lectures/"
+
+if [ "$SOURCE_FILES" -eq "$TARGET_FILES" ]; then
+    echo "   ✅ File counts match"
+else
+    echo "   ⚠️  File counts differ"
+fi
+
+echo ""
+echo "   Cleaning up temporary directory..."
 cd /
 rm -rf "$TEMP_DIR"
+echo "   ✅ Cleanup complete"
+echo ""
 
-#
-# SUMMARY
-#
+################################################################################
+# Done
+################################################################################
+
+echo "✅ Test repositories created successfully!"
 echo ""
-echo "✅ Setup complete!"
+echo "📊 Summary:"
+echo "   Source: https://github.com/${ORG}/${SOURCE_REPO}"
+echo "   Target: https://github.com/${ORG}/${TARGET_REPO}"
 echo ""
-echo "📦 Created repositories:"
-echo "   1. https://github.com/quantecon/test-translation-sync (source)"
-echo "      - English lecture content (intro.md, advanced.md)"
-echo "   2. https://github.com/quantecon/test-translation-sync.zh-cn (target)"
-echo "      - Initial Chinese translations ready for updates"
+echo "📝 Next steps:"
 echo ""
-echo "🔑 Next steps:"
-echo "   1. Add secrets to test-translation-sync:"
-echo "      - ANTHROPIC_API_KEY"
-echo "      - QUANTECON_SERVICES_PAT"
-echo "   2. Make a test change to a lecture file"
-echo "   3. Create and merge a PR"
-echo "   4. Watch the action create a translation PR in the target repo"
+echo "   1. Add secrets to source repository:"
+echo "      - QUANTECON_ACTIONS_TOKEN (GitHub PAT with repo access)"
+echo "      - ANTHROPIC_API_KEY (Claude API key)"
 echo ""
-echo "📖 See docs/TEST-REPOSITORIES.md for detailed testing guide"
+echo "   2. Test the workflow:"
+echo "      cd /path/to/${SOURCE_REPO}"
+echo "      # Make a change to lectures/intro.md"
+echo "      git add lectures/intro.md"
+echo "      git commit -m 'test: add new content'"
+echo "      git push"
+echo "      # Create and merge PR"
+echo "      gh pr create --title 'Test translation sync' --body 'Testing'"
+echo "      gh pr merge --merge"
 echo ""
+echo "   3. Check target repository for translation PR:"
+echo "      gh pr list --repo ${ORG}/${TARGET_REPO}"
+echo ""
+echo "🎯 Repositories are synchronized and ready for testing!"

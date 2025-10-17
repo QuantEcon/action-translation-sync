@@ -266,9 +266,9 @@ class DiffDetector {
         if (!change.position || !change.newBlock)
             return undefined;
         this.log(`Finding insertion point: underHeading=${change.position.underHeading}, index=${change.position.index}, targetBlocks=${targetBlocks.length}`);
-        // Strategy 1: If the new block is under a heading, find that heading in the target
+        // Strategy 1: If the new block has a parent heading, find that heading in the target
         // and insert after the last block under that heading
-        if (change.position.underHeading && change.newBlock) {
+        if (change.position.underHeading) {
             const targetHeadingId = change.position.underHeading;
             this.log(`Looking for heading with ID: ${targetHeadingId}`);
             // Find all blocks under this heading in the target document
@@ -278,31 +278,18 @@ class DiffDetector {
                 this.log(`Found ${blocksUnderHeading.length} blocks under heading "${targetHeadingId}", inserting after: ${lastBlock.content.substring(0, 50)}`);
                 return lastBlock;
             }
-            // If no blocks under this heading, find the heading itself
+            // If no blocks under this heading yet, find the heading itself
             const headingBlock = targetBlocks.find(b => b.type === 'heading' && b.id === targetHeadingId);
             if (headingBlock) {
-                this.log(`Found heading "${targetHeadingId}", inserting after it`);
+                this.log(`Found heading "${targetHeadingId}" with no content yet, inserting after heading`);
                 return headingBlock;
             }
-            this.log(`Heading "${targetHeadingId}" not found in target, will try fallback strategies`);
+            this.log(`Heading "${targetHeadingId}" not found in target`);
         }
-        // Strategy 2: For modified blocks or when heading not found, look for the previous 
-        // heading/section that exists in the target
-        // This handles the case where we're inserting a NEW section between existing sections
-        if (change.position.index !== undefined && change.position.index > 0) {
-            // The new block doesn't have a corresponding heading in target yet
-            // Find the last heading that exists in BOTH documents
-            // by looking backwards from the insertion point
-            this.log(`Heading not found in target, looking for previous anchor point from index ${change.position.index}`);
-            // Simply append to the end of the document for now
-            // TODO: Implement proper "find previous matching heading" logic
-            const lastBlock = targetBlocks[targetBlocks.length - 1];
-            this.log(`Using end of document as insertion point: ${lastBlock.content.substring(0, 50)}`);
-            return lastBlock;
-        }
-        // Fallback: insert after the last block
+        // Strategy 2: No parent heading or heading not found - append to end of document
+        // This happens when adding a completely new section
         const lastBlock = targetBlocks[targetBlocks.length - 1];
-        this.log(`Fallback: inserting after last block: ${lastBlock?.content.substring(0, 30)}`);
+        this.log(`No parent heading match, appending to end of document`);
         return lastBlock;
     }
     /**

@@ -60,6 +60,8 @@ export class MystParser {
           const headingText = toString(heading);
           const headingId = this.generateHeadingId(headingText);
           
+          // For headings, parentHeading should be undefined for top-level (# and ##)
+          // Only ### and deeper should have a parent heading
           block = {
             type: 'heading',
             content: nodeContent,
@@ -67,10 +69,11 @@ export class MystParser {
             level: heading.depth,
             startLine,
             endLine,
-            parentHeading: heading.depth > 1 ? currentHeading : undefined,
+            parentHeading: heading.depth > 2 ? currentHeading : undefined,
           };
           
-          // Update current heading context
+          // Update current heading context for non-heading blocks that follow
+          // Level 1 and 2 headings set the context
           if (heading.depth === 1 || heading.depth === 2) {
             currentHeading = headingId;
           }
