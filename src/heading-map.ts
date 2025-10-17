@@ -62,7 +62,8 @@ export function updateHeadingMap(
   // Process all sections and subsections recursively
   const processSections = (
     sourceSecs: Section[],
-    targetSecs: Section[]
+    targetSecs: Section[],
+    level: number = 0
   ) => {
     sourceSecs.forEach((sourceSection, i) => {
       const sourceHeading = cleanHeading(sourceSection.heading);
@@ -77,10 +78,17 @@ export function updateHeadingMap(
         // Always update to ensure latest translation is captured
         updated.set(sourceHeading, targetHeading);
         
+        // Debug logging
+        const indent = '  '.repeat(level);
+        console.log(`${indent}[HeadingMap] Added: "${sourceHeading}" → "${targetHeading}"`);
+        console.log(`${indent}  Source subsections: ${sourceSection.subsections.length}, Target subsections: ${targetSection.subsections.length}`);
+        
         // Process subsections recursively
         if (sourceSection.subsections.length > 0 && targetSection.subsections.length > 0) {
-          processSections(sourceSection.subsections, targetSection.subsections);
+          console.log(`${indent}  ✓ Processing ${sourceSection.subsections.length} subsections recursively`);
+          processSections(sourceSection.subsections, targetSection.subsections, level + 1);
         } else if (sourceSection.subsections.length > 0) {
+          console.log(`${indent}  ⚠ Source has subsections but target doesn't`);
           // Source has subsections but target doesn't - add subsection headings to tracking
           // (they'll be removed later if truly missing)
           addSourceSubsections(sourceSection.subsections);

@@ -265,6 +265,14 @@ export class FileProcessor {
     }
 
     // 6. Update heading map with new/changed sections
+    
+    // Debug: Count subsections in result
+    let totalSubsections = 0;
+    for (const section of resultSections) {
+      totalSubsections += section.subsections?.length || 0;
+    }
+    this.log(`Debug: resultSections has ${resultSections.length} sections with ${totalSubsections} total subsections`);
+    
     const updatedHeadingMap = updateHeadingMap(
       headingMap,
       newSourceSections.sections,

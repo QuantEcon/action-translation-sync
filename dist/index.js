@@ -367,6 +367,8 @@ class FileProcessor {
                 // Extract heading from translated content
                 const translatedLines = (result.translatedSection || '').split('\n');
                 const translatedHeading = translatedLines[0] || '';
+                // Parse subsections from translated content
+                const subsections = await this.parseTranslatedSubsections(result.translatedSection || '', newSection);
                 const translatedSection = {
                     heading: translatedHeading,
                     level: newSection.level,
@@ -374,7 +376,7 @@ class FileProcessor {
                     content: result.translatedSection || '',
                     startLine: 0,
                     endLine: 0,
-                    subsections: [],
+                    subsections: subsections,
                 };
                 resultSections.push(translatedSection);
                 this.log(`Added new section at position ${i}`);
@@ -400,6 +402,8 @@ class FileProcessor {
                     }
                     const translatedLines = (result.translatedSection || '').split('\n');
                     const translatedHeading = translatedLines[0] || '';
+                    // Parse subsections from translated content
+                    const subsections = await this.parseTranslatedSubsections(result.translatedSection || '', newSection);
                     resultSections.push({
                         heading: translatedHeading,
                         level: newSection.level,
@@ -407,7 +411,7 @@ class FileProcessor {
                         content: result.translatedSection || '',
                         startLine: 0,
                         endLine: 0,
-                        subsections: [],
+                        subsections: subsections,
                     });
                     continue;
                 }
@@ -427,15 +431,24 @@ class FileProcessor {
                 if (!result.success) {
                     throw new Error(`Translation failed for modified section: ${result.error}`);
                 }
+                // Parse subsections from translated content
+                const subsections = await this.parseTranslatedSubsections(result.translatedSection || '', newSection);
                 // Use updated content
                 resultSections.push({
                     ...targetSection,
                     content: result.translatedSection || targetSection.content,
+                    subsections: subsections,
                 });
                 this.log(`Updated section at position ${i}`);
             }
         }
         // 6. Update heading map with new/changed sections
+        // Debug: Count subsections in result
+        let totalSubsections = 0;
+        for (const section of resultSections) {
+            totalSubsections += section.subsections?.length || 0;
+        }
+        this.log(`Debug: resultSections has ${resultSections.length} sections with ${totalSubsections} total subsections`);
         const updatedHeadingMap = (0, heading_map_1.updateHeadingMap)(headingMap, newSourceSections.sections, resultSections);
         this.log(`Updated heading map to ${updatedHeadingMap.size} entries`);
         // 7. Reconstruct document from sections
@@ -461,29 +474,67 @@ class FileProcessor {
         return result.translatedSection || '';
     }
     /**
+     * Parse translated content to extract subsections
+     * This ensures subsections are properly populated in the heading-map
+     */
+    async parseTranslatedSubsections(translatedContent, sourceSection) {
+        try {
+            // Wrap in minimal MyST document for parsing
+            const wrappedContent = `---
+jupytext:
+  text_representation:
+    extension: .md
+    format_name: myst
+---
+
+${translatedContent}`;
+            const parsed = await this.parser.parseSections(wrappedContent, 'temp.md');
+            // Extract subsections from the first section
+            if (parsed.sections.length > 0 && parsed.sections[0].subsections.length > 0) {
+                this.log(`Extracted ${parsed.sections[0].subsections.length} subsections from translated content`);
+                return parsed.sections[0].subsections;
+            }
+        }
+        catch (error) {
+            this.log(`Warning: Failed to parse subsections from translated content: ${error}`);
+        }
+        return [];
+    }
+    /**
      * Find target section using heading map (preferred) or ID fallback
      * Returns the actual section object or undefined if not found
      */
     findTargetSectionByHeadingMap(sourceSection, targetSections, headingMap) {
+        this.log(`Finding target for source section: "${sourceSection.heading}" (id: ${sourceSection.id})`);
         // Strategy 1: Use heading map to find translated heading
         const translatedHeading = (0, heading_map_1.lookupTargetHeading)(sourceSection.heading, headingMap);
         if (translatedHeading) {
-            this.log(`Looking for translated heading: "${translatedHeading}"`);
+            this.log(`  Strategy 1: Looking for translated heading: "${translatedHeading}"`);
             // Search for the translated heading in target sections
             for (const targetSection of targetSections) {
                 const cleanTargetHeading = targetSection.heading.replace(/^#+\s+/, '').trim();
                 if (cleanTargetHeading === translatedHeading) {
-                    this.log(`Found by heading map: "${translatedHeading}"`);
+                    this.log(`  ✓ Found by heading map: "${translatedHeading}"`);
                     return targetSection;
                 }
             }
+            this.log(`  ✗ Not found by heading map`);
+        }
+        else {
+            this.log(`  Strategy 1: No heading map entry for "${sourceSection.heading.replace(/^#+\s+/, '').trim()}"`);
         }
         // Strategy 2: Fall back to ID-based matching
+        this.log(`  Strategy 2: Looking for ID: "${sourceSection.id}"`);
         for (const targetSection of targetSections) {
             if (targetSection.id === sourceSection.id) {
-                this.log(`Found by ID: ${sourceSection.id}`);
+                this.log(`  ✓ Found by ID: ${sourceSection.id}`);
                 return targetSection;
             }
+        }
+        this.log(`  ✗ Not found by ID`);
+        // Log target section IDs for debugging
+        if (targetSections.length <= 10) {
+            this.log(`  Available target IDs: ${targetSections.map(s => s.id).join(', ')}`);
         }
         return undefined;
     }
@@ -683,7 +734,7 @@ function updateHeadingMap(existingMap, sourceSections, targetSections) {
     // Build set of current source headings (for cleanup)
     const currentSourceHeadings = new Set();
     // Process all sections and subsections recursively
-    const processSections = (sourceSecs, targetSecs) => {
+    const processSections = (sourceSecs, targetSecs, level = 0) => {
         sourceSecs.forEach((sourceSection, i) => {
             const sourceHeading = cleanHeading(sourceSection.heading);
             currentSourceHeadings.add(sourceHeading);
@@ -694,11 +745,17 @@ function updateHeadingMap(existingMap, sourceSections, targetSections) {
                 const targetHeading = cleanHeading(targetSection.heading);
                 // Always update to ensure latest translation is captured
                 updated.set(sourceHeading, targetHeading);
+                // Debug logging
+                const indent = '  '.repeat(level);
+                console.log(`${indent}[HeadingMap] Added: "${sourceHeading}" → "${targetHeading}"`);
+                console.log(`${indent}  Source subsections: ${sourceSection.subsections.length}, Target subsections: ${targetSection.subsections.length}`);
                 // Process subsections recursively
                 if (sourceSection.subsections.length > 0 && targetSection.subsections.length > 0) {
-                    processSections(sourceSection.subsections, targetSection.subsections);
+                    console.log(`${indent}  ✓ Processing ${sourceSection.subsections.length} subsections recursively`);
+                    processSections(sourceSection.subsections, targetSection.subsections, level + 1);
                 }
                 else if (sourceSection.subsections.length > 0) {
+                    console.log(`${indent}  ⚠ Source has subsections but target doesn't`);
                     // Source has subsections but target doesn't - add subsection headings to tracking
                     // (they'll be removed later if truly missing)
                     addSourceSubsections(sourceSection.subsections);
