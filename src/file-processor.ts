@@ -110,12 +110,17 @@ export class FileProcessor {
         // Translate new section
         this.log(`Processing ADDED section: ${change.newSection?.heading}`);
         
+        // Serialize section with all subsections
+        const fullSectionContent = change.newSection 
+          ? this.serializeSection(change.newSection)
+          : '';
+        
         const result = await this.translator.translateSection({
           mode: 'new',
           sourceLanguage,
           targetLanguage,
           glossary,
-          englishSection: change.newSection?.content,
+          englishSection: fullSectionContent,
         });
 
         if (!result.success) {
@@ -161,14 +166,23 @@ export class FileProcessor {
 
         const targetSection = updatedSections[targetSectionIndex];
 
+        // Serialize sections with all subsections
+        const oldFullContent = change.oldSection 
+          ? this.serializeSection(change.oldSection)
+          : '';
+        const newFullContent = change.newSection 
+          ? this.serializeSection(change.newSection)
+          : '';
+        const currentFullContent = this.serializeSection(targetSection);
+
         const result = await this.translator.translateSection({
           mode: 'update',
           sourceLanguage,
           targetLanguage,
           glossary,
-          oldEnglish: change.oldSection?.content,
-          newEnglish: change.newSection?.content,
-          currentTranslation: targetSection.content,
+          oldEnglish: oldFullContent,
+          newEnglish: newFullContent,
+          currentTranslation: currentFullContent,
         });
 
         if (!result.success) {
@@ -314,7 +328,26 @@ export class FileProcessor {
   }
 
   /**
-   * Reconstruct markdown document from sections
+   * Serialize a section with all its subsections into markdown text
+   * This ensures subsections are included when translating
+   */
+  private serializeSection(section: Section): string {
+    const parts: string[] = [];
+    
+    // Add section content (heading and direct content)
+    parts.push(section.content);
+    
+    // Add subsections if present
+    for (const subsection of section.subsections) {
+      parts.push(''); // Empty line before subsection
+      parts.push(subsection.content);
+    }
+    
+    return parts.join('\n');
+  }
+
+  /**
+   * Reconstruct full markdown document from sections
    */
   private reconstructFromSections(
     sections: Section[],

@@ -46,7 +46,12 @@ export declare class FileProcessor {
      */
     private findMatchingSectionIndex;
     /**
-     * Reconstruct markdown document from sections
+     * Serialize a section with all its subsections into markdown text
+     * This ensures subsections are included when translating
+     */
+    private serializeSection;
+    /**
+     * Reconstruct full markdown document from sections
      */
     private reconstructFromSections;
     /**
