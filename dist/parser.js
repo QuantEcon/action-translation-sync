@@ -53,6 +53,11 @@ class MystParser {
             if (h2Match) {
                 // Save previous section if exists
                 if (currentSection) {
+                    // Save current subsection to section before pushing
+                    if (currentSubsection) {
+                        currentSubsection.endLine = lineNum - 1;
+                        currentSection.subsections.push(currentSubsection);
+                    }
                     currentSection.endLine = lineNum - 1;
                     sections.push(currentSection);
                 }
