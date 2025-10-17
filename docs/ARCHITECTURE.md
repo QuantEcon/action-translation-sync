@@ -1,340 +1,132 @@
-# Architecture Diagram
+# Architecture
 
-## System Architecture
+## Overview
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                     GitHub Action Workflow                      │
-│                                                                 │
-│  Trigger: PR Merged in Source Repository                       │
-└─────────────────────┬───────────────────────────────────────────┘
-                      │
-                      ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                        index.ts                                 │
-│                     Main Entry Point                            │
-│                                                                 │
-│  • Validate PR event                                            │
-│  • Get changed files from GitHub API                            │
-│  • Load glossary                                                │
-│  • Process each file                                            │
-└─────────────────────┬───────────────────────────────────────────┘
-                      │
-                      ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                   file-processor.ts                             │
-│                  File Orchestration                             │
-│                                                                 │
-│  ┌──────────────────────────────────────────────────────────┐  │
-│  │  Decide: Diff Mode or Full Mode?                         │  │
-│  └──────────┬────────────────────────────┬──────────────────┘  │
-│             │                            │                      │
-│        Diff Mode                    Full Mode                   │
-│             │                            │                      │
-└─────────────┼────────────────────────────┼──────────────────────┘
-              │                            │
-              ▼                            ▼
-   ┌──────────────────────┐    ┌──────────────────────┐
-   │  diff-detector.ts    │    │   translator.ts      │
-   │  Change Detection    │    │   Full Translation   │
-   │                      │    │                      │
-   │  1. Parse old/new    │    │  1. Translate entire │
-   │  2. Find changes     │    │     document         │
-   │  3. Map to target    │    │  2. Validate MyST    │
-   └──────────┬───────────┘    └──────────┬───────────┘
-              │                            │
-              ▼                            │
-   ┌──────────────────────┐               │
-   │   translator.ts      │               │
-   │   Diff Translation   │               │
-   │                      │               │
-   │  1. Translate blocks │               │
-   │  2. Apply to target  │               │
-   └──────────┬───────────┘               │
-              │                            │
-              └────────────┬───────────────┘
-                          │
-                          ▼
-              ┌──────────────────────┐
-              │  Translated Content  │
-              │  (validated MyST)    │
-              └──────────┬───────────┘
-                          │
-                          ▼
-              ┌──────────────────────┐
-              │   TODO: Create PR    │
-              │   in Target Repo     │
-              └──────────────────────┘
-```
+This action uses a **section-based approach** to translate MyST Markdown documents.
 
-## Component Details
+**Core Principle**: Documents are structured into sections (## headings). Translations operate at the section level, not on individual blocks.
 
-### Parser (parser.ts)
+## Why Section-Based?
+
+### Problems with Block-Based Approach
+- **Language mismatch**: Can't match paragraphs across English/Chinese
+- **Lost context**: Translating isolated blocks loses meaning
+- **Complex logic**: Block matching and insertion was error-prone
+- **Fragile**: Broke when structure differed
+
+### Section-Based Solutions
+- **Position matching**: 1st section → 1st section (language-independent)
+- **Full context**: Claude sees entire sections
+- **Simple logic**: Add, update, or delete sections
+- **Robust**: Works with structural differences
+
+## Architecture Flow
 
 ```
-Input: Markdown String
-         │
-         ▼
-    ┌────────┐
-    │unified │ ← remark-parse
-    │pipeline│ ← remark-directive
-    │        │ ← remark-math
-    │        │ ← remark-gfm
-    └────┬───┘
-         │
-         ▼
-    AST (Abstract Syntax Tree)
-         │
-         ▼
-    visit() each node
-         │
-         ▼
-    Extract blocks with:
-    • Type (heading/paragraph/code/etc)
-    • Content
-    • Line numbers
-    • Parent heading
-    • ID (for headings)
-         │
-         ▼
-    Output: ParsedDocument
-    {
-      blocks: Block[],
-      metadata: {
-        filepath,
-        totalLines,
-        hasCode,
-        hasMath,
-        hasDirectives
-      }
-    }
+PR Merged (English)
+       ↓
+index.ts: Detect changed files
+       ↓
+file-processor.ts: Orchestrate
+       ↓
+   ┌──────────────┬──────────────┐
+   │              │              │
+Existing File  New File      
+       ↓              ↓
+diff-detector  translator
+   ↓              (full doc)
+detectSectionChanges
+   ↓
+translator.ts
+   ├─ UPDATE: old EN + new EN + current CN → updated CN
+   └─ NEW: EN section → CN section
+       ↓
+Reconstruct document
+       ↓
+Create PR (Chinese)
 ```
 
-### Diff Detector (diff-detector.ts)
+## Components
 
-```
-Inputs: oldContent, newContent
-            │
-            ▼
-    Parse both documents
-            │
-            ▼
-    Build block maps
-            │
-            ▼
-    For each new block:
-    ┌───────────────────┐
-    │ Find in old doc?  │
-    └─────┬─────────────┘
-          │
-    ┌─────┴─────┐
-    │           │
-   YES         NO
-    │           │
-    ▼           ▼
- Compare    Mark as ADDED
- content    
-    │
-┌───┴───┐
-│       │
-Same  Different
-│       │
-Skip  Mark as MODIFIED
-│
-▼
-For remaining old blocks:
-Mark as DELETED
-│
-▼
-Output: ChangeBlock[]
+### 1. Parser (parser.ts)
+- Line-by-line section parser
+- Splits on ## headings
+- Preserves exact content
+- **172 lines** (was 390)
+
+### 2. Diff Detector (diff-detector.ts)
+- Position-based matching
+- Detects: added, modified, deleted sections
+- **178 lines** (was 538)
+
+### 3. Translator (translator.ts)
+- Two modes: UPDATE and NEW
+- Uses Claude Sonnet 4.5
+- **257 lines** (was 233)
+
+### 4. File Processor (file-processor.ts)
+- Orchestrates translation
+- Simple section operations
+- **244 lines** (was 425)
+
+## Data Structures
+
+### Section
+```typescript
 {
-  type: 'added' | 'modified' | 'deleted',
-  oldBlock?,
-  newBlock?,
-  anchor,
-  position
+  heading: "## Economic Models",
+  level: 2,
+  id: "economic-models",
+  content: "## Economic Models\n\n...",
+  startLine: 45,
+  endLine: 78,
+  subsections: [...]
 }
 ```
 
-### Matching Strategies
-
-```
-Block Matching (findCorrespondingBlock):
-
-Strategy 1: Exact ID Match
-├─ If block has ID (heading)
-└─ Find block with same ID
-
-Strategy 2: Structural Match
-├─ Match by parent heading
-└─ Match by block type
-
-Strategy 3: Position Match
-├─ Use approximate index
-└─ Check if types match
-
-Strategy 4: Fuzzy Match
-├─ Calculate Jaccard similarity
-├─ Compare word sets
-└─ Return if confidence > 0.7
+### SectionChange
+```typescript
+{
+  type: 'added' | 'modified' | 'deleted',
+  oldSection?: Section,
+  newSection?: Section,
+  position?: { index, afterSectionId }
+}
 ```
 
-### Translation Flow
+## Example Flow
 
-```
-Diff Mode:
-┌────────────────────┐
-│  Changed Blocks    │
-└─────────┬──────────┘
-          │
-          ▼
-For each changed block:
-┌────────────────────┐
-│  Get context       │
-│  • Before blocks   │
-│  • After blocks    │
-└─────────┬──────────┘
-          │
-          ▼
-┌────────────────────┐
-│  Build prompt:     │
-│  [CONTEXT]         │
-│  [CHANGED]         │
-│  [CONTEXT]         │
-│  + Glossary        │
-└─────────┬──────────┘
-          │
-          ▼
-┌────────────────────┐
-│  Call Claude API   │
-│  (Sonnet 4.5)      │
-└─────────┬──────────┘
-          │
-          ▼
-┌────────────────────┐
-│  Translated text   │
-└─────────┬──────────┘
-          │
-          ▼
-Apply to target document
+**Scenario**: Add "## Economic Models" to English lecture
 
-Full Mode:
-┌────────────────────┐
-│  Entire document   │
-└─────────┬──────────┘
-          │
-          ▼
-┌────────────────────┐
-│  Build prompt:     │
-│  + Full content    │
-│  + Glossary        │
-│  + Rules           │
-└─────────┬──────────┘
-          │
-          ▼
-┌────────────────────┐
-│  Call Claude API   │
-└─────────┬──────────┘
-          │
-          ▼
-┌────────────────────┐
-│  Translated doc    │
-└────────────────────┘
-```
+1. **Diff Detection**
+   - Parse old: 5 sections
+   - Parse new: 6 sections
+   - Detect: ADDED at position 2
 
-## Data Flow Example
+2. **Translation** (NEW mode)
+   - Input: English section
+   - Output: "## 经济模型\n\n..."
 
-```
-Source PR: Modify lectures/aiyagari.md
-│
-├─ Old content: "The Aiyagari model studies..."
-├─ New content: "The Aiyagari model is a canonical..."
-│
-▼
-Parser processes both versions
-│
-├─ Old blocks: [heading, paragraph_old, code]
-├─ New blocks: [heading, paragraph_new, code]
-│
-▼
-Diff Detector compares
-│
-├─ Changes: [{ type: 'modified', oldBlock: paragraph_old, newBlock: paragraph_new }]
-│
-▼
-Map to target (Chinese version)
-│
-├─ Find: paragraph in Chinese doc with same parent heading
-│
-▼
-Translator translates new paragraph
-│
-├─ Input: "The Aiyagari model is a canonical..."
-├─ Context: heading + code blocks
-├─ Glossary: "model" → "模型"
-├─ Output: "Aiyagari模型是一个典型的..."
-│
-▼
-File Processor applies translation
-│
-├─ Replace old Chinese paragraph with new translation
-├─ Keep heading and code unchanged
-│
-▼
-Output: Updated Chinese document
-│
-▼
-TODO: Create PR in target repo
-```
+3. **Reconstruction**
+   - Parse Chinese: 5 sections
+   - Insert at position 2
+   - Reconstruct: 6 sections
 
-## Technology Stack
+4. **PR Creation**
+   - Validate MyST
+   - Create branch
+   - Commit + open PR
 
-```
-┌─────────────────────────────────────┐
-│         Runtime: Node.js 20         │
-└─────────────────────────────────────┘
-              │
-    ┌─────────┴──────────┐
-    │                    │
-    ▼                    ▼
-┌────────┐        ┌──────────────┐
-│TypeScript│      │GitHub Actions│
-│  5.3     │      │   Toolkit    │
-└────────┘        └──────────────┘
-    │                    │
-    ▼                    ▼
-┌─────────────────────────────────────┐
-│           Dependencies              │
-│                                     │
-│  • unified (markdown pipeline)      │
-│  • remark-* (parsers/plugins)       │
-│  • @anthropic-ai/sdk (Claude)       │
-│  • @actions/core (GitHub)           │
-│  • @actions/github (API)            │
-│  • js-yaml (TOC parsing)            │
-└─────────────────────────────────────┘
-```
+## Key Benefits
 
-## Current State vs Target State
+- **43% less code** (976 vs 1586 lines)
+- **28% smaller bundle** (1794kB vs 2492kB)
+- **Simpler logic** - easy to understand
+- **Better translations** - full context
+- **More reliable** - position matching works
 
-### ✅ Implemented (Steps 1-3)
+## Related Docs
 
-```
-┌───────────┐    ┌──────────┐    ┌───────────┐
-│  Parser   │ → │   Diff   │ → │Translator │
-│  (MyST)   │    │ Detector │    │ (Claude)  │
-└───────────┘    └──────────┘    └───────────┘
-```
-
-### 🚧 TODO (Steps 4-6)
-
-```
-┌───────────┐    ┌──────────┐    ┌───────────┐
-│   Clone   │ → │  Create  │ → │  Create   │
-│   Target  │    │  Branch  │    │    PR     │
-└───────────┘    └──────────┘    └───────────┘
-```
-
----
-
-See IMPLEMENTATION.md for complete details.
+- [IMPLEMENTATION.md](IMPLEMENTATION.md) - Code details
+- [PROJECT-DESIGN.md](PROJECT-DESIGN.md) - Design decisions
+- [QUICKSTART.md](QUICKSTART.md) - Developer guide
