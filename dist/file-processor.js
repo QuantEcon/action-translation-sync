@@ -172,19 +172,16 @@ class FileProcessor {
     }
     /**
      * Find matching section index in target document
-     * Use position-based matching for translations
+     * Match by section ID (heading ID like "economic-models", "introduction", etc.)
      */
     findMatchingSectionIndex(targetSections, sourceSection) {
         if (!sourceSection) {
             return -1;
         }
-        // Try to find by position (most reliable for translations)
-        // The section structure should be similar between source and target
+        // Match by ID - this works across languages because IDs are based on
+        // the English heading structure (e.g., "introduction" in both repos)
         for (let i = 0; i < targetSections.length; i++) {
-            const targetSection = targetSections[i];
-            // Match by level and relative position
-            if (targetSection.level === sourceSection.level &&
-                Math.abs(targetSection.subsections.length - sourceSection.subsections.length) <= 1) {
+            if (targetSections[i].id === sourceSection.id) {
                 return i;
             }
         }

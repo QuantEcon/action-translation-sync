@@ -31,7 +31,7 @@ export declare class FileProcessor {
     processFull(content: string, filepath: string, sourceLanguage: string, targetLanguage: string, glossary?: Glossary): Promise<string>;
     /**
      * Find matching section index in target document
-     * Use position-based matching for translations
+     * Match by section ID (heading ID like "economic-models", "introduction", etc.)
      */
     private findMatchingSectionIndex;
     /**
