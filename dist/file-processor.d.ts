@@ -30,8 +30,19 @@ export declare class FileProcessor {
      */
     processFull(content: string, filepath: string, sourceLanguage: string, targetLanguage: string, glossary?: Glossary): Promise<string>;
     /**
+     * Find target section index using heading map (preferred) or position fallback
+     *
+     * Strategy:
+     * 1. Look up translated heading in heading map
+     * 2. Search for that heading in target sections
+     * 3. If not found, fall back to position-based matching
+     */
+    private findTargetSectionIndex;
+    /**
      * Find matching section index in target document
      * Match by section ID (heading ID like "economic-models", "introduction", etc.)
+     *
+     * @deprecated Use findTargetSectionIndex with heading map instead
      */
     private findMatchingSectionIndex;
     /**

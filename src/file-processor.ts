@@ -17,6 +17,13 @@ import { DiffDetector } from './diff-detector';
 import { TranslationService } from './translator';
 import { Section, Glossary } from './types';
 import * as core from '@actions/core';
+import { 
+  extractHeadingMap, 
+  updateHeadingMap, 
+  lookupTargetHeading,
+  injectHeadingMap,
+  HeadingMap
+} from './heading-map';
 
 export class FileProcessor {
   private parser: MystParser;
@@ -62,7 +69,11 @@ export class FileProcessor {
 
     this.log(`Detected ${changes.length} section changes`);
 
-    // 2. Parse source and target documents into sections
+    // 2. Extract heading map from target document
+    const headingMap = extractHeadingMap(targetContent);
+    this.log(`Loaded heading map with ${headingMap.size} entries`);
+    
+    // 3. Parse source and target documents into sections
     const sourceSections = await this.parser.parseSections(oldContent, filepath);
     const targetSections = await this.parser.parseSections(targetContent, filepath);
     this.log(`Target document has ${targetSections.sections.length} sections`);
@@ -135,17 +146,18 @@ export class FileProcessor {
         // Update existing section
         this.log(`Processing MODIFIED section: ${change.newSection?.heading}`);
 
-        // For MODIFIED sections, match by position in the document
-        // (IDs are language-specific, so we can't match by ID across languages)
-        const sourceIndex = change.oldSection ? 
-          sourceSections.sections.findIndex((s: Section) => s.id === change.oldSection?.id) : -1;
+        // Match section using heading map (preferred) or fallback to position
+        const targetSectionIndex = this.findTargetSectionIndex(
+          change.oldSection,
+          updatedSections,
+          sourceSections.sections,
+          headingMap
+        );
         
-        if (sourceIndex === -1 || sourceIndex >= updatedSections.length) {
-          this.log(`Warning: Could not find target section for "${change.oldSection?.heading}" at position ${sourceIndex}`);
+        if (targetSectionIndex === -1) {
+          this.log(`Warning: Could not find target section for "${change.oldSection?.heading}"`);
           continue;
         }
-        
-        const targetSectionIndex = sourceIndex;
 
         const targetSection = updatedSections[targetSectionIndex];
 
@@ -187,13 +199,24 @@ export class FileProcessor {
       }
     }
 
-    // 4. Reconstruct document from sections
+    // 4. Update heading map with new/changed sections
+    const updatedHeadingMap = updateHeadingMap(
+      headingMap,
+      await (await this.parser.parseSections(newContent, filepath)).sections,
+      updatedSections
+    );
+    this.log(`Updated heading map to ${updatedHeadingMap.size} entries`);
+    
+    // 5. Reconstruct document from sections
     this.log(`Reconstructing document from ${updatedSections.length} sections`);
-    return this.reconstructFromSections(
+    const reconstructed = this.reconstructFromSections(
       updatedSections,
       targetSections.frontmatter,
       updatedPreamble
     );
+    
+    // 6. Inject updated heading map into frontmatter
+    return injectHeadingMap(reconstructed, updatedHeadingMap);
   }
 
   /**
@@ -223,8 +246,53 @@ export class FileProcessor {
   }
 
   /**
+   * Find target section index using heading map (preferred) or position fallback
+   * 
+   * Strategy:
+   * 1. Look up translated heading in heading map
+   * 2. Search for that heading in target sections
+   * 3. If not found, fall back to position-based matching
+   */
+  private findTargetSectionIndex(
+    sourceSection: Section | undefined,
+    targetSections: Section[],
+    sourceSections: Section[],
+    headingMap: HeadingMap
+  ): number {
+    if (!sourceSection) {
+      return -1;
+    }
+
+    // Strategy 1: Use heading map to find translated heading
+    const translatedHeading = lookupTargetHeading(sourceSection.heading, headingMap);
+    if (translatedHeading) {
+      this.log(`Looking for translated heading: "${translatedHeading}"`);
+      
+      // Search for the translated heading in target sections
+      for (let i = 0; i < targetSections.length; i++) {
+        const cleanTargetHeading = targetSections[i].heading.replace(/^#+\s+/, '').trim();
+        if (cleanTargetHeading === translatedHeading) {
+          this.log(`Found by heading map at position ${i}`);
+          return i;
+        }
+      }
+    }
+
+    // Strategy 2: Fall back to position-based matching
+    const sourceIndex = sourceSections.findIndex(s => s.id === sourceSection.id);
+    if (sourceIndex !== -1 && sourceIndex < targetSections.length) {
+      this.log(`Using position-based fallback: ${sourceIndex}`);
+      return sourceIndex;
+    }
+
+    return -1;
+  }
+  
+  /**
    * Find matching section index in target document
    * Match by section ID (heading ID like "economic-models", "introduction", etc.)
+   * 
+   * @deprecated Use findTargetSectionIndex with heading map instead
    */
   private findMatchingSectionIndex(
     targetSections: Section[],
