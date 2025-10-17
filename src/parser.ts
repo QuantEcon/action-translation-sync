@@ -22,7 +22,34 @@ export class MystParser {
     let currentSection: Section | null = null;
     let currentSubsection: Section | null = null;
     
-    for (let i = 0; i < lines.length; i++) {
+    // Extract frontmatter (YAML between --- markers)
+    let frontmatter: string | undefined;
+    let preamble: string | undefined;
+    let contentStartIndex = 0;
+    
+    if (lines[0] === '---') {
+      // Find end of frontmatter
+      const endIndex = lines.slice(1).findIndex(line => line === '---');
+      if (endIndex !== -1) {
+        // Extract frontmatter including the --- markers
+        frontmatter = lines.slice(0, endIndex + 2).join('\n');
+        contentStartIndex = endIndex + 2;
+      }
+    }
+    
+    // Extract preamble (content before first ## heading)
+    const firstSectionIndex = lines.slice(contentStartIndex).findIndex(line => line.match(/^##\s+/));
+    if (firstSectionIndex !== -1) {
+      const preambleLines = lines.slice(contentStartIndex, contentStartIndex + firstSectionIndex);
+      // Only keep preamble if it has non-empty content
+      const preambleText = preambleLines.join('\n').trim();
+      if (preambleText) {
+        preamble = preambleText;
+      }
+      contentStartIndex = contentStartIndex + firstSectionIndex;
+    }
+    
+    for (let i = contentStartIndex; i < lines.length; i++) {
       const line = lines[i];
       const lineNum = i + 1;
       
@@ -104,6 +131,8 @@ export class MystParser {
     
     return {
       sections,
+      frontmatter,
+      preamble,
       metadata: {
         filepath,
         totalLines: lines.length,

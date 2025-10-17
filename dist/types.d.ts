@@ -52,6 +52,8 @@ export interface Section {
 }
 export interface ParsedSections {
     sections: Section[];
+    frontmatter?: string;
+    preamble?: string;
     metadata: {
         filepath: string;
         totalLines: number;

@@ -69,6 +69,8 @@ export interface Section {
 
 export interface ParsedSections {
   sections: Section[];
+  frontmatter?: string;     // YAML frontmatter (if present)
+  preamble?: string;        // Content before first ## heading (title, intro, etc.)
   metadata: {
     filepath: string;
     totalLines: number;

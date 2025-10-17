@@ -163,7 +163,11 @@ export class FileProcessor {
 
     // 4. Reconstruct document from sections
     this.log(`Reconstructing document from ${updatedSections.length} sections`);
-    return this.reconstructFromSections(updatedSections);
+    return this.reconstructFromSections(
+      updatedSections,
+      targetSections.frontmatter,
+      targetSections.preamble
+    );
   }
 
   /**
@@ -218,9 +222,26 @@ export class FileProcessor {
   /**
    * Reconstruct markdown document from sections
    */
-  private reconstructFromSections(sections: Section[]): string {
+  private reconstructFromSections(
+    sections: Section[],
+    frontmatter?: string,
+    preamble?: string
+  ): string {
     const parts: string[] = [];
 
+    // Add frontmatter if present
+    if (frontmatter) {
+      parts.push(frontmatter);
+      parts.push(''); // Empty line after frontmatter
+    }
+
+    // Add preamble if present (title, intro before first ##)
+    if (preamble) {
+      parts.push(preamble);
+      parts.push(''); // Empty line after preamble
+    }
+
+    // Add all sections
     for (const section of sections) {
       // Add section content (includes heading and all nested content)
       parts.push(section.content);

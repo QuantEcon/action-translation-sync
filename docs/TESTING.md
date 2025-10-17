@@ -5,7 +5,7 @@
 This document explains the test suite design, test fixtures, and what each test validates. The test suite was created to catch bugs early in development, before they appear in production GitHub Actions workflows.
 
 **Test Suite Stats:**
-- **34 tests** across 4 test files
+- **44 tests** across 4 test files
 - **3 fixture files** representing real-world scenarios
 - **100% pass rate** ✅
 - **Test execution time:** ~1.8 seconds
@@ -28,7 +28,13 @@ During v0.3.0 development, we discovered two critical bugs through **live testin
 - **Impact**: Document structure completely corrupted, headers deleted, wrong sections updated
 - **Detection Time**: ~10 minutes per test cycle
 
-**With Tests**: Both bugs would have been caught in **1.5 seconds** ⚡
+**Bug #3: Missing Frontmatter and Preamble**
+- **Symptom**: Jupytext headers deleted, document titles missing, intro paragraphs lost
+- **Root Cause**: Parser skipped frontmatter/preamble, reconstruction didn't add them back
+- **Impact**: Invalid Jupyter notebooks, missing metadata, corrupted document structure
+- **Detection Time**: Discovered during PR #3 testing
+
+**With Tests**: All three bugs would have been caught in **1.8 seconds** ⚡
 
 ### Benefits of Our Test Suite
 
@@ -47,10 +53,10 @@ src/__tests__/
 │   ├── intro-new.md            # English v2: 6 sections (Economic Models added)
 │   └── intro-zh-cn.md          # Chinese translation: 5 sections
 │
-├── parser.test.ts              # 9 tests: MyST parsing logic
+├── parser.test.ts              # 15 tests: MyST parsing logic + frontmatter extraction
 ├── diff-detector.test.ts       # 10 tests: Change detection (Bug #1)
-├── file-processor.test.ts      # 9 tests: Section matching (Bug #2)
-└── integration.test.ts         # 6 tests: Full workflow end-to-end ⭐ NEW
+├── file-processor.test.ts      # 13 tests: Section matching (Bug #2) + frontmatter preservation (Bug #3)
+└── integration.test.ts         # 6 tests: Full workflow end-to-end ⭐
 ```
 
 ## Test Fixtures Explained

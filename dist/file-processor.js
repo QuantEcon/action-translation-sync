@@ -152,7 +152,7 @@ class FileProcessor {
         }
         // 4. Reconstruct document from sections
         this.log(`Reconstructing document from ${updatedSections.length} sections`);
-        return this.reconstructFromSections(updatedSections);
+        return this.reconstructFromSections(updatedSections, targetSections.frontmatter, targetSections.preamble);
     }
     /**
      * Process a full document (for new files)
@@ -190,8 +190,19 @@ class FileProcessor {
     /**
      * Reconstruct markdown document from sections
      */
-    reconstructFromSections(sections) {
+    reconstructFromSections(sections, frontmatter, preamble) {
         const parts = [];
+        // Add frontmatter if present
+        if (frontmatter) {
+            parts.push(frontmatter);
+            parts.push(''); // Empty line after frontmatter
+        }
+        // Add preamble if present (title, intro before first ##)
+        if (preamble) {
+            parts.push(preamble);
+            parts.push(''); // Empty line after preamble
+        }
+        // Add all sections
         for (const section of sections) {
             // Add section content (includes heading and all nested content)
             parts.push(section.content);

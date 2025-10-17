@@ -150,5 +150,162 @@ describe('FileProcessor - Section Matching Logic', () => {
       expect(doc.indexOf('## Parent')).toBeLessThan(doc.indexOf('### Child'));
     });
   });
+
+  describe('Bug #3 Fix - Frontmatter and Preamble Preservation', () => {
+    /**
+     * Simulates reconstructFromSections with frontmatter and preamble
+     */
+    function reconstructWithFrontmatter(
+      sections: Section[],
+      frontmatter?: string,
+      preamble?: string
+    ): string {
+      const parts: string[] = [];
+
+      if (frontmatter) {
+        parts.push(frontmatter);
+        parts.push('');
+      }
+
+      if (preamble) {
+        parts.push(preamble);
+        parts.push('');
+      }
+
+      for (const section of sections) {
+        parts.push(section.content);
+        parts.push('');
+      }
+
+      return parts.join('\n').trim() + '\n';
+    }
+
+    it('should preserve YAML frontmatter during reconstruction', () => {
+      const frontmatter = `---
+jupytext:
+  text_representation:
+    extension: .md
+    format_name: myst
+kernelspec:
+  display_name: Python 3
+  name: python3
+---`;
+
+      const sections: Section[] = [
+        {
+          id: 'section-a',
+          heading: '## Section A',
+          level: 2,
+          content: '## Section A\n\nContent here.',
+          startLine: 1,
+          endLine: 3,
+          subsections: []
+        }
+      ];
+
+      const doc = reconstructWithFrontmatter(sections, frontmatter);
+
+      // Frontmatter should be at the start
+      expect(doc.startsWith('---')).toBe(true);
+      expect(doc).toContain('jupytext:');
+      expect(doc).toContain('format_name: myst');
+      expect(doc).toContain('kernelspec:');
+      
+      // Section should come after frontmatter
+      expect(doc.indexOf('---')).toBeLessThan(doc.indexOf('## Section A'));
+    });
+
+    it('should preserve document title and intro (preamble) during reconstruction', () => {
+      const frontmatter = '---\njupytext:\n  format_name: myst\n---';
+      const preamble = '# Introduction to Economics\n\nThis is a test lecture for translation sync action.';
+
+      const sections: Section[] = [
+        {
+          id: 'basic-concepts',
+          heading: '## Basic Concepts',
+          level: 2,
+          content: '## Basic Concepts\n\nEconomics is the study of resources.',
+          startLine: 1,
+          endLine: 3,
+          subsections: []
+        }
+      ];
+
+      const doc = reconstructWithFrontmatter(sections, frontmatter, preamble);
+
+      // Should contain frontmatter
+      expect(doc).toContain('jupytext:');
+      
+      // Should contain preamble (title + intro)
+      expect(doc).toContain('# Introduction to Economics');
+      expect(doc).toContain('This is a test lecture');
+      
+      // Should contain sections
+      expect(doc).toContain('## Basic Concepts');
+      
+      // Order should be: frontmatter → preamble → sections
+      const frontmatterIndex = doc.indexOf('---');
+      const titleIndex = doc.indexOf('# Introduction to Economics');
+      const sectionIndex = doc.indexOf('## Basic Concepts');
+      
+      expect(frontmatterIndex).toBeLessThan(titleIndex);
+      expect(titleIndex).toBeLessThan(sectionIndex);
+    });
+
+    it('BUG #3: without preservation, frontmatter and preamble are lost', () => {
+      // This simulates the old buggy behavior
+      function reconstructBuggy(sections: Section[]): string {
+        const parts: string[] = [];
+        for (const section of sections) {
+          parts.push(section.content);
+          parts.push('');
+        }
+        return parts.join('\n').trim() + '\n';
+      }
+
+      const sections: Section[] = [
+        {
+          id: 'section-a',
+          heading: '## Section A',
+          level: 2,
+          content: '## Section A\n\nContent.',
+          startLine: 1,
+          endLine: 2,
+          subsections: []
+        }
+      ];
+
+      const buggyDoc = reconstructBuggy(sections);
+
+      // Buggy version loses frontmatter and title
+      expect(buggyDoc).not.toContain('---');
+      expect(buggyDoc).not.toContain('jupytext:');
+      expect(buggyDoc).not.toContain('# Introduction');
+      
+      // Only has the section
+      expect(buggyDoc).toContain('## Section A');
+    });
+
+    it('should handle documents without frontmatter or preamble', () => {
+      const sections: Section[] = [
+        {
+          id: 'section-a',
+          heading: '## Section A',
+          level: 2,
+          content: '## Section A\n\nContent.',
+          startLine: 1,
+          endLine: 2,
+          subsections: []
+        }
+      ];
+
+      // No frontmatter, no preamble
+      const doc = reconstructWithFrontmatter(sections);
+
+      expect(doc).toContain('## Section A');
+      expect(doc).not.toContain('---');
+      expect(doc).not.toContain('#Introduction');
+    });
+  });
 });
 

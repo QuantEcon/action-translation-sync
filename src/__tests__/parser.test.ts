@@ -188,4 +188,148 @@ Content.
       expect(sections[1].id).toBe('section-with-parentheses-and-brackets');
     });
   });
+
+  describe('Frontmatter and Preamble Extraction', () => {
+    it('should extract YAML frontmatter', async () => {
+      const content = `---
+jupytext:
+  text_representation:
+    extension: .md
+    format_name: myst
+kernelspec:
+  display_name: Python 3
+  name: python3
+---
+
+# Title
+
+Intro paragraph.
+
+## Section One
+
+Content.
+`;
+      const result = await parser.parseSections(content, 'test.md');
+      
+      // Should extract frontmatter
+      expect(result.frontmatter).toBeDefined();
+      expect(result.frontmatter).toContain('jupytext:');
+      expect(result.frontmatter).toContain('format_name: myst');
+      expect(result.frontmatter).toContain('kernelspec:');
+      expect(result.frontmatter?.startsWith('---')).toBe(true);
+      expect(result.frontmatter?.endsWith('---')).toBe(true);
+    });
+
+    it('should extract preamble (title and intro)', async () => {
+      const content = `---
+jupytext:
+  format_name: myst
+---
+
+# Introduction to Economics
+
+This is a test lecture for translation sync action.
+
+It has multiple paragraphs before the first section.
+
+## Basic Concepts
+
+Content here.
+`;
+      const result = await parser.parseSections(content, 'test.md');
+      
+      // Should extract preamble
+      expect(result.preamble).toBeDefined();
+      expect(result.preamble).toContain('# Introduction to Economics');
+      expect(result.preamble).toContain('test lecture for translation sync action');
+      expect(result.preamble).toContain('multiple paragraphs');
+      
+      // Preamble should not include frontmatter or sections
+      expect(result.preamble).not.toContain('---');
+      expect(result.preamble).not.toContain('jupytext:');
+      expect(result.preamble).not.toContain('## Basic Concepts');
+    });
+
+    it('should handle documents without frontmatter', async () => {
+      const content = `# Title
+
+Intro text.
+
+## Section One
+
+Content.
+`;
+      const result = await parser.parseSections(content, 'test.md');
+      
+      // No frontmatter
+      expect(result.frontmatter).toBeUndefined();
+      
+      // But should have preamble
+      expect(result.preamble).toBeDefined();
+      expect(result.preamble).toContain('# Title');
+      expect(result.preamble).toContain('Intro text');
+    });
+
+    it('should handle documents without preamble', async () => {
+      const content = `---
+jupytext:
+  format_name: myst
+---
+
+## Section One
+
+Content immediately after frontmatter.
+`;
+      const result = await parser.parseSections(content, 'test.md');
+      
+      // Should have frontmatter
+      expect(result.frontmatter).toBeDefined();
+      
+      // But no preamble (goes straight to sections)
+      expect(result.preamble).toBeUndefined();
+      
+      // Should have sections
+      expect(result.sections).toHaveLength(1);
+      expect(result.sections[0].heading).toBe('## Section One');
+    });
+
+    it('should handle documents with neither frontmatter nor preamble', async () => {
+      const content = `## Section One
+
+Just starts with a section.
+
+## Section Two
+
+Another section.
+`;
+      const result = await parser.parseSections(content, 'test.md');
+      
+      // No frontmatter or preamble
+      expect(result.frontmatter).toBeUndefined();
+      expect(result.preamble).toBeUndefined();
+      
+      // But should have sections
+      expect(result.sections).toHaveLength(2);
+    });
+
+    it('should handle empty preamble (only whitespace)', async () => {
+      const content = `---
+jupytext:
+  format_name: myst
+---
+
+
+## Section One
+
+Content.
+`;
+      const result = await parser.parseSections(content, 'test.md');
+      
+      // Frontmatter present
+      expect(result.frontmatter).toBeDefined();
+      
+      // Preamble should be undefined (only whitespace)
+      expect(result.preamble).toBeUndefined();
+    });
+  });
 });
