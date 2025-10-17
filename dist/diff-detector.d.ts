@@ -17,6 +17,7 @@ export declare class DiffDetector {
     private log;
     /**
      * Detect section-level changes between old and new documents
+     * Also detects preamble changes (title and intro before first ## section)
      */
     detectSectionChanges(oldContent: string, newContent: string, filepath: string): Promise<SectionChange[]>;
     /**

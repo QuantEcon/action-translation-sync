@@ -5,10 +5,10 @@
 This document explains the test suite design, test fixtures, and what each test validates. The test suite was created to catch bugs early in development, before they appear in production GitHub Actions workflows.
 
 **Test Suite Stats:**
-- **44 tests** across 4 test files
+- **49 tests** across 4 test files
 - **3 fixture files** representing real-world scenarios
 - **100% pass rate** ✅
-- **Test execution time:** ~1.8 seconds
+- **Test execution time:** ~2.0 seconds
 
 ## Why We Need Tests
 
@@ -54,7 +54,7 @@ src/__tests__/
 │   └── intro-zh-cn.md          # Chinese translation: 5 sections
 │
 ├── parser.test.ts              # 15 tests: MyST parsing logic + frontmatter extraction
-├── diff-detector.test.ts       # 10 tests: Change detection (Bug #1)
+├── diff-detector.test.ts       # 15 tests: Change detection (Bug #1) + preamble detection
 ├── file-processor.test.ts      # 13 tests: Section matching (Bug #2) + frontmatter preservation (Bug #3)
 └── integration.test.ts         # 6 tests: Full workflow end-to-end ⭐
 ```

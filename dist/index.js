@@ -66,6 +66,7 @@ class DiffDetector {
     }
     /**
      * Detect section-level changes between old and new documents
+     * Also detects preamble changes (title and intro before first ## section)
      */
     async detectSectionChanges(oldContent, newContent, filepath) {
         this.log(`Detecting section changes in ${filepath}`);
@@ -75,6 +76,36 @@ class DiffDetector {
         this.log(`New document: ${newSections.sections.length} sections`);
         const changes = [];
         const processedOldSections = new Set();
+        // Check for preamble changes (title and intro text)
+        if (oldSections.preamble !== newSections.preamble) {
+            const oldPreamble = oldSections.preamble?.trim() || '';
+            const newPreamble = newSections.preamble?.trim() || '';
+            if (oldPreamble !== newPreamble) {
+                this.log(`PREAMBLE MODIFIED: Content changed`);
+                // Treat preamble as a special section with ID 'preamble'
+                changes.push({
+                    type: 'modified',
+                    oldSection: {
+                        id: '_preamble',
+                        heading: '', // Preamble has no heading
+                        level: 0, // Special level for preamble
+                        content: oldPreamble,
+                        startLine: 1,
+                        endLine: 1,
+                        subsections: []
+                    },
+                    newSection: {
+                        id: '_preamble',
+                        heading: '',
+                        level: 0,
+                        content: newPreamble,
+                        startLine: 1,
+                        endLine: 1,
+                        subsections: []
+                    }
+                });
+            }
+        }
         // Check for added and modified sections
         for (let i = 0; i < newSections.sections.length; i++) {
             const newSection = newSections.sections[i];
@@ -272,7 +303,27 @@ class FileProcessor {
         this.log(`Target document has ${targetSections.sections.length} sections`);
         // 3. Process each change
         const updatedSections = [...targetSections.sections];
+        let updatedPreamble = targetSections.preamble;
         for (const change of changes) {
+            // Handle preamble changes (special section with ID '_preamble')
+            if (change.newSection?.id === '_preamble' || change.oldSection?.id === '_preamble') {
+                this.log(`Processing PREAMBLE change`);
+                const result = await this.translator.translateSection({
+                    mode: 'update',
+                    sourceLanguage,
+                    targetLanguage,
+                    glossary,
+                    oldEnglish: change.oldSection?.content || '',
+                    newEnglish: change.newSection?.content || '',
+                    currentTranslation: targetSections.preamble || '',
+                });
+                if (!result.success) {
+                    throw new Error(`Translation failed for preamble: ${result.error}`);
+                }
+                updatedPreamble = result.translatedSection;
+                this.log(`Updated preamble`);
+                continue;
+            }
             if (change.type === 'added') {
                 // Translate new section
                 this.log(`Processing ADDED section: ${change.newSection?.heading}`);
@@ -344,7 +395,7 @@ class FileProcessor {
         }
         // 4. Reconstruct document from sections
         this.log(`Reconstructing document from ${updatedSections.length} sections`);
-        return this.reconstructFromSections(updatedSections, targetSections.frontmatter, targetSections.preamble);
+        return this.reconstructFromSections(updatedSections, targetSections.frontmatter, updatedPreamble);
     }
     /**
      * Process a full document (for new files)

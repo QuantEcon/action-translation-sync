@@ -270,4 +270,172 @@ Content B.
       expect(changes.every((c: any) => c.type === 'deleted')).toBe(true);
     });
   });
+
+  describe('Preamble Change Detection', () => {
+    it('should detect preamble changes (title and intro)', async () => {
+      const oldContent = `---
+jupytext:
+  format_name: myst
+---
+
+# Introduction to Economics
+
+This is a test lecture.
+
+## Section One
+
+Content here.
+`;
+
+      const newContent = `---
+jupytext:
+  format_name: myst
+---
+
+# Introduction to Quantitative Economics
+
+This is a comprehensive test lecture with more details.
+
+## Section One
+
+Content here.
+`;
+
+      const changes = await detector.detectSectionChanges(oldContent, newContent, 'test.md');
+      
+      // Should detect preamble change
+      const preambleChange = changes.find((c: any) => c.newSection?.id === '_preamble');
+      expect(preambleChange).toBeDefined();
+      expect(preambleChange?.type).toBe('modified');
+      expect(preambleChange?.oldSection?.content).toContain('Introduction to Economics');
+      expect(preambleChange?.newSection?.content).toContain('Introduction to Quantitative Economics');
+      expect(preambleChange?.newSection?.content).toContain('comprehensive test lecture');
+    });
+
+    it('should not detect preamble change when only frontmatter changes', async () => {
+      const oldContent = `---
+jupytext:
+  format_name: myst
+---
+
+# Title
+
+Intro text.
+
+## Section One
+
+Content.
+`;
+
+      const newContent = `---
+jupytext:
+  format_name: myst
+  format_version: 0.13
+---
+
+# Title
+
+Intro text.
+
+## Section One
+
+Content.
+`;
+
+      const changes = await detector.detectSectionChanges(oldContent, newContent, 'test.md');
+      
+      // Preamble unchanged, so no preamble change detected
+      const preambleChange = changes.find((c: any) => c.newSection?.id === '_preamble');
+      expect(preambleChange).toBeUndefined();
+    });
+
+    it('should detect when preamble is added', async () => {
+      const oldContent = `## Section One
+
+Content.
+`;
+
+      const newContent = `# New Title
+
+New intro paragraph.
+
+## Section One
+
+Content.
+`;
+
+      const changes = await detector.detectSectionChanges(oldContent, newContent, 'test.md');
+      
+      // Preamble was added
+      const preambleChange = changes.find((c: any) => c.newSection?.id === '_preamble');
+      expect(preambleChange).toBeDefined();
+      expect(preambleChange?.newSection?.content).toContain('New Title');
+      expect(preambleChange?.newSection?.content).toContain('New intro paragraph');
+    });
+
+    it('should detect when preamble is removed', async () => {
+      const oldContent = `# Title
+
+Intro text.
+
+## Section One
+
+Content.
+`;
+
+      const newContent = `## Section One
+
+Content.
+`;
+
+      const changes = await detector.detectSectionChanges(oldContent, newContent, 'test.md');
+      
+      // Preamble was removed
+      const preambleChange = changes.find((c: any) => c.oldSection?.id === '_preamble');
+      expect(preambleChange).toBeDefined();
+      expect(preambleChange?.type).toBe('modified');
+      expect(preambleChange?.oldSection?.content).toContain('Title');
+    });
+
+    it('should handle preamble change along with section changes', async () => {
+      const oldContent = `# Old Title
+
+Old intro.
+
+## Section A
+
+Content A.
+
+## Section B
+
+Content B.
+`;
+
+      const newContent = `# New Title
+
+New intro with more details.
+
+## Section A
+
+Content A.
+
+## New Section C
+
+New content.
+
+## Section B
+
+Content B.
+`;
+
+      const changes = await detector.detectSectionChanges(oldContent, newContent, 'test.md');
+      
+      // Should have preamble change + section addition
+      const preambleChange = changes.find((c: any) => c.newSection?.id === '_preamble');
+      const sectionAddition = changes.find((c: any) => c.type === 'added' && c.newSection?.heading === '## New Section C');
+      
+      expect(preambleChange).toBeDefined();
+      expect(sectionAddition).toBeDefined();
+    });
+  });
 });

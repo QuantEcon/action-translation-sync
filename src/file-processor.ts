@@ -68,8 +68,32 @@ export class FileProcessor {
 
     // 3. Process each change
     const updatedSections = [...targetSections.sections];
+    let updatedPreamble = targetSections.preamble;
 
     for (const change of changes) {
+      // Handle preamble changes (special section with ID '_preamble')
+      if (change.newSection?.id === '_preamble' || change.oldSection?.id === '_preamble') {
+        this.log(`Processing PREAMBLE change`);
+
+        const result = await this.translator.translateSection({
+          mode: 'update',
+          sourceLanguage,
+          targetLanguage,
+          glossary,
+          oldEnglish: change.oldSection?.content || '',
+          newEnglish: change.newSection?.content || '',
+          currentTranslation: targetSections.preamble || '',
+        });
+
+        if (!result.success) {
+          throw new Error(`Translation failed for preamble: ${result.error}`);
+        }
+
+        updatedPreamble = result.translatedSection;
+        this.log(`Updated preamble`);
+        continue;
+      }
+
       if (change.type === 'added') {
         // Translate new section
         this.log(`Processing ADDED section: ${change.newSection?.heading}`);
@@ -166,7 +190,7 @@ export class FileProcessor {
     return this.reconstructFromSections(
       updatedSections,
       targetSections.frontmatter,
-      targetSections.preamble
+      updatedPreamble
     );
   }
 

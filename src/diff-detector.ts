@@ -31,6 +31,7 @@ export class DiffDetector {
 
   /**
    * Detect section-level changes between old and new documents
+   * Also detects preamble changes (title and intro before first ## section)
    */
   async detectSectionChanges(
     oldContent: string,
@@ -47,6 +48,39 @@ export class DiffDetector {
 
     const changes: SectionChange[] = [];
     const processedOldSections = new Set<string>();
+
+    // Check for preamble changes (title and intro text)
+    if (oldSections.preamble !== newSections.preamble) {
+      const oldPreamble = oldSections.preamble?.trim() || '';
+      const newPreamble = newSections.preamble?.trim() || '';
+      
+      if (oldPreamble !== newPreamble) {
+        this.log(`PREAMBLE MODIFIED: Content changed`);
+        
+        // Treat preamble as a special section with ID 'preamble'
+        changes.push({
+          type: 'modified',
+          oldSection: {
+            id: '_preamble',
+            heading: '',  // Preamble has no heading
+            level: 0,     // Special level for preamble
+            content: oldPreamble,
+            startLine: 1,
+            endLine: 1,
+            subsections: []
+          },
+          newSection: {
+            id: '_preamble',
+            heading: '',
+            level: 0,
+            content: newPreamble,
+            startLine: 1,
+            endLine: 1,
+            subsections: []
+          }
+        });
+      }
+    }
 
     // Check for added and modified sections
     for (let i = 0; i < newSections.sections.length; i++) {
