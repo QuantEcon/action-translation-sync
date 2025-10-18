@@ -634,4 +634,176 @@ heading-map:
       expect(result).toContain('New Section: 新章节');
     });
   });
+
+  // ========================================================================
+  // REGRESSION TESTS FOR v0.4.3
+  // ========================================================================
+  
+  describe('Subsection Support - v0.4.3 Regression Tests', () => {
+    const createSection = (heading: string, level: number, subsections: Section[] = []): Section => ({
+      heading,
+      level,
+      id: heading.replace(/^#+\s+/, '').toLowerCase().replace(/\s+/g, '-'),
+      content: 'Test content',
+      subsections,
+      startLine: 1,
+      endLine: 10
+    });
+
+    it('should include subsections in heading-map', () => {
+      const sourceSections: Section[] = [
+        createSection('## Overview', 2, [
+          createSection('### Core Principles', 3)
+        ])
+      ];
+
+      const targetSections: Section[] = [
+        createSection('## 概述', 2, [
+          createSection('### 核心原则', 3)
+        ])
+      ];
+
+      const existingMap = new Map<string, string>();
+      const updatedMap = updateHeadingMap(existingMap, sourceSections, targetSections);
+
+      // Should have entries for BOTH section and subsection
+      expect(updatedMap.size).toBe(2);
+      expect(updatedMap.get('Overview')).toBe('概述');
+      expect(updatedMap.get('Core Principles')).toBe('核心原则');
+    });
+
+    it('should handle multiple subsections per section', () => {
+      const sourceSections: Section[] = [
+        createSection('## Basic Concepts', 2, [
+          createSection('### Key Terms', 3),
+          createSection('### Examples', 3)
+        ])
+      ];
+
+      const targetSections: Section[] = [
+        createSection('## 基本概念', 2, [
+          createSection('### 关键术语', 3),
+          createSection('### 示例', 3)
+        ])
+      ];
+
+      const updatedMap = updateHeadingMap(new Map(), sourceSections, targetSections);
+
+      // Should have 3 entries: 1 section + 2 subsections
+      expect(updatedMap.size).toBe(3);
+      expect(updatedMap.get('Basic Concepts')).toBe('基本概念');
+      expect(updatedMap.get('Key Terms')).toBe('关键术语');
+      expect(updatedMap.get('Examples')).toBe('示例');
+    });
+
+    it('should handle nested subsections (level 4)', () => {
+      const sourceSections: Section[] = [
+        createSection('## Policy Implications', 2, [
+          createSection('### Policy Trade-offs', 3, [
+            createSection('#### Short-term Effects', 4),
+            createSection('#### Long-term Effects', 4)
+          ])
+        ])
+      ];
+
+      const targetSections: Section[] = [
+        createSection('## 政策含义', 2, [
+          createSection('### 政策权衡', 3, [
+            createSection('#### 短期影响', 4),
+            createSection('#### 长期影响', 4)
+          ])
+        ])
+      ];
+
+      const updatedMap = updateHeadingMap(new Map(), sourceSections, targetSections);
+
+      // Should have 4 entries: 1 level-2 + 1 level-3 + 2 level-4
+      expect(updatedMap.size).toBe(4);
+      expect(updatedMap.get('Policy Implications')).toBe('政策含义');
+      expect(updatedMap.get('Policy Trade-offs')).toBe('政策权衡');
+      expect(updatedMap.get('Short-term Effects')).toBe('短期影响');
+      expect(updatedMap.get('Long-term Effects')).toBe('长期影响');
+    });
+
+    it('should handle sections with and without subsections', () => {
+      const sourceSections: Section[] = [
+        createSection('## Overview', 2, [
+          createSection('### Core Principles', 3)
+        ]),
+        createSection('## Mathematical Example', 2),  // No subsections
+        createSection('## Exercises', 2, [
+          createSection('### Exercise Solutions', 3)
+        ])
+      ];
+
+      const targetSections: Section[] = [
+        createSection('## 概述', 2, [
+          createSection('### 核心原则', 3)
+        ]),
+        createSection('## 数学示例', 2),  // No subsections
+        createSection('## 练习', 2, [
+          createSection('### 练习答案', 3)
+        ])
+      ];
+
+      const updatedMap = updateHeadingMap(new Map(), sourceSections, targetSections);
+
+      // Should have 5 entries: 3 sections + 2 subsections
+      expect(updatedMap.size).toBe(5);
+      expect(updatedMap.get('Overview')).toBe('概述');
+      expect(updatedMap.get('Core Principles')).toBe('核心原则');
+      expect(updatedMap.get('Mathematical Example')).toBe('数学示例');
+      expect(updatedMap.get('Exercises')).toBe('练习');
+      expect(updatedMap.get('Exercise Solutions')).toBe('练习答案');
+    });
+
+    it('BUG #10: demonstrates v0.4.1 behavior (missing subsections)', () => {
+      // Simulate the buggy v0.4.1 behavior: only process sections, not subsections
+      function updateHeadingMapBuggy(
+        sourceSections: Section[],
+        targetSections: Section[]
+      ): Map<string, string> {
+        const map = new Map<string, string>();
+        
+        // BUG: Only processes sections, not subsections recursively
+        sourceSections.forEach((source, i) => {
+          const target = targetSections[i];
+          if (target) {
+            map.set(
+              source.heading.replace(/^#+\s+/, ''),
+              target.heading.replace(/^#+\s+/, '')
+            );
+          }
+          // Missing: No recursive processing of subsections!
+        });
+        
+        return map;
+      }
+
+      const sourceSections: Section[] = [
+        createSection('## Section', 2, [
+          createSection('### Subsection', 3)
+        ])
+      ];
+
+      const targetSections: Section[] = [
+        createSection('## 部分', 2, [
+          createSection('### 子部分', 3)
+        ])
+      ];
+
+      const buggyMap = updateHeadingMapBuggy(sourceSections, targetSections);
+      
+      // Buggy version only has section, not subsection
+      expect(buggyMap.size).toBe(1);  // Should be 2!
+      expect(buggyMap.get('Section')).toBe('部分');
+      expect(buggyMap.get('Subsection')).toBeUndefined();  // Missing!
+
+      // Correct version has both
+      const correctMap = updateHeadingMap(new Map(), sourceSections, targetSections);
+      expect(correctMap.size).toBe(2);
+      expect(correctMap.get('Section')).toBe('部分');
+      expect(correctMap.get('Subsection')).toBe('子部分');  // Present!
+    });
+  });
 });

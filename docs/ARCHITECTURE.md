@@ -80,9 +80,15 @@ Create PR (Chinese)
   content: "## Economic Models\n\n...",
   startLine: 45,
   endLine: 78,
-  subsections: [...]
+  subsections: [...]  // Nested sections (### headings)
 }
 ```
+
+**Subsection Support** (v0.4.3+):
+- Sections can contain subsections (level 3, 4, etc.)
+- Subsections are parsed from translated content
+- Subsections included in heading-map for incremental updates
+- See [HEADING-MAPS.md](HEADING-MAPS.md) for details
 
 ### SectionChange
 ```typescript

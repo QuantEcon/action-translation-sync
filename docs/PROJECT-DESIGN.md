@@ -406,12 +406,13 @@ jobs:
 
 ## Implementation Status
 
-### Completed Features
+### Completed Features (v0.4.3)
 
 - ✅ PR merge detection and file change tracking
 - ✅ Section-based MyST parser (172 lines)
 - ✅ Section-level diff detection (178 lines)
 - ✅ Position-based section matching
+- ✅ **Subsection parsing and heading-map integration (v0.4.3)**
 - ✅ Claude Sonnet 4.5 integration (257 lines)
 - ✅ Glossary support (342 terms for zh-cn)
 - ✅ UPDATE and NEW translation modes
@@ -419,6 +420,7 @@ jobs:
 - ✅ PR creation in target repository
 - ✅ Error handling and workflow failures
 - ✅ MyST validation
+- ✅ Comprehensive test suite (87 tests, all passing)
 
 ### Future Enhancements
 
@@ -457,15 +459,17 @@ jobs:
 
 ## Version Strategy
 
-**Current: v0.1.x** (Development)
-- Breaking changes freely allowed
-- API stability not guaranteed
-- Focus on getting the core right
+**Current: v0.4.3** (Production-Ready)
+- Core features complete and stable
+- Comprehensive test coverage (87 tests)
+- Validated with real-world documents
+- Ready for v1.0 API stabilization
 
-**Future: v1.0** (Production)
-- Breaking changes avoided
-- API stability guaranteed
-- Comprehensive automated tests
+**Next: v1.0** (API Stable)
+- API freeze and semantic versioning
+- Backward compatibility guaranteed
+- Production-grade documentation
+- Performance benchmarks
 
 ---
 

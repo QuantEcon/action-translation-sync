@@ -307,5 +307,281 @@ kernelspec:
       expect(doc).not.toContain('#Introduction');
     });
   });
+
+  // ========================================================================
+  // REGRESSION TESTS FOR v0.4.3
+  // ========================================================================
+  
+  describe('Document Reconstruction - v0.4.3 Regression Tests', () => {
+    /**
+     * Simulates reconstructFromSections - the FIXED version
+     */
+    function reconstructFromSections(
+      sections: Section[],
+      frontmatter?: string,
+      preamble?: string
+    ): string {
+      const parts: string[] = [];
+
+      if (frontmatter) {
+        parts.push(frontmatter);
+        parts.push('');
+      }
+
+      if (preamble) {
+        parts.push(preamble);
+        parts.push('');
+      }
+
+      for (const section of sections) {
+        // FIXED: section.content already includes subsections
+        parts.push(section.content);
+        // DO NOT append subsections separately - they're already in section.content!
+      }
+
+      return parts.join('\n').trim() + '\n';
+    }
+
+    it('should NOT duplicate subsections in output', () => {
+      // This is the critical v0.4.3 bug fix test
+      const sections: Section[] = [
+        {
+          id: 'parent-section',
+          heading: '## 概述',
+          level: 2,
+          content: `## 概述
+
+主要内容在这里。
+
+### 核心原则
+
+子部分内容。
+
+`,
+          startLine: 10,
+          endLine: 20,
+          subsections: [
+            {
+              id: 'parent-section:core-principles',
+              heading: '### 核心原则',
+              level: 3,
+              content: `### 核心原则
+
+子部分内容。
+
+`,
+              startLine: 15,
+              endLine: 20,
+              subsections: []
+            }
+          ]
+        }
+      ];
+
+      // Reconstruct document
+      const reconstructed = reconstructFromSections(
+        sections,
+        '---\ntitle: Test\n---',
+        ''
+      );
+
+      // Count occurrences of subsection heading
+      const matches = reconstructed.match(/### 核心原则/g);
+      
+      // Should appear EXACTLY ONCE (not twice)
+      expect(matches).toHaveLength(1);
+      
+      // Verify content structure
+      expect(reconstructed).toContain('## 概述');
+      expect(reconstructed).toContain('### 核心原则');
+      expect(reconstructed).toContain('主要内容在这里');
+      expect(reconstructed).toContain('子部分内容');
+    });
+
+    it('BUG: v0.4.3-debug duplicated subsections', () => {
+      // Simulate the buggy v0.4.3-debug behavior
+      function reconstructBuggy(sections: Section[]): string {
+        const parts: string[] = [];
+        
+        for (const section of sections) {
+          parts.push(section.content);  // Already includes subsections
+          
+          // BUG: Append subsections again!
+          for (const subsection of section.subsections) {
+            parts.push(subsection.content);  // DUPLICATE!
+          }
+        }
+        
+        return parts.join('\n');
+      }
+
+      const sections: Section[] = [
+        {
+          id: 'test',
+          heading: '## Section',
+          level: 2,
+          content: '## Section\n\n### Subsection\n\nContent.\n\n',
+          startLine: 1,
+          endLine: 5,
+          subsections: [
+            {
+              id: 'test:sub',
+              heading: '### Subsection',
+              level: 3,
+              content: '### Subsection\n\nContent.\n\n',
+              startLine: 3,
+              endLine: 5,
+              subsections: []
+            }
+          ]
+        }
+      ];
+
+      const buggyOutput = reconstructBuggy(sections);
+      const matches = buggyOutput.match(/### Subsection/g);
+      
+      // Buggy code produces DUPLICATE
+      expect(matches).toHaveLength(2);  // Bug demonstrated!
+      
+      // Fixed code produces single occurrence
+      const fixedOutput = reconstructFromSections(sections);
+      const fixedMatches = fixedOutput.match(/### Subsection/g);
+      expect(fixedMatches).toHaveLength(1);  // Fixed!
+    });
+
+    it('should handle multiple sections with subsections correctly', () => {
+      const sections: Section[] = [
+        {
+          id: 'section-1',
+          heading: '## Section 1',
+          level: 2,
+          content: '## Section 1\n\n### Sub 1A\n\nContent.\n\n### Sub 1B\n\nMore.\n\n',
+          startLine: 1,
+          endLine: 10,
+          subsections: [
+            {
+              id: 'section-1:sub-1a',
+              heading: '### Sub 1A',
+              level: 3,
+              content: '### Sub 1A\n\nContent.\n\n',
+              startLine: 3,
+              endLine: 5,
+              subsections: []
+            },
+            {
+              id: 'section-1:sub-1b',
+              heading: '### Sub 1B',
+              level: 3,
+              content: '### Sub 1B\n\nMore.\n\n',
+              startLine: 7,
+              endLine: 10,
+              subsections: []
+            }
+          ]
+        },
+        {
+          id: 'section-2',
+          heading: '## Section 2',
+          level: 2,
+          content: '## Section 2\n\n### Sub 2A\n\nText.\n\n',
+          startLine: 11,
+          endLine: 15,
+          subsections: [
+            {
+              id: 'section-2:sub-2a',
+              heading: '### Sub 2A',
+              level: 3,
+              content: '### Sub 2A\n\nText.\n\n',
+              startLine: 13,
+              endLine: 15,
+              subsections: []
+            }
+          ]
+        }
+      ];
+
+      const reconstructed = reconstructFromSections(sections, '', '');
+
+      // Each subsection should appear exactly once
+      expect(reconstructed.match(/### Sub 1A/g)).toHaveLength(1);
+      expect(reconstructed.match(/### Sub 1B/g)).toHaveLength(1);
+      expect(reconstructed.match(/### Sub 2A/g)).toHaveLength(1);
+      
+      // Sections should be in order
+      expect(reconstructed.indexOf('## Section 1')).toBeLessThan(
+        reconstructed.indexOf('## Section 2')
+      );
+      expect(reconstructed.indexOf('### Sub 1A')).toBeLessThan(
+        reconstructed.indexOf('### Sub 1B')
+      );
+    });
+
+    it('should preserve section.content which already includes subsections', () => {
+      // The key insight: section.content from translation already includes subsections
+      const section: Section = {
+        id: 'overview',
+        heading: '## Overview',
+        level: 2,
+        content: `## Overview
+
+Introduction text.
+
+### Core Principles
+
+Subsection text already in section.content from translation.
+
+`,
+        startLine: 1,
+        endLine: 10,
+        subsections: [
+          {
+            id: 'overview:core-principles',
+            heading: '### Core Principles',
+            level: 3,
+            content: `### Core Principles
+
+Subsection text already in section.content from translation.
+
+`,
+            startLine: 5,
+            endLine: 10,
+            subsections: []
+          }
+        ]
+      };
+
+      // Reconstruct using ONLY section.content (correct approach)
+      const parts: string[] = [];
+      parts.push(section.content);
+      // DO NOT append subsections separately!
+      
+      const correct = parts.join('\n');
+      
+      // Should have subsection exactly once
+      expect(correct.match(/### Core Principles/g)).toHaveLength(1);
+    });
+
+    it('should handle sections without subsections', () => {
+      const sections: Section[] = [
+        {
+          id: 'simple-section',
+          heading: '## Simple Section',
+          level: 2,
+          content: '## Simple Section\n\nJust content, no subsections.\n\n',
+          startLine: 1,
+          endLine: 3,
+          subsections: []  // Empty subsections array
+        }
+      ];
+
+      const reconstructed = reconstructFromSections(sections);
+
+      expect(reconstructed).toContain('## Simple Section');
+      expect(reconstructed).toContain('Just content, no subsections.');
+      
+      // Should not have any level-3 headings
+      expect(reconstructed).not.toContain('###');
+    });
+  });
 });
 

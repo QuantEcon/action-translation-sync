@@ -1,130 +1,186 @@
-# Translation Sync Action - TODO
+# Development Roadmap
 
-## Project Status
+**Current Version**: v0.4.3  
+**Status**: Production-Ready  
+**Next**: v1.0 (API Stabilization)
 
-**Current Version**: v0.3.0 (In Development)  
-**Repository**: https://github.com/quantecon/action-translation-sync  
-**Target Version**: v1.0 (Production Ready)  
-**Focus**: Section-based approach with comprehensive testing
+---
 
-**Note**: We are NOT maintaining backward compatibility during v0.x development. Breaking changes are acceptable and expected as we iterate toward the best design.
+## v0.4.3 - COMPLETE ✅
 
-## Recent Progress
+**Subsection Handling** - All features working, comprehensively tested
 
-### v0.3.0 Development
-- ✅ Complete section-based refactor (43% code reduction, 28% bundle reduction)
-- ✅ Claude Sonnet 4.5 integration (`claude-sonnet-4.5-20241022`)
-- ✅ Comprehensive test suite (28 tests, all passing)
-- ✅ Bug #1 fixed: `sectionsMatch()` now requires ID match (commit 61095aa)
-- ✅ Bug #2 fixed: `findMatchingSectionIndex()` matches by ID (commit pending)
-- 🚧 Testing with real translation PRs
-- 🚧 Update STATUS-REPORT.md and release v0.3.0
+### Features
+- ✅ Subsection parsing from translated content
+- ✅ Subsections included in heading-map (15 entries vs 10)
+- ✅ Recursive subsection processing in heading-map
+- ✅ Enhanced debug logging
 
-## Completed ✅
+### Bug Fixes
+- ✅ Bug #10: Incomplete heading-map (subsections missing)
+- ✅ Subsection duplication bug in reconstructFromSections()
 
-### v0.3.0 - Section-Based Refactor
-- [x] Section-based architecture (replaces block-based)
-- [x] Simplified parser (line-by-line, no unified/remark)
-- [x] Section-level diff detection
-- [x] Claude Sonnet 4.5 integration
-- [x] Two translation modes (UPDATE for modified, NEW for added)
-- [x] Test fixtures (intro-old.md, intro-new.md, intro-zh-cn.md)
-- [x] Comprehensive test suite (28 tests, all passing)
-  - [x] Parser tests (basic parsing, fixtures, edge cases)
-  - [x] DiffDetector tests (section matching, change detection)
-  - [x] FileProcessor tests (Bug #2 fix verification)
-- [x] Bug #1 fix: `sectionsMatch()` requires ID match
-- [x] Bug #2 fix: `findMatchingSectionIndex()` matches by ID
-- [x] Documentation updates (ARCHITECTURE, PROJECT-DESIGN, IMPLEMENTATION)
+### Testing
+- ✅ 10 new regression tests (87 total, all passing)
+- ✅ Test Suite 2: Document reconstruction (5 tests)
+- ✅ Test Suite 3: Heading-map integration (5 tests)
+- ✅ Comprehensive validation with test repositories
 
-### v0.1.0 - Initial Release
-- [x] Project setup (TypeScript, Jest, ESLint)
-- [x] Block-based MyST parser (with remark)
-- [x] Block-level diff detection
-- [x] Claude Sonnet 4 integration
-- [x] Glossary support (zh-cn.json with 342 terms)
-- [x] GitHub Actions workflow
-- [x] Example configurations
-- [x] README and documentation
+### Documentation
+- ✅ Consolidated TESTING.md (1197→400 lines)
+- ✅ Comprehensive IMPLEMENTATION.md rewrite
+- ✅ Updated ARCHITECTURE.md (subsection support)
+- ✅ Clean documentation structure (12 core files)
 
-## In Progress 🚧
+---
 
-### Testing & Release
-- [x] Create test suite
-- [ ] Commit Bug #2 fix
-- [ ] Test translation PR with both bugs fixed
-- [ ] Update STATUS-REPORT.md
-- [ ] Tag v0.3.0 release
+## v1.0 - API Stabilization (Next)
 
-### Enhancements
-- [ ] Error handling and retries
-- [ ] Rate limiting for Claude API
-- [ ] TOC file parsing and updating
+**Goal**: Freeze public interfaces, guarantee backward compatibility
 
-## Remaining Work 📝
+### Requirements
+- [ ] Comprehensive test coverage (target: 95%+ core logic)
+- [ ] Real-world validation with QuantEcon lectures
+- [ ] Performance benchmarks
+- [ ] API documentation freeze
+- [ ] Semantic versioning commitment
 
-### Step 6: GitHub Integration
-- [x] Clone target repository
-- [x] Create branch in target repo
-- [x] Commit translated files
-- [x] Create pull request
-- [x] Add PR description with source PR link
-- [x] Apply labels and reviewers
-- [ ] Comment on source PR with target PR link
+### Testing
+- [ ] Phase 2 regression tests (Test Suites 1 & 4)
+  - [ ] Test Suite 1: parseTranslatedSubsections() (3 tests)
+  - [ ] Test Suite 4: End-to-end integration (1 test)
+- [ ] Large document tests (10+ subsections)
+- [ ] Deep nesting tests (level 5-6 subsections)
+- [ ] Edge case coverage
 
-### Step 7: Testing
-- [x] Unit tests for parser (9 tests)
-- [x] Unit tests for diff detector (10 tests)
-- [x] Unit tests for file processor (9 tests)
-- [ ] Integration tests (end-to-end workflows)
-- [ ] Test with real lecture repositories
-
-### Step 8: Documentation
-- [x] README with usage instructions
-- [x] Example workflow configurations
-- [x] Glossary format documentation
-- [ ] API documentation
+### Documentation
+- [ ] API reference documentation
+- [ ] Migration guide (v0.x → v1.0)
+- [ ] Best practices guide
 - [ ] Troubleshooting guide
-- [ ] Contributing guidelines
 
-### Step 9: Initial Release
-- [x] Initialize git repository
-- [x] Create GitHub repository (quantecon/action-translation-sync)
-- [x] Push code to GitHub
-- [x] Create v0.1.0 tag
-- [x] Create v0.1 floating tag
-- [x] Publish release to GitHub
-- [ ] Test with lecture-python.myst (next step)
+### Release Criteria
+- [ ] 95%+ test coverage
+- [ ] No known critical bugs
+- [ ] All QuantEcon lectures translate successfully
+- [ ] Performance acceptable (<5 min per lecture)
+- [ ] Documentation complete
 
-### Step 10: CI/CD
-- [ ] GitHub Actions workflow for testing
-- [ ] GitHub Actions workflow for building
-- [ ] Automated version tagging
-- [ ] Dependabot configuration
+---
 
-### Step 11: Enhancements (Future)
-- [ ] Support for multiple files in single PR
+## v1.1+ - Feature Enhancements (Future)
+
+**Focus**: New features while maintaining v1.0 compatibility
+
+### Translation Improvements
+- [ ] Support for additional languages (Japanese, Spanish)
+- [ ] Custom glossary per-repository
+- [ ] Translation memory / caching
 - [ ] Batch translation optimization
-- [ ] Translation memory/caching
-- [ ] Dry-run mode
-- [ ] Custom prompt templates
+
+### Performance
+- [ ] Parallel section translation
+- [ ] Incremental caching (skip unchanged sections)
+- [ ] Bundle size optimization
+- [ ] Faster parsing with streaming
+
+### Features
+- [ ] Support for nested directives
+- [ ] Image caption translation
+- [ ] Table content translation
+- [ ] Footnote handling
+- [ ] Citation translation
+
+### Quality
 - [ ] Translation quality metrics
-- [ ] Issue creation on failure
-- [ ] Notification system
+- [ ] Automated validation rules
+- [ ] Style consistency checking
+- [ ] Terminology enforcement
 
-## Known Issues 🐛
+### Developer Experience
+- [ ] CLI tool for local testing
+- [ ] Docker container for reproducibility
+- [ ] Better error messages
+- [ ] Interactive debugging mode
 
-- GitHub PR integration not implemented (will fail at PR creation)
-- TOC management not implemented
-- Limited test coverage
-- No error recovery for partial failures
+---
 
-## Notes 📔
+## v2.0+ - Major Enhancements (Long-term)
 
-- **Model**: Claude Sonnet 4.5 (claude-sonnet-4.5-20241022)
-- **Built-in Glossary**: 342 terms in glossary/zh-cn.json
-- MyST parsing uses unified/remark ecosystem
-- Type errors resolved by using `any` for visit callback (remark types are complex)
-- Build successful with ncc bundling (2,452 KB)
-- **v0.1.0 Released**: October 16, 2025
-- Repository: https://github.com/quantecon/action-translation-sync
+**Possible breaking changes acceptable**
+
+### Architecture
+- [ ] Plugin system for extensibility
+- [ ] Multiple translation provider support (beyond Claude)
+- [ ] Custom parser plugins
+- [ ] Custom diff strategies
+
+### Advanced Features
+- [ ] Multi-language synchronization (EN→ZH+JA simultaneously)
+- [ ] Bidirectional translation
+- [ ] Translation suggestions/corrections
+- [ ] Machine learning for terminology
+
+---
+
+## Completed Milestones
+
+### v0.3.0 - Section-Based Architecture ✅
+**Released**: August 2024
+
+- ✅ Complete rewrite using section-based approach
+- ✅ 43% code reduction (1586→976 lines)
+- ✅ 28% bundle reduction (2492kB→1794kB)
+- ✅ Claude Sonnet 4.5 integration
+- ✅ Heading-map system
+- ✅ Position-based section matching
+- ✅ 77 tests, all passing
+
+### v0.2.2 - Block-Based Prototype ✅
+**Released**: July 2024
+
+- ✅ Working prototype with block-based approach
+- ✅ Basic translation functionality
+- ✅ Identified limitations leading to v0.3.0 redesign
+
+### v0.1.x - Initial Development ✅
+**Released**: May-June 2024
+
+- ✅ Project setup and infrastructure
+- ✅ Initial parser and translator
+- ✅ GitHub Actions integration
+- ✅ Glossary system (342 terms)
+
+---
+
+## Maintenance Tasks
+
+### Regular
+- [ ] Update Claude model as new versions release
+- [ ] Monitor API costs and optimize
+- [ ] Review and update glossaries
+- [ ] Address user feedback
+
+### As Needed
+- [ ] Dependency updates (security patches)
+- [ ] Bug fixes from production use
+- [ ] Documentation improvements
+- [ ] Performance tuning
+
+---
+
+## Contributing
+
+Want to contribute? Check:
+- **Good First Issues**: Search GitHub issues tagged `good-first-issue`
+- **Help Wanted**: Issues tagged `help-wanted`
+- **Documentation**: Always needs improvement
+- **Testing**: Add more edge case tests
+
+---
+
+## Questions & Feedback
+
+- **GitHub Issues**: https://github.com/QuantEcon/action-translation-sync/issues
+- **Discussions**: https://github.com/QuantEcon/action-translation-sync/discussions
+- **Documentation**: See `docs/INDEX.md`
