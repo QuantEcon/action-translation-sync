@@ -395,6 +395,30 @@ Version bumps in v0.1.x:
 - `0.1.x` → `0.2.0`: New features, refactors
 - `0.x.x` → `1.0.0`: Production ready, API frozen
 
+## Testing
+
+### Test Repositories
+
+The project uses dedicated test repositories for end-to-end testing:
+
+- **Source Repository**: `test-translation-sync` (English content)
+- **Target Repository**: `test-translation-sync.zh-cn` (Chinese translations)
+
+### Production Testing Workflow
+
+To test the action in a production-like environment:
+
+1. Create a PR in `test-translation-sync` with content changes
+2. Merge the PR to trigger the translation action
+3. Verify the action creates a translation PR in `test-translation-sync.zh-cn`
+
+### Local Development
+
+- Test repositories are cloned to `tmp/` directory for local testing
+- **Always check the state** of `tmp/` repos before running tests
+- These are working copies that may have uncommitted changes or stale state
+- Clean or reset `tmp/` repositories as needed between test runs
+
 ## Getting Help
 
 - **Design decisions**: See `docs/PROJECT-DESIGN.md`
@@ -402,6 +426,7 @@ Version bumps in v0.1.x:
 - **Current tasks**: See `docs/TODO.md`
 - **How things work**: See `docs/IMPLEMENTATION.md`
 - **Quick reference**: See `docs/QUICKSTART.md`
+- **Test setup**: See `docs/TEST-REPOSITORIES.md`
 
 ## Remember
 
