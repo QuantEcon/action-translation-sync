@@ -330,7 +330,6 @@ done
 # Handle real-world scenario (needs lecture base)
 if [ "$DRY_RUN" = true ]; then
     echo -e "${CYAN}[DRY RUN] Would switch main to lecture base${NC}"
-    echo -e "${CYAN}[DRY RUN] Would update target repo to lecture base${NC}"
     echo -e "${CYAN}[DRY RUN] Would create PR: Real-world lecture update${NC}"
     echo -e "${CYAN}  Branch: test/09-real-world-lecture${NC}"
     echo -e "${CYAN}  File: 09-real-world-lecture.md${NC}"
@@ -338,20 +337,12 @@ if [ "$DRY_RUN" = true ]; then
 else
     echo -e "${YELLOW}Setting up real-world scenario...${NC}"
 
-    # First, update main to lecture base
+    # Update main to lecture base (only source repo needs this)
     git checkout main
     cp "$DATA_DIR/base-lecture.md" "$TEST_FILE"
     git add "$TEST_FILE"
     git commit -m "Switch to lecture base for real-world test"
     git push origin main
-
-    # Update target repo too
-    cd "../$TARGET_REPO"
-    cp "$DATA_DIR/base-lecture-zh-cn.md" "$TEST_FILE"
-    git add "$TEST_FILE"
-    git commit -m "Switch to lecture base for real-world test (Chinese)"
-    git push origin main
-    cd "../$SOURCE_REPO"
 
     # Now create the real-world PR
     IFS=':' read -r file_prefix description <<< "$REAL_WORLD_SCENARIO"
