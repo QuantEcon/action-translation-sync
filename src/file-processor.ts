@@ -222,15 +222,15 @@ export class FileProcessor {
           throw new Error(`Translation failed for modified section: ${result.error}`);
         }
 
-        // Parse subsections from translated content
-        const subsections = await this.parseTranslatedSubsections(
+        // Parse subsections from translated content and strip them from content
+        const { subsections, contentWithoutSubsections } = await this.parseTranslatedSubsections(
           result.translatedSection || '',
           newSection
         );
 
         resultSections.push({
           ...targetSection,
-          content: result.translatedSection || targetSection.content,
+          content: contentWithoutSubsections || targetSection.content,
           subsections: subsections,
         });
 
@@ -294,7 +294,7 @@ export class FileProcessor {
     const translatedLines = (result.translatedSection || '').split('\n');
     const translatedHeading = translatedLines[0] || '';
     
-    const subsections = await this.parseTranslatedSubsections(
+    const { subsections, contentWithoutSubsections } = await this.parseTranslatedSubsections(
       result.translatedSection || '',
       section
     );
@@ -303,7 +303,7 @@ export class FileProcessor {
       heading: translatedHeading,
       level: section.level,
       id: section.id,
-      content: result.translatedSection || '',
+      content: contentWithoutSubsections || '',
       startLine: 0,
       endLine: 0,
       subsections: subsections,
@@ -375,13 +375,14 @@ export class FileProcessor {
   }
 
   /**
-   * Parse translated content to extract subsections
-   * This ensures subsections are properly populated in the heading-map
+   * Parse translated content to extract subsections and strip them from parent content
+   * This ensures subsections are properly populated in the heading-map and not duplicated
+   * Returns both the subsections and the content without subsections
    */
   private async parseTranslatedSubsections(
     translatedContent: string,
     sourceSection: Section
-  ): Promise<Section[]> {
+  ): Promise<{ subsections: Section[]; contentWithoutSubsections: string }> {
     try {
       // Wrap in minimal MyST document for parsing
       const wrappedContent = `---
@@ -397,14 +398,29 @@ ${translatedContent}`;
       
       // Extract subsections from the first section
       if (parsed.sections.length > 0 && parsed.sections[0].subsections.length > 0) {
-        this.log(`Extracted ${parsed.sections[0].subsections.length} subsections from translated content`);
-        return parsed.sections[0].subsections;
+        const section = parsed.sections[0];
+        this.log(`Extracted ${section.subsections.length} subsections from translated content`);
+        
+        // Get content without subsections by removing everything from first subsection onward
+        // The wrapped content adds 7 lines of frontmatter, so adjust line numbers
+        const firstSubsectionLine = section.subsections[0].startLine - 7;
+        const lines = translatedContent.split('\n');
+        const contentLines = lines.slice(0, firstSubsectionLine);
+        const contentWithoutSubsections = contentLines.join('\n').trim();
+        
+        return {
+          subsections: section.subsections,
+          contentWithoutSubsections
+        };
       }
     } catch (error) {
       this.log(`Warning: Failed to parse subsections from translated content: ${error}`);
     }
     
-    return [];
+    return {
+      subsections: [],
+      contentWithoutSubsections: translatedContent
+    };
   }
 
   /**

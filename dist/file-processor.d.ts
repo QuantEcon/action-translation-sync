@@ -40,8 +40,9 @@ export declare class FileProcessor {
      */
     processFull(content: string, filepath: string, sourceLanguage: string, targetLanguage: string, glossary?: Glossary): Promise<string>;
     /**
-     * Parse translated content to extract subsections
-     * This ensures subsections are properly populated in the heading-map
+     * Parse translated content to extract subsections and strip them from parent content
+     * This ensures subsections are properly populated in the heading-map and not duplicated
+     * Returns both the subsections and the content without subsections
      */
     private parseTranslatedSubsections;
     /**
