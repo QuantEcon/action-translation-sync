@@ -20,7 +20,7 @@
 # What this script does:
 # 1. Clones/updates both test repositories
 # 2. Force pushes base state to main (clean slate)
-# 3. Closes all open PRs on source repo
+# 3. Closes all open PRs on both source and target repos
 # 4. Creates 9 fresh test PRs with different scenarios
 # 5. Adds 'test-translation' label to each PR
 # 6. Prints summary of created PRs
@@ -210,12 +210,13 @@ echo ""
 #
 echo -e "${BLUE}Step 3: Closing all open PRs...${NC}"
 
+# Close PRs on source repo
 if [ "$DRY_RUN" = true ]; then
     OPEN_PRS=$(gh pr list --repo "$OWNER/$SOURCE_REPO" --state open --json number --jq '.[].number' 2>/dev/null || echo "")
     if [ -z "$OPEN_PRS" ]; then
-        echo -e "${CYAN}[DRY RUN] No open PRs to close${NC}"
+        echo -e "${CYAN}[DRY RUN] No open PRs to close on source repo${NC}"
     else
-        echo -e "${CYAN}[DRY RUN] Would close the following PRs:${NC}"
+        echo -e "${CYAN}[DRY RUN] Would close the following PRs on source repo:${NC}"
         for pr_number in $OPEN_PRS; do
             echo -e "${CYAN}  - PR #${pr_number}${NC}"
         done
@@ -225,7 +226,7 @@ else
     OPEN_PRS=$(gh pr list --repo "$OWNER/$SOURCE_REPO" --state open --json number --jq '.[].number')
 
     if [ -z "$OPEN_PRS" ]; then
-        echo "No open PRs to close"
+        echo "No open PRs to close on source repo"
     else
         for pr_number in $OPEN_PRS; do
             gh pr close "$pr_number" --repo "$OWNER/$SOURCE_REPO" --comment "Closing for test reset"
@@ -236,6 +237,30 @@ else
     # Clean up local branches
     git checkout main
     git branch | grep -v "main" | xargs -r git branch -D 2>/dev/null || true
+fi
+
+# Close PRs on target repo
+if [ "$DRY_RUN" = true ]; then
+    TARGET_PRS=$(gh pr list --repo "$OWNER/$TARGET_REPO" --state open --json number --jq '.[].number' 2>/dev/null || echo "")
+    if [ -z "$TARGET_PRS" ]; then
+        echo -e "${CYAN}[DRY RUN] No open PRs to close on target repo${NC}"
+    else
+        echo -e "${CYAN}[DRY RUN] Would close the following PRs on target repo:${NC}"
+        for pr_number in $TARGET_PRS; do
+            echo -e "${CYAN}  - PR #${pr_number}${NC}"
+        done
+    fi
+else
+    TARGET_PRS=$(gh pr list --repo "$OWNER/$TARGET_REPO" --state open --json number --jq '.[].number')
+
+    if [ -z "$TARGET_PRS" ]; then
+        echo "No open PRs to close on target repo"
+    else
+        for pr_number in $TARGET_PRS; do
+            gh pr close "$pr_number" --repo "$OWNER/$TARGET_REPO" --comment "Closing for test reset"
+            echo -e "${GREEN}✓${NC} Closed PR #${pr_number} on target repo"
+        done
+    fi
 fi
 
 echo ""
