@@ -50,6 +50,6 @@ jobs:
           source-language: en
           docs-folder: '.'
           anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ secrets.QUANTECON_SERVICES_PAT }}
           test-mode: ${{ steps.mode.outputs.mode == 'test' }}
         uses: ./action
