@@ -352,24 +352,14 @@ This is an automated test PR to validate the translation action.
     fi
 done
 
-# Handle real-world scenario (needs lecture base)
+# Handle real-world scenario
 if [ "$DRY_RUN" = true ]; then
-    echo -e "${CYAN}[DRY RUN] Would switch main to lecture base${NC}"
     echo -e "${CYAN}[DRY RUN] Would create PR: Real-world lecture update${NC}"
     echo -e "${CYAN}  Branch: test/09-real-world-lecture${NC}"
     echo -e "${CYAN}  File: 09-real-world-lecture.md${NC}"
     echo -e "${CYAN}  Label: test-translation${NC}"
 else
-    echo -e "${YELLOW}Setting up real-world scenario...${NC}"
-
-    # Update main to lecture base (only source repo needs this)
-    git checkout main
-    cp "$DATA_DIR/base-lecture.md" "$TEST_FILE"
-    git add "$TEST_FILE"
-    git commit -m "Switch to lecture base for real-world test"
-    git push origin main
-
-    # Now create the real-world PR
+    # Create the real-world PR from main (don't modify main)
     IFS=':' read -r file_prefix description <<< "$REAL_WORLD_SCENARIO"
     branch_name="test/${file_prefix}"
 
@@ -448,8 +438,6 @@ else
     echo ""
     echo "Monitor translation PRs:"
     echo "  gh pr list --repo $OWNER/$TARGET_REPO"
-    echo ""
-    echo -e "${YELLOW}Note: The first 8 tests use minimal base, test #9 uses lecture base${NC}"
     echo ""
     echo "To reset and run again, just execute this script again!"
 fi
