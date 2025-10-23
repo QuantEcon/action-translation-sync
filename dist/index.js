@@ -1296,7 +1296,11 @@ function getInputs() {
     const targetLanguage = core.getInput('target-language', { required: true });
     // Handle docs-folder: '.' or '/' means root level (GitHub Actions normalizes '.' to '/')
     const docsFolderInput = core.getInput('docs-folder', { required: false });
+    core.info(`Raw docs-folder input: "${docsFolderInput}" (length: ${docsFolderInput.length})`);
+    core.info(`Checking: docsFolderInput === '.' is ${docsFolderInput === '.'}`);
+    core.info(`Checking: docsFolderInput === '/' is ${docsFolderInput === '/'}`);
     const docsFolder = (docsFolderInput === '.' || docsFolderInput === '/') ? '' : docsFolderInput;
+    core.info(`Converted docsFolder: "${docsFolder}" (length: ${docsFolder.length})`);
     const sourceLanguage = core.getInput('source-language', { required: false }) || 'en';
     const glossaryPath = core.getInput('glossary-path', { required: false }) || ''; // Empty by default - uses built-in
     const tocFile = core.getInput('toc-file', { required: false }) || '_toc.yml';
