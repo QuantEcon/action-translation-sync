@@ -42,7 +42,8 @@ const core = __importStar(require("@actions/core"));
 function getInputs() {
     const targetRepo = core.getInput('target-repo', { required: true });
     const targetLanguage = core.getInput('target-language', { required: true });
-    const docsFolder = core.getInput('docs-folder', { required: false }) || 'lectures/';
+    const docsFolderRaw = core.getInput('docs-folder', { required: false });
+    const docsFolder = docsFolderRaw !== undefined && docsFolderRaw !== null ? docsFolderRaw : 'lectures/';
     const sourceLanguage = core.getInput('source-language', { required: false }) || 'en';
     const glossaryPath = core.getInput('glossary-path', { required: false }) || ''; // Empty by default - uses built-in
     const tocFile = core.getInput('toc-file', { required: false }) || '_toc.yml';
