@@ -278,7 +278,7 @@ This PR contains automated translations from [${github.context.repo.owner}/${git
 ${translatedFiles.map(f => `- \`${f.path}\``).join('\n')}
 
 ### Source
-${prNumber ? `- **PR**: #${prNumber}` : '- **Trigger**: Manual workflow dispatch'}
+${prNumber ? `- **PR**: [#${prNumber}](https://github.com/${github.context.repo.owner}/${github.context.repo.repo}/pull/${prNumber})` : '- **Trigger**: Manual workflow dispatch'}
 - **Source Language**: ${inputs.sourceLanguage}
 - **Target Language**: ${inputs.targetLanguage}
 - **Model**: ${inputs.claudeModel}
@@ -286,10 +286,17 @@ ${prNumber ? `- **PR**: #${prNumber}` : '- **Trigger**: Manual workflow dispatch
 ---
 *This PR was created automatically by the [translation-sync action](https://github.com/quantecon/action-translation-sync).*`;
 
+          // Create a concise title with actual filenames
+          const fileList = translatedFiles.length === 1 
+            ? translatedFiles[0].path 
+            : translatedFiles.length <= 3
+              ? translatedFiles.map(f => f.path).join(', ')
+              : `${translatedFiles.length} files`;
+          
           const { data: pr } = await octokit.rest.pulls.create({
             owner: targetOwner,
             repo: targetRepoName,
-            title: `🌐 Translation sync: ${processedFiles.length} file(s) updated`,
+            title: `🌐 Translation sync: ${fileList}`,
             body: prBody,
             head: branchName,
             base: defaultBranch,
