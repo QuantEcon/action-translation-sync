@@ -179,7 +179,13 @@ if (docsFolder === '') {
 
 ## Testing Strategy
 
-**Test Coverage**: 121 tests across 5 files
+**Two Testing Approaches**:
+
+### 1. Local Unit/Integration Tests
+**Purpose**: Fast, comprehensive testing of core logic
+**Location**: `src/__tests__/*.test.ts`
+**Run**: `npm test`
+**Coverage**: 121 tests across 5 files
 
 **Test Files**:
 - `parser.test.ts` - MyST parsing, frontmatter (15 tests)
@@ -193,10 +199,28 @@ if (docsFolder === '') {
 - Heading-map completeness
 - Root-level file handling
 
-**GitHub Test Infrastructure**:
+### 2. GitHub Repository Tests
+**Purpose**: Real-world validation with actual PRs and GitHub Actions
+**Script**: `scripts/test-action-on-github.sh`
+**Repositories**: `quantecon-test/lectures` → `quantecon-test/lectures-zh-cn`
+**Features**:
 - 9 automated test scenarios
-- Test repositories: `quantecon-test/lectures` → `quantecon-test/lectures-zh-cn`
-- Script: `scripts/test-action-on-github.sh`
+- Automated setup and reset
+- TEST mode (no API calls)
+- Cross-repo PR creation validation
+
+**Test Scenarios**:
+1. New file (full translation)
+2. Single section update
+3. Multiple section updates
+4. Section added
+5. Section deleted
+6. Preamble update
+7. Subsection content update
+8. Heading-map integration
+9. Root-level file support
+
+**See**: `docs/TEST-REPOSITORIES.md` for detailed GitHub testing guide
 
 ## Common Tasks
 
@@ -242,14 +266,23 @@ docs/
 ├── HEADING-MAPS.md       # Heading-map system
 ├── TODO.md               # Roadmap
 ├── STATUS-REPORT.md      # Project status
+├── TEST-REPOSITORIES.md  # GitHub test setup guide
 └── releases/             # Release notes
-    └── v0.4.3.md
+    ├── v0.4.3.md
+    └── v0.4.4.md
 ```
 
 **Always Update**:
 - Test counts when adding tests
 - Release notes for new features/fixes
 - Status report for major changes
+- README.md for user-facing changes
+
+**IMPORTANT - Do NOT**:
+❌ **Never create separate SUMMARY.md or CHANGELOG.md files**
+❌ **Never create standalone documentation files for changes**
+✅ **Always update existing documentation in place** (STATUS-REPORT.md, TODO.md, release notes)
+✅ **Update README.md for user-facing changes**
 
 ## What NOT to Do
 
@@ -314,11 +347,21 @@ Now we can match!
 
 ## Quick Reference
 
-**Run tests**: `npm test`
-**Run specific test**: `npm test -- parser.test.ts`
-**Build**: `npm run build`
-**Package**: `npm run package`
-**GitHub tests**: `./scripts/test-action-on-github.sh`
+**Local Testing**:
+- `npm test` - Run all unit tests
+- `npm test -- parser.test.ts` - Run specific test file
+- `npm test -- --watch` - Watch mode for development
+- `npm test -- --coverage` - Generate coverage report
+
+**GitHub Testing**:
+- `./scripts/test-action-on-github.sh` - Run all 9 GitHub test scenarios
+- Uses TEST mode (no Claude API calls)
+- Automatically resets test repositories
+- See `docs/TEST-REPOSITORIES.md` for details
+
+**Build**:
+- `npm run build` - Compile TypeScript
+- `npm run package` - Bundle for distribution
 
 **Key files to check when modifying**:
 - Subsection handling → `file-processor.ts:parseTranslatedSubsections`

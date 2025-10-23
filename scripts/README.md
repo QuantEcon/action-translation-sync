@@ -136,6 +136,6 @@ rm -rf tmp/test-repos
 **"Old PRs interfering"**
 - Just re-run the script - it closes all old PRs automatically
 
-## setup-test-repos.sh
+---
 
-Legacy script for manual repository setup. Use `test-action-on-github.sh` instead for automated testing.
+**Note**: The legacy `setup-test-repos.sh` script has been removed. Use `test-action-on-github.sh` for all testing needs.

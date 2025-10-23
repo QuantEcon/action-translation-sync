@@ -611,47 +611,39 @@ After testing with test repos:
 
 ---
 
-## Quick Setup Script
+## Automated Testing Script
 
-Save time with this setup script:
+For automated, repeatable testing, use the test script:
 
 ```bash
-#!/bin/bash
-# setup-test-repos.sh
-
-echo "Setting up test repositories..."
-
-# Source repo
-gh repo create quantecon/test-translation-sync --public
-git clone https://github.com/quantecon/test-translation-sync.git
-cd test-translation-sync
-
-# Create structure
-mkdir -p lectures .github/workflows
-# ... (copy files from above)
-
-git add .
-git commit -m "Initial setup"
-git push origin main
-
-# Target repo
-cd ..
-gh repo create quantecon/test-translation-sync.zh-cn --public
-git clone https://github.com/quantecon/test-translation-sync.zh-cn.git
-cd test-translation-sync.zh-cn
-
-mkdir lectures
-touch lectures/.gitkeep
-# ... (create README)
-
-git add .
-git commit -m "Initial setup"
-git push origin main
-
-echo "✅ Test repositories created!"
-echo "Next: Add secrets to test-translation-sync"
+# From repository root
+./scripts/test-action-on-github.sh
 ```
+
+This script:
+- Resets test repositories to clean state
+- Closes all old PRs automatically
+- Creates 9 fresh test PRs with different scenarios
+- Fully automated and idempotent (safe to re-run)
+
+**Prerequisites**:
+- GitHub CLI (`gh`) installed and authenticated
+- Test repositories already exist (see setup below)
+- `ANTHROPIC_API_KEY` secret configured in source repo
+
+**First-Time Setup**:
+```bash
+# Create repositories (once)
+gh repo create quantecon/test-translation-sync --public
+gh repo create quantecon/test-translation-sync.zh-cn --public
+
+# Add API key secret
+gh secret set ANTHROPIC_API_KEY --repo quantecon/test-translation-sync
+```
+
+See `scripts/README.md` for detailed documentation.
 
 ---
 
-**Ready to test!** Follow the steps above to create isolated test repositories.
+**Ready to test!** Use the automated script above for comprehensive testing.
+
