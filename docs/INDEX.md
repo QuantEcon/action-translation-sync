@@ -42,6 +42,8 @@ Complete documentation for the Translation Sync GitHub Action.
 
 ## 📦 Release Notes
 
+- **[v0.4.4](releases/v0.4.4.md)** - Developer experience, GitHub testing, root-level support
+- **[v0.4.3](releases/v0.4.3.md)** - Subsection support complete with regression tests
 - **[v0.3.0](releases/v0.3.0.md)** - Section-based refactor, Claude 4.5, test suite
 - **[v0.2.2](releases/v0.2.2.md)** - Team reviewers support
 - **[v0.1.2](releases/v0.1.2.md)** - Documentation and glossary updates
@@ -77,7 +79,7 @@ docs/
 ├── PROJECT-DESIGN.md         # Design decisions and philosophy
 ├── ARCHITECTURE.md           # System architecture
 ├── IMPLEMENTATION.md         # Comprehensive implementation guide
-├── TESTING.md                # Testing guide (87 tests)
+├── TESTING.md                # Testing guide (121 tests)
 ├── TODO.md                   # Development roadmap
 ├── STATUS-REPORT.md          # Project status
 ├── HEADING-MAPS.md           # Heading-map system guide

@@ -1,6 +1,6 @@
 # Testing Guide
 
-**Current Test Status**: ✅ 87 tests passing | 0 failing | ~2s execution time
+**Current Test Status**: ✅ 121 tests passing | 0 failing | ~2s execution time
 
 ---
 
@@ -36,8 +36,8 @@ src/__tests__/
 **Test Breakdown**:
 - Parser: 15 tests
 - Diff Detector: 15 tests  
-- File Processor: 20 tests (including 5 v0.4.3 regression tests)
-- Heading-Map: 28 tests (including 5 v0.4.3 regression tests)
+- File Processor: 54 tests (including subsection duplication regression test)
+- Heading-Map: 28 tests (including v0.4.3 subsection regression tests)
 - Integration: 9 tests
 
 ---

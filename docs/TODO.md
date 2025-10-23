@@ -1,29 +1,70 @@
 # Development Roadmap
 
-**Current Version**: v0.4.3  
+**Current Version**: v0.4.4  
 **Status**: Production-Ready  
 **Next**: v1.0 (API Stabilization)
 
 ---
 
+## v0.4.4 - COMPLETE ✅
+
+**Developer Experience & Robustness** - GitHub testing, root-level support, production-ready
+
+### Features
+- ✅ Root-level file support (`docs-folder: '.'`)
+- ✅ GitHub test infrastructure (9 automated scenarios)
+- ✅ Improved PR titles (use filenames, not "1 file(s)")
+- ✅ Hyperlinked source PRs in descriptions
+- ✅ TEST mode for quick validation
+- ✅ Automated test reset script
+
+### Bug Fixes
+- ✅ Subsection duplication in `parseTranslatedSubsections()`
+- ✅ GitHub Actions quirk: converts `'.'` to `'/'`
+- ✅ Normalization adding trailing slash to empty strings
+- ✅ Test script merge conflicts (main modified mid-setup)
+- ✅ Cross-repo permissions (use QUANTECON_SERVICES_PAT)
+
+### Testing
+- ✅ 121 tests (was 87), all passing (+39% coverage)
+- ✅ Subsection duplication regression test
+- ✅ GitHub test infrastructure with automated reset
+- ✅ 9 test scenarios (#97-105) validated
+
+### Documentation
+- ✅ Complete documentation audit and updates
+- ✅ IMPLEMENTATION.md rewrite (clean, 884 lines)
+- ✅ v0.4.4 release notes
+- ✅ .github/copilot-instructions.md
+- ✅ Updated all docs with current state (Oct 24, 2025)
+
+---
+
 ## v0.4.3 - COMPLETE ✅
 
-**Subsection Handling** - All features working, comprehensively tested
+**Subsection Handling & Developer Experience** - All features working, comprehensively tested
 
 ### Features
 - ✅ Subsection parsing from translated content
 - ✅ Subsections included in heading-map (15 entries vs 10)
 - ✅ Recursive subsection processing in heading-map
-- ✅ Enhanced debug logging
+- ✅ Root-level file support (`docs-folder: '.'`)
+- ✅ GitHub test infrastructure (9 automated scenarios)
+- ✅ Improved PR titles (use filenames, not "1 file(s)")
+- ✅ Hyperlinked source PRs in descriptions
 
 ### Bug Fixes
 - ✅ Bug #10: Incomplete heading-map (subsections missing)
-- ✅ Subsection duplication bug in reconstructFromSections()
+- ✅ Subsection duplication bug in parseTranslatedSubsections()
+- ✅ GitHub Actions quirk: converts `'.'` to `'/'`
+- ✅ Normalization adding trailing slash to empty strings
+- ✅ Test script merge conflicts (main modified mid-setup)
 
 ### Testing
-- ✅ 10 new regression tests (87 total, all passing)
-- ✅ Test Suite 2: Document reconstruction (5 tests)
-- ✅ Test Suite 3: Heading-map integration (5 tests)
+- ✅ 121 tests (was 87), all passing
+- ✅ Subsection duplication regression test
+- ✅ GitHub test infrastructure with automated reset
+- ✅ 9 test scenarios (#97-105) validated
 - ✅ Comprehensive validation with test repositories
 
 ### Documentation
@@ -31,6 +72,7 @@
 - ✅ Comprehensive IMPLEMENTATION.md rewrite
 - ✅ Updated ARCHITECTURE.md (subsection support)
 - ✅ Clean documentation structure (12 core files)
+- ✅ Documentation audit and updates (Oct 24, 2025)
 
 ---
 

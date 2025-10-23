@@ -1,734 +1,1465 @@
-# Implementation Guide# Implementation Details
+# Implementation Guide# Implementation Guide# Implementation Details
 
 
 
-This document explains how the Translation Sync Action works internally. For architecture overview, see [ARCHITECTURE.md](ARCHITECTURE.md). For design decisions, see [PROJECT-DESIGN.md](PROJECT-DESIGN.md).## Overview
+This document explains how the Translation Sync Action works internally. For architecture overview, see [ARCHITECTURE.md](ARCHITECTURE.md). For design decisions, see [PROJECT-DESIGN.md](PROJECT-DESIGN.md).
 
 
 
----This document explains the implementation details of the section-based translation sync action. The implementation is **simple by design** - 976 lines of core code across 4 modules, no complex AST parsing, and straightforward position-based matching.
+---This document explains how the Translation Sync Action works internally. For architecture overview, see [ARCHITECTURE.md](ARCHITECTURE.md). For design decisions, see [PROJECT-DESIGN.md](PROJECT-DESIGN.md).## Overview
 
 
 
-## Core Components**Core Philosophy**: Keep it simple, maintainable, and easy to understand.
+## Overview
 
 
 
-### 1. Entry Point (`src/index.ts`)## Core Modules
+The implementation is **simple by design** - ~1,200 lines of core code across 6 modules, no complex AST parsing, and straightforward position-based matching.---This document explains the implementation details of the section-based translation sync action. The implementation is **simple by design** - 976 lines of core code across 4 modules, no complex AST parsing, and straightforward position-based matching.
 
 
+
+**Core Philosophy**: Keep it simple, maintainable, and easy to understand.
+
+
+
+---## Core Components**Core Philosophy**: Keep it simple, maintainable, and easy to understand.
+
+
+
+## Core Modules
+
+
+
+### 1. Entry Point (`src/index.ts` - 118 lines)### 1. Entry Point (`src/index.ts`)## Core Modules
+
+
+
+#### Purpose
+
+GitHub Actions entry point that orchestrates the translation workflow.
 
 **Purpose**: GitHub Actions entry point### 1. Section Parser (`src/parser.ts` - 172 lines)
 
+#### Key Responsibilities
 
+- Read action inputs (repos, languages, API keys)
 
-**Key Functions**:#### Purpose
+- Detect changed files in merged PR
+
+- Orchestrate translation workflow**Key Functions**:#### Purpose
+
+- Create translation PRs in target repo
 
 - Reads action inputs (repos, languages, API keys)Parse MyST Markdown documents into `## Section` blocks using simple line-by-line parsing.
 
-- Detects changed files in merged PR
+#### Main Flow
 
-- Orchestrates translation workflow#### Key Functions
+```typescript- Detects changed files in merged PR
 
-- Creates translation PRs
+1. Get merged PR details from GitHub
 
-**`parseSections(content: string, filepath: string): Section[]`**
+2. Detect changed lecture files (*.md in docs-folder)- Orchestrates translation workflow#### Key Functions
+
+3. For each changed file:
+
+   - Fetch source (English) and target (Chinese) content- Creates translation PRs
+
+   - Process file (translate via file-processor)
+
+   - Create PR in target repo with translations**`parseSections(content: string, filepath: string): Section[]`**
+
+```
 
 **Flow**:
 
+---
+
 ```typescriptMain parser function. Splits document on `## Heading` markers.
+
+### 2. Parser (`src/parser.ts` - 172 lines)
 
 1. Get merged PR details
 
-2. Detect changed lecture files (*.md in lectures/)```typescript
+#### Purpose
 
-3. For each changed file:// Input:
+Parse MyST Markdown documents into `## Section` blocks using simple line-by-line parsing.2. Detect changed lecture files (*.md in lectures/)```typescript
 
-   - Fetch source (English) and target (Chinese) content# Lecture Title
 
-   - Process file (translate)
 
-   - Create PR in target repo## Introduction
+#### Key Functions3. For each changed file:// Input:
 
-```This is the intro.
 
 
+**`parseSections(content: string, filepath: string): Section[]`**   - Fetch source (English) and target (Chinese) content# Lecture Title
 
----### Background
 
-Some history here.
 
-### 2. File Processor (`src/file-processor.ts`)
+Main parser function. Splits document on `## Heading` markers.   - Process file (translate)
 
-## Main Theory
 
-**Purpose**: Orchestrates section-based translationThe core content.
 
+```typescript   - Create PR in target repo## Introduction
 
+// Input:
 
-**Key Methods**:// Output:
+# Lecture Title```This is the intro.
 
-[
 
-#### `processFile(sourceContent, targetContent, filename)`  {
-
-Main orchestration method:    heading: "Introduction",
-
-1. Parse source and target documents    level: 2,
-
-2. Detect section changes (ADDED/MODIFIED/DELETED)    id: "introduction",
-
-3. Translate changed sections    content: "This is the intro.\n\n### Background\nSome history here.",
-
-4. Reconstruct target document    startLine: 3,
-
-5. Update heading-map    endLine: 8,
-
-    subsections: ["Background"]
-
-#### `parseTranslatedSubsections(content, sourceSection)` (v0.4.3)  },
-
-Extracts subsections from translated content:  {
-
-- Wraps content in minimal MyST document    heading: "Main Theory",
-
-- Parses with parser to extract structure    level: 2,
-
-- Returns array of subsection objects    id: "main-theory",
-
-- Critical for heading-map completeness    content: "The core content.",
-
-    startLine: 10,
-
-**Subsection Handling** (v0.4.3):    endLine: 11,
-
-- After translating a section, parse the result to extract subsections    subsections: []
-
-- Add subsections to Section object  }
-
-- Include subsections in heading-map updates]
-
-- This enables incremental subsection updates```
-
-
-
-#### `reconstructFromSections(sections, frontmatter, preamble)`**Algorithm**:
-
-Rebuilds complete document:1. Split content into lines
-
-- Combines frontmatter + preamble + sections2. For each line, check if it starts with `## ` (level-2 heading)
-
-- Preserves document structure3. When found, save previous section (if any)
-
-- **Important**: section.content already includes subsections (don't append them again)4. Start new section with this heading
-
-5. Accumulate content lines until next `## ` or EOF
-
-**Size**: ~470 lines6. Track `###` subsections within each section
-
-7. Generate heading ID from heading text
-
----
-
-**Why Line-by-Line?**
-
-### 3. Parser (`src/parser.ts`)- No dependencies needed (no `unified`, `remark`, etc.)
-
-- Simple and fast
-
-**Purpose**: Parses MyST Markdown into structured sections- Sufficient for `##` heading detection
-
-- Easy to debug and maintain
-
-**Key Methods**:
-
-**`generateHeadingId(text: string): string`**
-
-#### `parseSections(content, filename)`
-
-Main parsing method:Creates consistent heading anchors for cross-references.
-
-```typescript
-
-Returns: {```typescript
-
-  frontmatter: string,    // YAML frontmattergenerateHeadingId("Economic Models") // → "economic-models"
-
-  preamble: string,       // Title + introgenerateHeadingId("The Bellman Equation") // → "the-bellman-equation"
-
-  sections: Section[]     // Parsed sections```
-
-}
-
-```**Algorithm**:
-
-1. Convert to lowercase
-
-**Parsing Strategy**:2. Replace spaces with hyphens
-
-- Line-by-line parsing3. Remove special characters
-
-- Splits on ## headings (level 2)4. Trim leading/trailing hyphens
-
-- Extracts ### subsections (level 3+) recursively
-
-- Preserves exact content**`findSectionById(sections: Section[], id: string): Section | undefined`**
-
-- Generates IDs from headings
-
-Recursively searches for a section by its ID. Checks top-level sections and nested subsections.
-
-**Section Structure**:
-
-```typescript**`validateMyST(content: string, filepath: string): ValidationResult`**
-
-interface Section {
-
-  heading: string;        // "## Economic Models"Basic MyST syntax validation:
-
-  level: number;          // 2, 3, 4, etc.- Check for unclosed code blocks (odd number of ` ``` `)
-
-  id: string;            // "economic-models"- Check for unclosed directives (odd number of ` ::: `)
-
-  content: string;        // Full content including subsections- Return errors with line numbers if found
-
-  startLine: number;      // Source line number
-
-  endLine: number;        // End line number#### No AST Parsing
-
-  subsections: Section[]; // Nested subsections
-
-}The old block-based approach used `unified` and `remark` to build an Abstract Syntax Tree. This added:
-
-```- 700kB to bundle size
-
-- Complex AST traversal logic
-
-**Key Features**:- Many dependencies to maintain
-
-- Preserves frontmatter (Jupyter/MyST metadata)
-
-- Preserves preamble (title + introduction)The section-based approach just splits on `##` - no AST needed!
-
-- Handles nested subsections
-
-- Uses unified/remark for robust parsing### 2. Diff Detector (`src/diff-detector.ts` - 178 lines)
-
-
-
-**Size**: ~170 lines#### Purpose
-
-Detect section-level changes between old and new English versions.
-
----
-
-#### Key Functions
-
-### 4. Diff Detector (`src/diff-detector.ts`)
-
-**`detectSectionChanges(oldContent, newContent, filepath): SectionChange[]`**
-
-**Purpose**: Detects changes between document versions
-
-Main diff detection function. Returns array of changes (added, modified, deleted).
-
-**Key Methods**:
-
-```typescript
-
-#### `detectChanges(oldContent, newContent, filename)`// Old English:
-
-Detects section-level changes:## Introduction
-
-```typescriptThis is v1.
-
-Returns: {
-
-  changes: SectionChange[],## Theory
-
-  preambleChanged: booleanThe math.
-
-}
-
-```// New English:
 
 ## Introduction
 
-**Change Types**:This is v2.
+This is the intro.
 
-- **ADDED**: New section in source
+---### Background
 
-- **MODIFIED**: Existing section changed## Economic Models   ← NEW
+### Background
 
-- **DELETED**: Section removed from sourceHousehold optimization.
+Some history here.Some history here.
 
 
 
-**Matching Strategy**:## Theory
+## Main Theory### 2. File Processor (`src/file-processor.ts`)
 
-- **Primary**: Match by section IDThe math.
+The core content.
 
-- **Fallback**: Match by position
-
-- **Why**: IDs are language-independent (generated from English headings)// Output:
-
-[
-
-**Example**:  {
-
-```typescript    type: 'modified',
-
-Old: [Introduction, Theory, Data]    oldSection: { heading: "Introduction", content: "This is v1.", ... },
-
-New: [Introduction, Models, Theory, Data]    newSection: { heading: "Introduction", content: "This is v2.", ... },
-
-    position: 0
-
-Detected:   },
-
-- ADDED: "Models" at position 1  {
-
-- All others matched by ID (not position!)    type: 'added',
-
-```    newSection: { heading: "Economic Models", content: "Household...", ... },
-
-    position: 1
-
-**Preamble Detection**:  }
-
-- Compares title and introduction text]
-
-- Returns `preambleChanged: true` if different```
-
-
-
-**Size**: ~178 lines**Algorithm**:
-
-1. Parse old content into sections
-
----2. Parse new content into sections
-
-3. For each new section at index i:
-
-### 5. Translator (`src/translator.ts`)   - Try position match: Does old section at index i match?
-
-   - If not, try ID match: Does any old section have same ID?
-
-**Purpose**: Translates content using Claude API   - If match found and content differs: MODIFIED
-
-   - If no match found: ADDED
-
-**Translation Modes**:4. For each old section not matched: DELETED
-
-
-
-#### Mode 1: UPDATE (Incremental Translation)**`sectionsMatch(section1: Section, section2: Section): boolean`**
-
-For MODIFIED sections - uses diff-based translation:
-
-Checks if two sections are the "same section" (for matching purposes).
-
-**Prompt Structure**:
-
-``````typescript
-
-You are translating from English to Chinese.// Checks:
-
-// 1. Same heading level (both level-2)
-
-OLD ENGLISH:// 2. Same number of subsections
-
-[previous English content]// 3. (Optional) Same heading ID
-
-
-
-NEW ENGLISH:// Match:
-
-[updated English content]{ heading: "Introduction", level: 2, subsections: ["Background"] }
-
-{ heading: "Introduction", level: 2, subsections: ["Background"] }
-
-CURRENT CHINESE:
-
-[existing Chinese translation]// Don't match:
-
-{ heading: "Introduction", level: 2, subsections: [] }
-
-Provide ONLY the updated Chinese translation.{ heading: "Introduction", level: 2, subsections: ["Background"] }
-
-``````
-
-
-
-**Benefits**:**Why This Works**:
-
-- Maintains translation consistency- Level and subsection count provide structural signature
-
-- Preserves terminology choices- Heading ID provides fallback for renamed sections
-
-- Faster than full re-translation- Language-independent (works with "Introduction" and "介绍")
-
-- Uses glossary for key terms
-
-**`sectionContentEqual(section1: Section, section2: Section): boolean`**
-
-#### Mode 2: NEW (Full Translation)
-
-For ADDED sections or new files:Checks if section content actually changed (to distinguish modified from unchanged).
-
-
-
-**Prompt Structure**:```typescript
-
-```// Two strategies:
-
-Translate the following from English to Chinese.// 1. Length difference > 10% → definitely changed
-
-// 2. Code block count differs → definitely changed
-
-Use this glossary:
-
-[glossary terms]if (Math.abs(len1 - len2) / len1 > 0.1) return false;
-
-if (codeBlocks1.length !== codeBlocks2.length) return false;
-
-[English content]
-
-return true; // Likely unchanged
-
-Provide ONLY the Chinese translation.```
-
-```
-
-**Why Not Exact Comparison?**
-
-**Special Handling**:- Minor formatting changes shouldn't trigger re-translation
-
-- **Code blocks**: Preserved unchanged (``` ... ```)- Small edits (fix typo) might not need full translation
-
-- **Math equations**: Preserved unchanged ($$...$$, $...$)- This is heuristic, Claude still sees the changes
-
-- **MyST directives**: Syntax preserved, content translated
-
-- **URLs**: Preserved unchanged**`extractCodeBlocks(content: string): string[]`**
-
-- **Variable names**: Preserved unchanged
-
-Finds all ` ```...``` ` code blocks in content. Used to detect if code changed (which often means content changed significantly).
-
-**Glossary Integration**:
-
-- Loads from `glossary/{language}.json`#### Position Matching
-
-- Example: `glossary/zh-cn.json` (342 terms)
-
-- Ensures consistent terminologyThe key insight: **Most edits don't reorder sections.**
-
-- Terms include: GDP, marginal cost, opportunity cost, etc.
-
-```
-
-**API Details**:English v1:          English v2:
-
-- Model: Claude Sonnet 4.5 (`claude-sonnet-4.5-20241022`)1. Introduction      1. Introduction      ← Position match
-
-- Max tokens: 81922. Theory           2. Economic Models   ← NEW (no match)
-
-- Temperature: 0.3 (deterministic)3. Examples         3. Theory           ← Position match (was #2)
-
-                    4. Examples         ← Position match (was #3)
-
-**Size**: ~257 lines```
-
-
-
----Position matching is:
-
-- **Simple**: Index-based lookup
-
-### 6. Heading Map System (`src/heading-map.ts`)- **Fast**: O(1) per section
-
-- **Language-independent**: Doesn't rely on heading text
-
-**Purpose**: Maintains cross-language section mappings- **Robust**: Works across translations
-
-
-
-**What is a Heading-Map?**### 3. Translation Service (`src/translator.ts` - 257 lines)
-
-
-
-A heading-map is a YAML dictionary in the frontmatter that maps English section headings to their Chinese translations:#### Purpose
-
-Translate sections using Claude Sonnet 4.5 with full context.
-
-```yaml
-
----#### Key Functions
-
-heading-map:
-
-  Introduction: 简介**`translateSection(request: SectionTranslationRequest): Promise<string>`**
-
-  Economic Models: 经济模型
-
-  Core Principles: 核心原则    # Subsection!Router function that dispatches to UPDATE or NEW mode based on request type.
-
-  Theory: 理论
-
----```typescript
-
-```if (request.mode === 'update') {
-
-  return await this.translateSectionUpdate(request);
-
-**Why Heading-Maps?**} else {
-
-  return await this.translateNewSection(request);
-
-Without heading-maps, we can't do incremental updates:}
-
-- English section IDs: `introduction`, `economic-models````
-
-- Chinese section IDs: `简介`, `经济模型` (different!)
-
-- Can't match sections across languages**`translateSectionUpdate(request: SectionTranslationRequest): Promise<string>`**
-
-
-
-With heading-maps:Handles MODIFIED sections. Provides Claude with old EN, new EN, and current CN translation.
-
-- Look up: "Economic Models" → "经济模型"
-
-- Match sections correctly**Prompt Structure**:
-
-- Update only changed sections```
-
-You are updating a Chinese translation to reflect changes in the English source.
-
-**Key Functions**:
-
-KEY RULES:
-
-#### `extractHeadingMap(content)`1. Maintain the translation style and terminology
-
-Extracts existing heading-map from frontmatter2. Update only what changed in the English
-
-3. Preserve all code blocks, math, and MyST directives unchanged
-
-#### `updateHeadingMap(existing, sourceSections, targetSections)`4. Use glossary terms consistently
-
-Updates heading-map with new translations:
-
-- Adds new section mappingsGLOSSARY (if applicable):
-
-- Removes deleted sections- household: 家庭
-
-- **Recursively processes subsections** (v0.4.3)- equilibrium: 均衡
-
-- Preserves existing mappings
-
-OLD ENGLISH SECTION:
-
-#### `injectHeadingMap(content, map)`## Introduction
-
-Injects updated heading-map back into frontmatterThis lecture covers dynamic programming.
-
-
-
-**Subsection Support** (v0.4.3):### Key Concepts
-
-```typescriptWe examine value functions.
-
-const processSections = (
-
-  sourceSecs: Section[],NEW ENGLISH SECTION:
-
-  targetSecs: Section[],## Introduction
-
-  level: number = 0This lecture covers dynamic programming and optimal control.
-
-) => {
-
-  sourceSecs.forEach((source, i) => {### Key Concepts
-
-    // Add section mappingWe examine value functions and policy functions.
-
-    map.set(sourceHeading, targetHeading);
-
-    CURRENT CHINESE TRANSLATION:
-
-    // Recursively process subsections## 介绍
-
-    if (source.subsections.length > 0) {本讲座涵盖动态规划。
-
-      processSections(
-
-        source.subsections,### 关键概念
-
-        target.subsections,我们研究价值函数。
-
-        level + 1
-
-      );Provide the UPDATED CHINESE translation that reflects the changes in the new English version.
-
-    }Output only the translation, no explanations.
-
-  });```
-
-};
-
-```**Why This Works**:
-
-- Claude sees what changed (old vs new)
-
-**Size**: ~140 lines- Claude preserves existing style (current translation)
-
-- Claude updates only what's necessary
-
----- Full section provides context for coherent prose
-
-
-
-## Data Flow**`translateNewSection(request: SectionTranslationRequest): Promise<string>`**
-
-
-
-### Scenario: Adding "## Economic Models" SectionHandles ADDED sections. Translates from scratch.
-
-
-
-**Input**:**Prompt Structure**:
-
-- English PR merged with new section```
-
-- Chinese translation exists (5 sections)Translate this English section to Chinese.
-
-
-
-**Step-by-Step**:RULES:
-
-1. Translate all prose content
-
-1. **Detection** (`index.ts`)2. Preserve code blocks unchanged
-
-   ```3. Preserve math equations unchanged
-
-   Merged PR #42: "Add economic models section"4. Preserve MyST directives unchanged
-
-   Changed files: lectures/intro.md5. Use glossary terms consistently
-
-   ```
-
-GLOSSARY (if applicable):
-
-2. **Parsing** (`parser.ts`)- household: 家庭
-
-   ```- optimization: 优化
-
-   Old English: 5 sections [Getting Started, Math, Python, Data, Conclusion]
-
-   New English: 6 sections [Getting Started, Models, Math, Python, Data, Conclusion]ENGLISH SECTION:
-
-   Chinese: 5 sections## Economic Models
-
-   ```We examine household optimization problems in dynamic settings.
-
-
-
-3. **Diff Detection** (`diff-detector.ts`)### The Bellman Equation
-
-   ```The value function satisfies:
-
-   Change detected:
-
-   - Type: ADDED$$
-
-   - Section: "## Economic Models"V(x) = \max_{c} u(c) + \beta V(x')
-
-   - Position: 1 (after Getting Started)$$
-
-   ```
-
-Provide the complete Chinese translation.
-
-4. **Translation** (`translator.ts`)Output only the translation, no explanations.
-
-   ``````
-
-   Mode: NEW (ADDED section)
-
-   Input: "## Economic Models\n\nThis section covers..."**`translateFullDocument(request: TranslationRequest): Promise<string>`**
-
-   Output: "## 经济模型\n\n本节介绍..."
-
-   Glossary used: "economic model" → "经济模型"Handles completely new files. Translates entire document (not used for section updates).
-
-   ```
-
-**`formatGlossary(glossary: Glossary, targetLanguage: string): string`**
-
-5. **Reconstruction** (`file-processor.ts`)
-
-   ```Formats glossary terms for inclusion in prompts:
-
-   Parse Chinese sections (5)
-
-   Insert translated section at position 1```typescript
-
-   Result: 6 sections// Input:
-
-   Update heading-map: "Economic Models" → "经济模型"{ terms: { "household": "家庭", "equilibrium": "均衡" } }
-
-   ```
+## Main Theory
 
 // Output:
 
-6. **PR Creation** (`index.ts`)"- household: 家庭\n- equilibrium: 均衡"
+[**Purpose**: Orchestrates section-based translationThe core content.
 
-   ``````
+  {
 
-   Create branch: translation-sync-2025-10-18...
+    heading: "Introduction",
 
-   Commit: "Update intro.md - Add Economic Models section"#### Claude Model
+    level: 2,
 
-   Open PR in Chinese repo
+    id: "introduction",**Key Methods**:// Output:
 
-   ```Uses **Claude Sonnet 4.5** (`claude-sonnet-4.5-20241022`):
+    content: "## Introduction\n\nThis is the intro.\n\n### Background\nSome history here.\n\n",
 
-- Latest and most capable model
+    startLine: 3,[
 
-**Result**: Chinese PR ready for review with new section inserted at correct position.- Best at following complex instructions
+    endLine: 8,
 
-- Excellent at preserving formatting
+    subsections: [#### `processFile(sourceContent, targetContent, filename)`  {
 
----- Handles long context (full sections)
+      { heading: "Background", level: 3, ... }
+
+    ]Main orchestration method:    heading: "Introduction",
+
+  },
+
+  {1. Parse source and target documents    level: 2,
+
+    heading: "Main Theory",
+
+    level: 2,2. Detect section changes (ADDED/MODIFIED/DELETED)    id: "introduction",
+
+    id: "main-theory",
+
+    content: "## Main Theory\n\nThe core content.\n\n",3. Translate changed sections    content: "This is the intro.\n\n### Background\nSome history here.",
+
+    startLine: 10,
+
+    endLine: 11,4. Reconstruct target document    startLine: 3,
+
+    subsections: []
+
+  }5. Update heading-map    endLine: 8,
+
+]
+
+```    subsections: ["Background"]
 
 
 
-## Key Implementation Details#### Token Usage
+**Algorithm**:#### `parseTranslatedSubsections(content, sourceSection)` (v0.4.3)  },
+
+1. Split content into lines
+
+2. For each line, check if it starts with `## ` (level-2 heading)Extracts subsections from translated content:  {
+
+3. When found, save previous section (if any)
+
+4. Start new section with this heading- Wraps content in minimal MyST document    heading: "Main Theory",
+
+5. Accumulate content lines until next `## ` or EOF
+
+6. Track `###` subsections within each section (recursive parsing)- Parses with parser to extract structure    level: 2,
+
+7. Generate heading ID from heading text
+
+- Returns array of subsection objects    id: "main-theory",
+
+**Why Line-by-Line?**
+
+- No dependencies needed (no `unified`, `remark`, etc.)- Critical for heading-map completeness    content: "The core content.",
+
+- Simple and fast (~1000 lines/ms)
+
+- Sufficient for `##` heading detection    startLine: 10,
+
+- Easy to debug and maintain
+
+**Subsection Handling** (v0.4.3):    endLine: 11,
+
+**`generateHeadingId(text: string): string`**
+
+- After translating a section, parse the result to extract subsections    subsections: []
+
+Creates consistent heading anchors for cross-references.
+
+- Add subsections to Section object  }
+
+```typescript
+
+generateHeadingId("Economic Models") // → "economic-models"- Include subsections in heading-map updates]
+
+generateHeadingId("The Bellman Equation") // → "the-bellman-equation"
+
+```- This enables incremental subsection updates```
 
 
 
-### Section Matching StrategyLogged for each translation:
+**Algorithm**:
+
+1. Convert to lowercase
+
+2. Replace spaces with hyphens#### `reconstructFromSections(sections, frontmatter, preamble)`**Algorithm**:
+
+3. Remove special characters
+
+4. Trim leading/trailing hyphensRebuilds complete document:1. Split content into lines
+
+
+
+**`findSectionById(sections: Section[], id: string): Section | undefined`**- Combines frontmatter + preamble + sections2. For each line, check if it starts with `## ` (level-2 heading)
+
+
+
+Recursively searches for a section by its ID. Checks top-level sections and nested subsections.- Preserves document structure3. When found, save previous section (if any)
+
+
+
+**`validateMyST(content: string, filepath: string): ValidationResult`**- **Important**: section.content already includes subsections (don't append them again)4. Start new section with this heading
+
+
+
+Basic MyST syntax validation:5. Accumulate content lines until next `## ` or EOF
+
+- Check for unclosed code blocks (odd number of ` ``` `)
+
+- Check for unclosed directives (odd number of ` ::: `)**Size**: ~470 lines6. Track `###` subsections within each section
+
+- Return errors with line numbers if found
+
+7. Generate heading ID from heading text
+
+#### Data Structure
+
+---
+
+```typescript
+
+interface Section {**Why Line-by-Line?**
+
+  heading: string;        // "## Economic Models"
+
+  level: number;          // 2, 3, 4, etc.### 3. Parser (`src/parser.ts`)- No dependencies needed (no `unified`, `remark`, etc.)
+
+  id: string;            // "economic-models"
+
+  content: string;        // Full content including subsections- Simple and fast
+
+  startLine: number;      // Source line number
+
+  endLine: number;        // End line number**Purpose**: Parses MyST Markdown into structured sections- Sufficient for `##` heading detection
+
+  subsections: Section[]; // Nested subsections (v0.4.0+)
+
+}- Easy to debug and maintain
 
 ```
 
+**Key Methods**:
+
+#### No AST Parsing
+
+**`generateHeadingId(text: string): string`**
+
+The old block-based approach used `unified` and `remark` to build an Abstract Syntax Tree. This added:
+
+- 700kB to bundle size#### `parseSections(content, filename)`
+
+- Complex AST traversal logic
+
+- Many dependencies to maintainMain parsing method:Creates consistent heading anchors for cross-references.
+
+
+
+The section-based approach just splits on `##` - no AST needed!```typescript
+
+
+
+---Returns: {```typescript
+
+
+
+### 3. Diff Detector (`src/diff-detector.ts` - 178 lines)  frontmatter: string,    // YAML frontmattergenerateHeadingId("Economic Models") // → "economic-models"
+
+
+
+#### Purpose  preamble: string,       // Title + introgenerateHeadingId("The Bellman Equation") // → "the-bellman-equation"
+
+Detect section-level changes between old and new English versions.
+
+  sections: Section[]     // Parsed sections```
+
+#### Key Functions
+
+}
+
+**`detectSectionChanges(oldContent, newContent, filepath): SectionChange[]`**
+
+```**Algorithm**:
+
+Main diff detection function. Returns array of changes (added, modified, deleted).
+
+1. Convert to lowercase
+
+```typescript
+
+// Old English:**Parsing Strategy**:2. Replace spaces with hyphens
+
+## Introduction
+
+This is v1.- Line-by-line parsing3. Remove special characters
+
+
+
+## Theory- Splits on ## headings (level 2)4. Trim leading/trailing hyphens
+
+The math.
+
+- Extracts ### subsections (level 3+) recursively
+
+// New English:
+
+## Introduction- Preserves exact content**`findSectionById(sections: Section[], id: string): Section | undefined`**
+
+This is v2.
+
+- Generates IDs from headings
+
+## Economic Models   ← NEW
+
+Household optimization.Recursively searches for a section by its ID. Checks top-level sections and nested subsections.
+
+
+
+## Theory**Section Structure**:
+
+The math.
+
+```typescript**`validateMyST(content: string, filepath: string): ValidationResult`**
+
+// Output:
+
+[interface Section {
+
+  {
+
+    type: 'modified',  heading: string;        // "## Economic Models"Basic MyST syntax validation:
+
+    oldSection: { heading: "Introduction", content: "This is v1.", ... },
+
+    newSection: { heading: "Introduction", content: "This is v2.", ... },  level: number;          // 2, 3, 4, etc.- Check for unclosed code blocks (odd number of ` ``` `)
+
+    position: 0
+
+  },  id: string;            // "economic-models"- Check for unclosed directives (odd number of ` ::: `)
+
+  {
+
+    type: 'added',  content: string;        // Full content including subsections- Return errors with line numbers if found
+
+    newSection: { heading: "Economic Models", content: "Household...", ... },
+
+    position: 1  startLine: number;      // Source line number
+
+  }
+
+]  endLine: number;        // End line number#### No AST Parsing
+
+```
+
+  subsections: Section[]; // Nested subsections
+
+**Algorithm**:
+
+1. Parse old content into sections}The old block-based approach used `unified` and `remark` to build an Abstract Syntax Tree. This added:
+
+2. Parse new content into sections
+
+3. For each new section at index i:```- 700kB to bundle size
+
+   - Try position match: Does old section at index i match?
+
+   - If not, try ID match: Does any old section have same ID?- Complex AST traversal logic
+
+   - If match found and content differs: MODIFIED
+
+   - If no match found: ADDED**Key Features**:- Many dependencies to maintain
+
+4. For each old section not matched: DELETED
+
+- Preserves frontmatter (Jupyter/MyST metadata)
+
+**`sectionsMatch(section1: Section, section2: Section): boolean`**
+
+- Preserves preamble (title + introduction)The section-based approach just splits on `##` - no AST needed!
+
+Checks if two sections are the "same section" (for matching purposes).
+
+- Handles nested subsections
+
+```typescript
+
+// Checks:- Uses unified/remark for robust parsing### 2. Diff Detector (`src/diff-detector.ts` - 178 lines)
+
+// 1. Same heading level (both level-2)
+
+// 2. Same number of subsections
+
+// 3. (Optional) Same heading ID
+
+**Size**: ~170 lines#### Purpose
+
+// Match:
+
+{ heading: "Introduction", level: 2, subsections: ["Background"] }Detect section-level changes between old and new English versions.
+
+{ heading: "Introduction", level: 2, subsections: ["Background"] }
+
+---
+
+// Don't match:
+
+{ heading: "Introduction", level: 2, subsections: [] }#### Key Functions
+
+{ heading: "Introduction", level: 2, subsections: ["Background"] }
+
+```### 4. Diff Detector (`src/diff-detector.ts`)
+
+
+
+**Why This Works**:**`detectSectionChanges(oldContent, newContent, filepath): SectionChange[]`**
+
+- Level and subsection count provide structural signature
+
+- Heading ID provides fallback for renamed sections**Purpose**: Detects changes between document versions
+
+- Language-independent (works with "Introduction" and "介绍")
+
+Main diff detection function. Returns array of changes (added, modified, deleted).
+
+**`sectionContentEqual(section1: Section, section2: Section): boolean`**
+
+**Key Methods**:
+
+Checks if section content actually changed (to distinguish modified from unchanged).
+
+```typescript
+
+```typescript
+
+// Two strategies:#### `detectChanges(oldContent, newContent, filename)`// Old English:
+
+// 1. Length difference > 10% → definitely changed
+
+// 2. Code block count differs → definitely changedDetects section-level changes:## Introduction
+
+
+
+if (Math.abs(len1 - len2) / len1 > 0.1) return false;```typescriptThis is v1.
+
+if (codeBlocks1.length !== codeBlocks2.length) return false;
+
+Returns: {
+
+return true; // Likely unchanged
+
+```  changes: SectionChange[],## Theory
+
+
+
+---  preambleChanged: booleanThe math.
+
+
+
+### 4. Translator (`src/translator.ts` - 257 lines)}
+
+
+
+#### Purpose```// New English:
+
+Translates content using Claude API (Claude Sonnet 4.5).
+
+## Introduction
+
+#### Translation Modes
+
+**Change Types**:This is v2.
+
+**Mode 1: UPDATE (Incremental Translation)**
+
+- **ADDED**: New section in source
+
+For MODIFIED sections - uses diff-based translation:
+
+- **MODIFIED**: Existing section changed## Economic Models   ← NEW
+
+```
+
+You are translating from English to Chinese.- **DELETED**: Section removed from sourceHousehold optimization.
+
+
+
+OLD ENGLISH:
+
+[previous English content]
+
+**Matching Strategy**:## Theory
+
+NEW ENGLISH:
+
+[updated English content]- **Primary**: Match by section IDThe math.
+
+
+
+CURRENT CHINESE:- **Fallback**: Match by position
+
+[existing Chinese translation]
+
+- **Why**: IDs are language-independent (generated from English headings)// Output:
+
+Provide ONLY the updated Chinese translation.
+
+```[
+
+
+
+**Benefits**:**Example**:  {
+
+- Maintains translation consistency
+
+- Preserves terminology choices```typescript    type: 'modified',
+
+- Faster than full re-translation
+
+- Uses glossary for key termsOld: [Introduction, Theory, Data]    oldSection: { heading: "Introduction", content: "This is v1.", ... },
+
+
+
+**Mode 2: NEW (Full Translation)**New: [Introduction, Models, Theory, Data]    newSection: { heading: "Introduction", content: "This is v2.", ... },
+
+
+
+For ADDED sections or new files:    position: 0
+
+
+
+```Detected:   },
+
+Translate the following from English to Chinese.
+
+- ADDED: "Models" at position 1  {
+
+Use this glossary:
+
+[glossary terms]- All others matched by ID (not position!)    type: 'added',
+
+
+
+[English content]```    newSection: { heading: "Economic Models", content: "Household...", ... },
+
+
+
+Provide ONLY the Chinese translation.    position: 1
+
+```
+
+**Preamble Detection**:  }
+
+#### Key Functions
+
+- Compares title and introduction text]
+
+**`translateSection(request: SectionTranslationRequest): Promise<string>`**
+
+- Returns `preambleChanged: true` if different```
+
+Main translation function. Routes to UPDATE or NEW mode.
+
+
+
+**`translateNewSection(request: SectionTranslationRequest): Promise<string>`**
+
+**Size**: ~178 lines**Algorithm**:
+
+Full translation for new sections.
+
+1. Parse old content into sections
+
+**`translateModifiedSection(request: SectionTranslationRequest): Promise<string>`**
+
+---2. Parse new content into sections
+
+Incremental translation for modified sections.
+
+3. For each new section at index i:
+
+#### Prompt Engineering
+
+### 5. Translator (`src/translator.ts`)   - Try position match: Does old section at index i match?
+
+**Key Instructions**:
+
+1. Maintain the translation style and terminology   - If not, try ID match: Does any old section have same ID?
+
+2. Preserve all MyST syntax (directives, roles, etc.)
+
+3. Keep code blocks unchanged**Purpose**: Translates content using Claude API   - If match found and content differs: MODIFIED
+
+4. Use glossary terms consistently
+
+5. Preserve math equations   - If no match found: ADDED
+
+6. Keep cross-references intact
+
+**Translation Modes**:4. For each old section not matched: DELETED
+
+**Example**:
+
+```markdown
+
+English:
+
+```{code-cell} ipython3#### Mode 1: UPDATE (Incremental Translation)**`sectionsMatch(section1: Section, section2: Section): boolean`**
+
+print("Hello")
+
+```For MODIFIED sections - uses diff-based translation:
+
+
+
+Chinese:Checks if two sections are the "same section" (for matching purposes).
+
+```{code-cell} ipython3
+
+print("Hello")**Prompt Structure**:
+
+```
+
+`````````typescript
+
+
+
+---You are translating from English to Chinese.// Checks:
+
+
+
+### 5. File Processor (`src/file-processor.ts` - 244 lines)// 1. Same heading level (both level-2)
+
+
+
+#### PurposeOLD ENGLISH:// 2. Same number of subsections
+
+Orchestrates section-based translation workflow.
+
+[previous English content]// 3. (Optional) Same heading ID
+
+#### Key Functions
+
+
+
+**`processFile(sourceContent, targetContent, filename)`**
+
+NEW ENGLISH:// Match:
+
+Main orchestration function:
+
+[updated English content]{ heading: "Introduction", level: 2, subsections: ["Background"] }
+
+```typescript
+
+1. Parse source and target documents{ heading: "Introduction", level: 2, subsections: ["Background"] }
+
+2. Detect section changes (ADDED/MODIFIED/DELETED)
+
+3. Translate changed sectionsCURRENT CHINESE:
+
+4. Reconstruct target document
+
+5. Update heading-map[existing Chinese translation]// Don't match:
+
+```
+
+{ heading: "Introduction", level: 2, subsections: [] }
+
+**`parseTranslatedSubsections(content, sourceSection)` (v0.4.3)**
+
+Provide ONLY the updated Chinese translation.{ heading: "Introduction", level: 2, subsections: ["Background"] }
+
+Extracts subsections from translated content:
+
+``````
+
+```typescript
+
+// Input: Translated section content
+
+## Economic Models
+
+**Benefits**:**Why This Works**:
+
+### Household Problem
+
+Maximize utility...- Maintains translation consistency- Level and subsection count provide structural signature
+
+
+
+### Firm Problem- Preserves terminology choices- Heading ID provides fallback for renamed sections
+
+Maximize profits...
+
+- Faster than full re-translation- Language-independent (works with "Introduction" and "介绍")
+
+// Output: 
+
+{- Uses glossary for key terms
+
+  subsections: [
+
+    { heading: "Household Problem", level: 3, ... },**`sectionContentEqual(section1: Section, section2: Section): boolean`**
+
+    { heading: "Firm Problem", level: 3, ... }
+
+  ],#### Mode 2: NEW (Full Translation)
+
+  contentWithoutSubsections: "## Economic Models\n\n"  // Stripped
+
+}For ADDED sections or new files:Checks if section content actually changed (to distinguish modified from unchanged).
+
+```
+
+
+
+**Why**: Critical for heading-map completeness and preventing duplication.
+
+**Prompt Structure**:```typescript
+
+**Algorithm**:
+
+1. Wrap translated content in minimal MyST document```// Two strategies:
+
+2. Parse with parser to extract structure
+
+3. Extract subsections from parsed resultTranslate the following from English to Chinese.// 1. Length difference > 10% → definitely changed
+
+4. Strip subsections from content (lines after first subsection)
+
+5. Return both subsections array and stripped content// 2. Code block count differs → definitely changed
+
+
+
+**`reconstructFromSections(sections, frontmatter, preamble)`**Use this glossary:
+
+
+
+Rebuilds complete document:[glossary terms]if (Math.abs(len1 - len2) / len1 > 0.1) return false;
+
+
+
+```typescriptif (codeBlocks1.length !== codeBlocks2.length) return false;
+
+// Input:
+
+sections = [[English content]
+
+  { heading: "Intro", content: "## Intro\n\nText.\n\n", subsections: [...] },
+
+  { heading: "Theory", content: "## Theory\n\nMath.\n\n", subsections: [] }return true; // Likely unchanged
+
+]
+
+Provide ONLY the Chinese translation.```
+
+// Output:
+
+---```
+
+jupytext: ...
+
+---**Why Not Exact Comparison?**
+
+
+
+# Title**Special Handling**:- Minor formatting changes shouldn't trigger re-translation
+
+
+
+Preamble text.- **Code blocks**: Preserved unchanged (``` ... ```)- Small edits (fix typo) might not need full translation
+
+
+
+## Intro- **Math equations**: Preserved unchanged ($$...$$, $...$)- This is heuristic, Claude still sees the changes
+
+
+
+Text.- **MyST directives**: Syntax preserved, content translated
+
+
+
+### Subsection  ← From subsections array- **URLs**: Preserved unchanged**`extractCodeBlocks(content: string): string[]`**
+
+Content.
+
+- **Variable names**: Preserved unchanged
+
+## Theory
+
+Finds all ` ```...``` ` code blocks in content. Used to detect if code changed (which often means content changed significantly).
+
+Math.
+
+```**Glossary Integration**:
+
+
+
+**Important**: - Loads from `glossary/{language}.json`#### Position Matching
+
+- `section.content` is stripped of subsections (v0.4.3 fix)
+
+- Subsections appended separately from `section.subsections` array- Example: `glossary/zh-cn.json` (342 terms)
+
+- This prevents duplication
+
+- Ensures consistent terminologyThe key insight: **Most edits don't reorder sections.**
+
+---
+
+- Terms include: GDP, marginal cost, opportunity cost, etc.
+
+### 6. Heading Map System (`src/heading-map.ts` - 200 lines)
+
+```
+
+#### Purpose
+
+Maintain mapping between English and Chinese section headings for language-independent matching.**API Details**:English v1:          English v2:
+
+
+
+#### Heading Map Structure- Model: Claude Sonnet 4.5 (`claude-sonnet-4.5-20241022`)1. Introduction      1. Introduction      ← Position match
+
+
+
+```typescript- Max tokens: 81922. Theory           2. Economic Models   ← NEW (no match)
+
+// Stored in translated document frontmatter:
+
+---- Temperature: 0.3 (deterministic)3. Examples         3. Theory           ← Position match (was #2)
+
+jupytext: ...
+
+heading-map:                    4. Examples         ← Position match (was #3)
+
+  introduction: "介绍"
+
+  background: "背景"**Size**: ~257 lines```
+
+  economic-models: "经济模型"
+
+  household-problem: "家庭问题"  ← Subsection (v0.4.0+)
+
+---
+
+```---Position matching is:
+
+
+
+**Key Features**:- **Simple**: Index-based lookup
+
+- Flat structure (no nesting)
+
+- Includes both sections AND subsections (v0.4.0+)### 6. Heading Map System (`src/heading-map.ts`)- **Fast**: O(1) per section
+
+- Automatically populated on first translation
+
+- Self-maintaining (updates with each translation)- **Language-independent**: Doesn't rely on heading text
+
+
+
+**Why It's Needed**:**Purpose**: Maintains cross-language section mappings- **Robust**: Works across translations
+
+```typescript
+
+// Without heading-map:
+
+English: "## Introduction" (id: "introduction")
+
+Chinese: "## 介绍" (id: "介绍")  ← Different ID!**What is a Heading-Map?**### 3. Translation Service (`src/translator.ts` - 257 lines)
+
+
+
+// Can't match sections by ID alone
+
+
+
+// With heading-map:A heading-map is a YAML dictionary in the frontmatter that maps English section headings to their Chinese translations:#### Purpose
+
+heading-map:
+
+  introduction: "介绍"Translate sections using Claude Sonnet 4.5 with full context.
+
+
+
+// Now we can match!```yaml
+
+englishId = "introduction"
+
+chineseHeading = headingMap[englishId]  // "介绍"---#### Key Functions
+
+```
+
+heading-map:
+
+#### Key Functions
+
+  Introduction: 简介**`translateSection(request: SectionTranslationRequest): Promise<string>`**
+
+**`extractHeadingMap(content): Record<string, string>`**
+
+  Economic Models: 经济模型
+
+Extracts existing heading-map from frontmatter.
+
+  Core Principles: 核心原则    # Subsection!Router function that dispatches to UPDATE or NEW mode based on request type.
+
+```typescript
+
+// Input: Document with frontmatter  Theory: 理论
+
+---
+
+heading-map:---```typescript
+
+  intro: "介绍"
+
+---```if (request.mode === 'update') {
+
+
+
+// Output:  return await this.translateSectionUpdate(request);
+
+{ "intro": "介绍" }
+
+```**Why Heading-Maps?**} else {
+
+
+
+**`updateHeadingMap(existing, sourceSections, targetSections): Record<string, string>`**  return await this.translateNewSection(request);
+
+
+
+Updates heading-map with new translations.Without heading-maps, we can't do incremental updates:}
+
+
+
+```typescript- English section IDs: `introduction`, `economic-models````
+
+// Existing map:
+
+{ "intro": "介绍" }- Chinese section IDs: `简介`, `经济模型` (different!)
+
+
+
+// New translations:- Can't match sections across languages**`translateSectionUpdate(request: SectionTranslationRequest): Promise<string>`**
+
+sourceSections = [
+
+  { id: "intro", heading: "Introduction" },
+
+  { id: "theory", heading: "Theory" }
+
+]With heading-maps:Handles MODIFIED sections. Provides Claude with old EN, new EN, and current CN translation.
+
+targetSections = [
+
+  { id: "intro", heading: "介绍" },- Look up: "Economic Models" → "经济模型"
+
+  { id: "theory", heading: "理论" }
+
+]- Match sections correctly**Prompt Structure**:
+
+
+
+// Updated map:- Update only changed sections```
+
+{
+
+  "intro": "介绍",You are updating a Chinese translation to reflect changes in the English source.
+
+  "theory": "理论"  ← Added
+
+}**Key Functions**:
+
+```
+
+KEY RULES:
+
+**Algorithm** (v0.4.3 with subsection support):
+
+1. Start with existing map#### `extractHeadingMap(content)`1. Maintain the translation style and terminology
+
+2. For each source section:
+
+   - Add section heading to map: `map[sourceId] = targetHeading`Extracts existing heading-map from frontmatter2. Update only what changed in the English
+
+   - Recursively process subsections (v0.4.0+)
+
+3. Return updated map3. Preserve all code blocks, math, and MyST directives unchanged
+
+
+
+**`injectHeadingMap(content, map): string`**#### `updateHeadingMap(existing, sourceSections, targetSections)`4. Use glossary terms consistently
+
+
+
+Injects updated heading-map into frontmatter.Updates heading-map with new translations:
+
+
+
+```typescript- Adds new section mappingsGLOSSARY (if applicable):
+
+// Input:
+
+content = "---\njupytext: ...\n---\n\n# Title\n\n..."- Removes deleted sections- household: 家庭
+
+map = { "intro": "介绍", "theory": "理论" }
+
+- **Recursively processes subsections** (v0.4.3)- equilibrium: 均衡
+
+// Output:
+
+---- Preserves existing mappings
+
+jupytext: ...
+
+heading-map:OLD ENGLISH SECTION:
+
+  intro: "介绍"
+
+  theory: "理论"#### `injectHeadingMap(content, map)`## Introduction
+
+---
+
+Injects updated heading-map back into frontmatterThis lecture covers dynamic programming.
+
+# Title
+
+
+
+...
+
+```**Subsection Support** (v0.4.3):### Key Concepts
+
+
+
+---```typescriptWe examine value functions.
+
+
+
+## Data Flowconst processSections = (
+
+
+
+### Full Workflow Example  sourceSecs: Section[],NEW ENGLISH SECTION:
+
+
+
+```  targetSecs: Section[],## Introduction
+
+1. PR merged in English repo
+
+   ↓  level: number = 0This lecture covers dynamic programming and optimal control.
+
+2. index.ts: Detect changed files
+
+   File: "lectures/intro.md") => {
+
+   ↓
+
+3. Fetch content  sourceSecs.forEach((source, i) => {### Key Concepts
+
+   sourceContent = English intro.md (new version)
+
+   targetContent = Chinese intro.md (current version)    // Add section mappingWe examine value functions and policy functions.
+
+   ↓
+
+4. file-processor.ts: processFile()    map.set(sourceHeading, targetHeading);
+
+   ↓
+
+5. parser.ts: Parse both documents    CURRENT CHINESE TRANSLATION:
+
+   sourceSections = [Intro, Background, Theory]
+
+   targetSections = [介绍, 背景]    // Recursively process subsections## 介绍
+
+   ↓
+
+6. diff-detector.ts: Detect changes    if (source.subsections.length > 0) {本讲座涵盖动态规划。
+
+   changes = [
+
+     { type: 'modified', section: 'Intro' },      processSections(
+
+     { type: 'added', section: 'Theory' }
+
+   ]        source.subsections,### 关键概念
+
+   ↓
+
+7. translator.ts: Translate changed sections        target.subsections,我们研究价值函数。
+
+   - Intro: UPDATE mode (was modified)
+
+   - Theory: NEW mode (was added)        level + 1
+
+   ↓
+
+8. file-processor.ts: Parse subsections from translated content (v0.4.3)      );Provide the UPDATED CHINESE translation that reflects the changes in the new English version.
+
+   - Extract ### subsections from translated text
+
+   - Strip subsections from section.content    }Output only the translation, no explanations.
+
+   - Add to section.subsections array
+
+   ↓  });```
+
+9. file-processor.ts: Reconstruct document
+
+   - Combine frontmatter + preamble + sections};
+
+   - Append subsections from array (not from content)
+
+   ↓```**Why This Works**:
+
+10. heading-map.ts: Update heading-map
+
+    - Add new section: theory → "理论"- Claude sees what changed (old vs new)
+
+    - Add subsections recursively
+
+    ↓**Size**: ~140 lines- Claude preserves existing style (current translation)
+
+11. index.ts: Create PR in Chinese repo
+
+    - Title: "Update intro.md"- Claude updates only what's necessary
+
+    - Body: Links to source PR
+
+    - Files: lectures/intro.md---- Full section provides context for coherent prose
+
+```
+
+
+
+---
+
+## Data Flow**`translateNewSection(request: SectionTranslationRequest): Promise<string>`**
+
+## Key Implementation Details
+
+
+
+### Subsection Handling (v0.4.3)
+
+### Scenario: Adding "## Economic Models" SectionHandles ADDED sections. Translates from scratch.
+
+**Problem**: Subsections (`### Heading`) need special handling because:
+
+1. They appear in translated content but weren't tracked
+
+2. Heading-map was incomplete without them
+
+3. Could duplicate if not handled carefully**Input**:**Prompt Structure**:
+
+
+
+**Solution**:- English PR merged with new section```
+
+1. **Parse**: Extract subsections from translated content
+
+2. **Strip**: Remove subsections from section.content- Chinese translation exists (5 sections)Translate this English section to Chinese.
+
+3. **Track**: Store in section.subsections array
+
+4. **Map**: Include in heading-map updates
+
+5. **Reconstruct**: Append from array, not content
+
+**Step-by-Step**:RULES:
+
+**Result**: No duplication, complete heading-maps, proper subsection tracking.
+
+1. Translate all prose content
+
+### Root-Level File Support (v0.4.3)
+
+1. **Detection** (`index.ts`)2. Preserve code blocks unchanged
+
+**Problem**: Files at repository root (not in subfolder) need special handling.
+
+   ```3. Preserve math equations unchanged
+
+**GitHub Actions Quirk**: Converts `docs-folder: '.'` to `docs-folder: '/'`
+
+   Merged PR #42: "Add economic models section"4. Preserve MyST directives unchanged
+
+**Solution**:
+
+```typescript   Changed files: lectures/intro.md5. Use glossary terms consistently
+
+// index.ts:
+
+let docsFolder = core.getInput('docs-folder') || 'lectures/';   ```
+
+
+
+// Handle both '.' and '/' as rootGLOSSARY (if applicable):
+
+if (docsFolder === '.' || docsFolder === '/') {
+
+  docsFolder = '';2. **Parsing** (`parser.ts`)- household: 家庭
+
+}
+
+   ```- optimization: 优化
+
+// Normalize: add trailing slash (but skip empty string)
+
+if (docsFolder && !docsFolder.endsWith('/')) {   Old English: 5 sections [Getting Started, Math, Python, Data, Conclusion]
+
+  docsFolder = docsFolder + '/';
+
+}   New English: 6 sections [Getting Started, Models, Math, Python, Data, Conclusion]ENGLISH SECTION:
+
+
+
+// Filter files   Chinese: 5 sections## Economic Models
+
+const changedFiles = allFiles.filter(file => {
+
+  if (docsFolder === '') {   ```We examine household optimization problems in dynamic settings.
+
+    // Root level: any .md file in root (not in subdirectories)
+
+    return file.endsWith('.md') && !file.includes('/');
+
+  } else {
+
+    // Subfolder: files starting with docsFolder3. **Diff Detection** (`diff-detector.ts`)### The Bellman Equation
+
+    return file.startsWith(docsFolder) && file.endsWith('.md');
+
+  }   ```The value function satisfies:
+
+});
+
+```   Change detected:
+
+
+
+### Error Handling   - Type: ADDED$$
+
+
+
+**Parser Errors**:   - Section: "## Economic Models"V(x) = \max_{c} u(c) + \beta V(x')
+
+- Invalid MyST syntax → Include in PR as comment
+
+- Missing frontmatter → Create new frontmatter   - Position: 1 (after Getting Started)$$
+
+- Unclosed blocks → Validation warning
+
+   ```
+
+**Translation Errors**:
+
+- API timeout → Retry with exponential backoffProvide the complete Chinese translation.
+
+- Rate limit → Wait and retry
+
+- Invalid response → Log and skip section4. **Translation** (`translator.ts`)Output only the translation, no explanations.
+
+
+
+**Diff Detection Edge Cases**:   ``````
+
+- Empty documents → Treat as all sections added
+
+- No changes → Skip translation   Mode: NEW (ADDED section)
+
+- Preamble only change → Translate preamble only
+
+   Input: "## Economic Models\n\nThis section covers..."**`translateFullDocument(request: TranslationRequest): Promise<string>`**
+
+---
+
+   Output: "## 经济模型\n\n本节介绍..."
+
+## Testing Strategy
+
+   Glossary used: "economic model" → "经济模型"Handles completely new files. Translates entire document (not used for section updates).
+
+See [TESTING.md](TESTING.md) for complete testing guide.
+
+   ```
+
+**Test Coverage**: 121 tests across 5 test files
+
+**`formatGlossary(glossary: Glossary, targetLanguage: string): string`**
+
+**Key Test Areas**:
+
+1. Parser: MyST parsing, frontmatter, subsections5. **Reconstruction** (`file-processor.ts`)
+
+2. Diff Detector: Change detection, matching strategies
+
+3. File Processor: Section reconstruction, subsection handling   ```Formats glossary terms for inclusion in prompts:
+
+4. Heading-Map: Map updates, subsection inclusion
+
+5. Integration: End-to-end workflows   Parse Chinese sections (5)
+
+
+
+**Regression Tests** (v0.4.3):   Insert translated section at position 1```typescript
+
+- Subsection duplication prevention
+
+- Heading-map completeness   Result: 6 sections// Input:
+
+- Root-level file handling
+
+   Update heading-map: "Economic Models" → "经济模型"{ terms: { "household": "家庭", "equilibrium": "均衡" } }
+
+---
+
+   ```
+
+## Performance
+
+// Output:
+
+**Benchmarks** (typical lecture):
+
+- Parsing: ~5ms for 500-line document6. **PR Creation** (`index.ts`)"- household: 家庭\n- equilibrium: 均衡"
+
+- Diff detection: ~10ms for 20 sections
+
+- Translation: ~5s per section (Claude API)   ``````
+
+- Reconstruction: ~2ms
+
+- **Total**: ~2-3 minutes for typical lecture (15-20 sections)   Create branch: translation-sync-2025-10-18...
+
+
+
+**Optimizations**:   Commit: "Update intro.md - Add Economic Models section"#### Claude Model
+
+- Only translate changed sections (not entire document)
+
+- Parallel section translation (when possible)   Open PR in Chinese repo
+
+- Efficient line-by-line parsing (no AST)
+
+- Minimal bundle size (1794kB)   ```Uses **Claude Sonnet 4.5** (`claude-sonnet-4.5-20241022`):
+
+
+
+---- Latest and most capable model
+
+
+
+## Dependencies**Result**: Chinese PR ready for review with new section inserted at correct position.- Best at following complex instructions
+
+
+
+**Core Dependencies**:- Excellent at preserving formatting
+
+- `@actions/core`: GitHub Actions integration
+
+- `@actions/github`: GitHub API---- Handles long context (full sections)
+
+- `@anthropic-ai/sdk`: Claude API
+
+- `@octokit/rest`: GitHub REST API
+
+
+
+**No AST Dependencies**:## Key Implementation Details#### Token Usage
+
+- ❌ `unified`, `remark`, `remark-parse`
+
+- ❌ `mdast-util-*` packages
+
+- ✅ Simple line-by-line parsing instead
+
+### Section Matching StrategyLogged for each translation:
+
+**Total Bundle**: 1794kB (28% reduction from v0.2.x)
+
+```
+
+---
+
 **Challenge**: How to match sections when structure changes?Input tokens: 523
+
+## Future Improvements
 
 Output tokens: 412
 
+See [TODO.md](TODO.md) for roadmap.
+
 **Solution**: Three-tier matchingTotal cost: $0.012
 
-1. **Exact ID match**: `section.id === targetSection.id````
+**Potential Enhancements**:
 
-2. **Heading-map lookup**: Use English → Chinese mapping
+- Parallel section translation1. **Exact ID match**: `section.id === targetSection.id````
 
-3. **Position fallback**: Match by index if no ID matchHelps track API usage and costs.
+- Translation caching
+
+- Additional languages2. **Heading-map lookup**: Use English → Chinese mapping
+
+- Custom glossaries
+
+- Quality metrics3. **Position fallback**: Match by index if no ID matchHelps track API usage and costs.
 
 
 
-**Why this works**:### 4. File Processor (`src/file-processor.ts` - 244 lines)
+---
+
+
+
+**Last Updated**: October 24, 2025**Why this works**:### 4. File Processor (`src/file-processor.ts` - 244 lines)
+
 
 - ID matching handles unchanged sections
 

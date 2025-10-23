@@ -1,14 +1,14 @@
 # Project Status Report
 
-**Version**: v0.4.3 (Production-Ready)  
-**Date**: October 2025  
+**Version**: v0.4.4 (Production-Ready)  
+**Date**: October 24, 2025  
 **Status**: Ready for v1.0 API Stabilization ✅
 
 ---
 
 ## Current Status
 
-**v0.4.3** is production-ready with all core features complete, comprehensively tested (87 passing tests), and validated with real-world documents.
+**v0.4.4** is production-ready with all core features complete, comprehensively tested (121 passing tests), and validated with real-world documents and GitHub test infrastructure.
 
 ### What's Complete ✅
 
@@ -16,28 +16,37 @@
 - **Subsection Support**: Full parsing and tracking of `### Subsections`
 - **Heading Maps**: Language-independent section matching
 - **Diff Detection**: Multi-strategy change detection
-- **Test Suite**: 87 tests covering all components
+- **Root-Level Support**: Works with `docs-folder: '.'` for root-level files
+- **GitHub Testing**: 9 automated test scenarios with PR validation
+- **Test Suite**: 121 tests covering all components
 - **Documentation**: 12 comprehensive documentation files
 
 ### Key Metrics
 
 - **Code Size**: ~1,200 lines core logic
-- **Test Coverage**: 87 tests, 100% passing
+- **Test Coverage**: 121 tests, 100% passing
 - **Bundle Size**: 1794kB (28% reduction from v0.2.x)
 - **Glossary**: 342 terms (zh-cn)
+- **GitHub Tests**: 9 scenarios with automated reset script
 
 ---
 
 ## v0.4.x Journey
 
-The v0.4.x series focused on subsection handling:
+The v0.4.x series focused on subsection handling and developer experience:
 
 1. **v0.4.0** - Discovered heading-map missing subsections
 2. **v0.4.1** - Fixed subsection parsing from translated content
 3. **v0.4.2** - Fixed heading-map recursive processing  
-4. **v0.4.3** - Fixed duplication bug in document reconstruction ✅
+4. **v0.4.3** - Initial subsection duplication investigation
+5. **v0.4.4** - Complete developer experience overhaul ✅
 
-**Result**: Subsections now fully supported - parsed, tracked, and integrated into heading-maps.
+**Result**: 
+- Subsections fully supported - parsed, tracked, and integrated into heading-maps
+- Root-level file support (`docs-folder: '.'`)
+- Improved PR titles and descriptions
+- 9 automated GitHub test scenarios
+- 121 comprehensive tests (+39% from v0.4.3)
 
 ---
 
@@ -111,12 +120,13 @@ The v0.4.x series focused on subsection handling:
 
 - ✅ **v0.3.0** (Aug 2024) - Section-based rewrite, 43% code reduction
 - ✅ **v0.4.0** (Nov 2024) - Heading-map system complete
-- ✅ **v0.4.3** (Oct 2025) - Subsection support complete
+- ✅ **v0.4.3** (Oct 18, 2025) - Subsection support foundation
+- ✅ **v0.4.4** (Oct 24, 2025) - Developer experience complete
 
 ### Current Focus
 
-- Documentation review and cleanup
-- Preparing v0.4.3 release
+- GitHub test infrastructure validation
+- Documentation updates
 - Planning v1.0 stabilization
 
 ---
@@ -140,4 +150,7 @@ Want to help?
 
 ---
 
-**Last Updated**: October 2025
+---
+
+**Last Updated**: October 24, 2025
+```
