@@ -1,0 +1,20 @@
+graph LR
+    A[PR Merged<br/>English] --> B[Detect<br/>Changed Files]
+    B --> C[Parse into<br/>Sections]
+    C --> D{File<br/>Type?}
+    
+    D -->|Existing| E[Diff Sections<br/>Match to Target]
+    D -->|New| F[Full<br/>Translation]
+    D -->|Deleted| G[Remove from<br/>Target]
+    
+    E --> H[Claude AI<br/>Translates]
+    F --> H
+    
+    H --> I[Reconstruct<br/>Document]
+    I --> J[Create PR in<br/>Target Repo]
+    G --> J
+    
+    style A fill:#2E86AB,stroke:#1a5a7a,color:#fff,stroke-width:2px
+    style H fill:#2E86AB,stroke:#1a5a7a,color:#fff,stroke-width:2px
+    style J fill:#2E86AB,stroke:#1a5a7a,color:#fff,stroke-width:2px
+    style D fill:#f0f4f8,stroke:#2E86AB,color:#1a1a1a,stroke-width:2px
