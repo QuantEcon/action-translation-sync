@@ -60,6 +60,23 @@ export interface ParsedSections {
         sectionCount: number;
     };
 }
+/**
+ * Document broken into explicit components
+ * Every valid document has: CONFIG + TITLE + INTRO + SECTIONS
+ * - INTRO and SECTIONS can be empty
+ */
+export interface DocumentComponents {
+    config: string;
+    title: string;
+    titleText: string;
+    intro: string;
+    sections: Section[];
+    metadata: {
+        filepath: string;
+        totalLines: number;
+        sectionCount: number;
+    };
+}
 export type SectionChangeType = 'added' | 'modified' | 'deleted';
 /**
  * Represents a change at the section level

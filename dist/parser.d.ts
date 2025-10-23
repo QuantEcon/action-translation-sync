@@ -8,7 +8,7 @@
  * This simplified parser replaces the previous block-based approach with
  * a cleaner section-based structure that's easier to work with for translations.
  */
-import { Section, ParsedSections } from './types';
+import { Section, ParsedSections, DocumentComponents } from './types';
 export declare class MystParser {
     /**
      * Parse markdown content into sections based on ## headings
@@ -35,5 +35,16 @@ export declare class MystParser {
         valid: boolean;
         error?: string;
     }>;
+    /**
+     * Parse document into explicit components: CONFIG + TITLE + INTRO + SECTIONS
+     *
+     * This provides a more structured view of the document that ensures
+     * complete reconstruction by always including all components.
+     *
+     * @param content - The markdown content to parse
+     * @param filepath - Path to the file (for metadata)
+     * @returns DocumentComponents with all parts explicitly separated
+     */
+    parseDocumentComponents(content: string, filepath: string): Promise<DocumentComponents>;
 }
 //# sourceMappingURL=parser.d.ts.map

@@ -78,6 +78,24 @@ export interface ParsedSections {
   };
 }
 
+/**
+ * Document broken into explicit components
+ * Every valid document has: CONFIG + TITLE + INTRO + SECTIONS
+ * - INTRO and SECTIONS can be empty
+ */
+export interface DocumentComponents {
+  config: string;           // YAML frontmatter (always present, even if empty)
+  title: string;            // The # heading line (e.g., "# Introduction to Economics")
+  titleText: string;        // Just the heading text (e.g., "Introduction to Economics")
+  intro: string;            // Content between # title and first ## (can be empty)
+  sections: Section[];      // All ## level sections (can be empty array)
+  metadata: {
+    filepath: string;
+    totalLines: number;
+    sectionCount: number;
+  };
+}
+
 // ============================================================================
 // SECTION-BASED DIFF DETECTION
 // ============================================================================

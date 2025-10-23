@@ -21,10 +21,20 @@ export declare class FileProcessor {
     constructor(translationService: TranslationService, debug?: boolean);
     private log;
     /**
-     * Process a file using section-based approach
-     * This is the main method for handling existing files with changes
+     * Process a file using component-based approach
+     * Always reconstructs complete document: CONFIG + TITLE + INTRO + SECTIONS
+     * This ensures no components get lost during translation updates
      */
     processSectionBased(oldContent: string, newContent: string, targetContent: string, filepath: string, sourceLanguage: string, targetLanguage: string, glossary?: Glossary): Promise<string>;
+    /**
+     * Helper: Translate a new section
+     */
+    private translateNewSection;
+    /**
+     * Reconstruct document from components: CONFIG + TITLE + INTRO + SECTIONS
+     * This ensures we always produce a complete, valid document
+     */
+    private reconstructFromComponents;
     /**
      * Process a full document (for new files)
      */
@@ -39,6 +49,11 @@ export declare class FileProcessor {
      * Returns the actual section object or undefined if not found
      */
     private findTargetSectionByHeadingMap;
+    /**
+     * Helper to find the index of a section in the NEW source sections
+     * Used for position-based fallback
+     */
+    private findSourceSectionIndex;
     /**
      * Find target section index using heading map (preferred) or position fallback
      *
@@ -62,10 +77,6 @@ export declare class FileProcessor {
      * This ensures subsections are included when translating
      */
     private serializeSection;
-    /**
-     * Reconstruct full markdown document from sections
-     */
-    private reconstructFromSections;
     /**
      * Validate the translated content has valid MyST syntax
      */
