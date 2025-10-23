@@ -278,10 +278,10 @@ docs/
 - Status report for major changes
 - README.md for user-facing changes
 
-**IMPORTANT - Do NOT**:
-❌ **Never create separate SUMMARY.md or CHANGELOG.md files**
-❌ **Never create standalone documentation files for changes**
+**IMPORTANT - Documentation Guidelines**:
+❌ **Never create standalone SUMMARY.md files for individual changes**
 ✅ **Always update existing documentation in place** (STATUS-REPORT.md, TODO.md, release notes)
+✅ **CHANGELOG.md is OK** - Can be built from `docs/releases/` content
 ✅ **Update README.md for user-facing changes**
 
 ## What NOT to Do
@@ -362,6 +362,17 @@ Now we can match!
 **Build**:
 - `npm run build` - Compile TypeScript
 - `npm run package` - Bundle for distribution
+
+**GitHub CLI Usage**:
+When using `gh` commands, write output to `tmp/` directory to avoid interactive prompts:
+```bash
+# Good: Write to file for reading
+gh pr view 123 > tmp/pr-details.txt
+cat tmp/pr-details.txt
+
+# Avoid: Direct reading (may have interactive prompts)
+gh pr view 123
+```
 
 **Key files to check when modifying**:
 - Subsection handling → `file-processor.ts:parseTranslatedSubsections`
