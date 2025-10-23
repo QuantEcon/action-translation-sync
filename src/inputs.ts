@@ -7,9 +7,9 @@ import { ActionInputs } from './types';
 export function getInputs(): ActionInputs {
   const targetRepo = core.getInput('target-repo', { required: true });
   const targetLanguage = core.getInput('target-language', { required: true });
-  // Handle docs-folder: '.' means root level (no prefix)
+  // Handle docs-folder: '.' or '/' means root level (GitHub Actions normalizes '.' to '/')
   const docsFolderInput = core.getInput('docs-folder', { required: false });
-  const docsFolder = docsFolderInput === '.' ? '' : docsFolderInput;
+  const docsFolder = (docsFolderInput === '.' || docsFolderInput === '/') ? '' : docsFolderInput;
   const sourceLanguage = core.getInput('source-language', { required: false }) || 'en';
   const glossaryPath = core.getInput('glossary-path', { required: false }) || '';  // Empty by default - uses built-in
   const tocFile = core.getInput('toc-file', { required: false }) || '_toc.yml';
