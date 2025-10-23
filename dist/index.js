@@ -1284,8 +1284,9 @@ const core = __importStar(__nccwpck_require__(7484));
 function getInputs() {
     const targetRepo = core.getInput('target-repo', { required: true });
     const targetLanguage = core.getInput('target-language', { required: true });
-    const docsFolderRaw = core.getInput('docs-folder', { required: false });
-    const docsFolder = docsFolderRaw !== undefined && docsFolderRaw !== null ? docsFolderRaw : 'lectures/';
+    // Handle docs-folder: empty string means root level (no prefix)
+    const docsFolderInput = core.getInput('docs-folder', { required: false });
+    const docsFolder = docsFolderInput; // Use as-is, including empty string for root
     const sourceLanguage = core.getInput('source-language', { required: false }) || 'en';
     const glossaryPath = core.getInput('glossary-path', { required: false }) || ''; // Empty by default - uses built-in
     const tocFile = core.getInput('toc-file', { required: false }) || '_toc.yml';
