@@ -24,6 +24,10 @@ export function getInputs(): ActionInputs {
   const prTeamReviewersRaw = core.getInput('pr-team-reviewers', { required: false }) || '';
   const prTeamReviewers = prTeamReviewersRaw.split(',').map((t: string) => t.trim()).filter((t: string) => t.length > 0);
 
+  // Test mode: use PR head instead of merge commit
+  const testModeRaw = core.getInput('test-mode', { required: false }) || 'false';
+  const testMode = testModeRaw.toLowerCase() === 'true';
+
   // Validate target repo format
   if (!targetRepo.includes('/')) {
     throw new Error(`Invalid target-repo format: ${targetRepo}. Expected format: owner/repo`);
@@ -45,20 +49,21 @@ export function getInputs(): ActionInputs {
     prLabels,
     prReviewers,
     prTeamReviewers,
+    testMode,
   };
 }
 
 /**
- * Validate that the event is a merged PR or manual dispatch
+ * Validate that the event is a merged PR, test mode label, or manual dispatch
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function validatePREvent(context: any): { merged: boolean; prNumber: number | null } {
+export function validatePREvent(context: any, testMode: boolean): { merged: boolean; prNumber: number | null; isTestMode: boolean } {
   const { eventName, payload } = context;
 
   // Handle workflow_dispatch for manual testing
   if (eventName === 'workflow_dispatch') {
     core.info('Manual workflow dispatch - will process latest commit');
-    return { merged: true, prNumber: null };
+    return { merged: true, prNumber: null, isTestMode: false };
   }
 
   // Handle pull_request events
@@ -66,8 +71,19 @@ export function validatePREvent(context: any): { merged: boolean; prNumber: numb
     throw new Error(`This action only works on pull_request or workflow_dispatch events. Got: ${eventName}`);
   }
 
+  // Test mode: triggered by label, use PR head (not merged)
+  if (testMode || (payload.action === 'labeled' && payload.label?.name === 'test-translation')) {
+    const prNumber = payload.pull_request?.number;
+    if (!prNumber) {
+      throw new Error('Could not determine PR number from event payload');
+    }
+    core.info(`🧪 Running in TEST mode for PR #${prNumber} (using PR head commit, not merge)`);
+    return { merged: true, prNumber, isTestMode: true };  // merged=true to continue processing
+  }
+
+  // Production mode: must be closed and merged
   if (payload.action !== 'closed') {
-    throw new Error(`This action only runs when PRs are closed. Got action: ${payload.action}`);
+    throw new Error(`This action only runs when PRs are closed or labeled with test-translation. Got action: ${payload.action}`);
   }
 
   const merged = payload.pull_request?.merged === true;
@@ -81,5 +97,6 @@ export function validatePREvent(context: any): { merged: boolean; prNumber: numb
     throw new Error('Could not determine PR number from event payload');
   }
 
-  return { merged, prNumber };
+  core.info(`🚀 Running in PRODUCTION mode for merged PR #${prNumber}`);
+  return { merged, prNumber, isTestMode: false };
 }

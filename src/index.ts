@@ -16,16 +16,18 @@ async function run(): Promise<void> {
     core.info('Getting action inputs...');
     const inputs = getInputs();
 
-    // Validate this is a merged PR event or manual dispatch
+    // Validate this is a merged PR event, test mode, or manual dispatch
     core.info('Validating PR event...');
-    const { merged, prNumber } = validatePREvent(github.context);
+    const { merged, prNumber, isTestMode } = validatePREvent(github.context, inputs.testMode);
 
     if (!merged) {
       core.info('PR was not merged. Exiting.');
       return;
     }
 
-    if (prNumber) {
+    if (isTestMode) {
+      core.info(`🧪 TEST MODE: Processing PR #${prNumber} (using head commit)`);
+    } else if (prNumber) {
       core.info(`Processing merged PR #${prNumber}`);
     } else {
       core.info('Processing manual workflow dispatch');
@@ -295,15 +297,22 @@ ${prNumber ? `- **PR**: #${prNumber}` : '- **Trigger**: Manual workflow dispatch
           
           core.info(`Created PR: ${pr.html_url}`);
           
+          // Prepare labels - add test-translation if in test mode
+          const labelsToAdd = [...inputs.prLabels];
+          if (isTestMode) {
+            labelsToAdd.push('test-translation');
+            core.info('🧪 Test mode: Adding test-translation label to PR');
+          }
+          
           // Add labels if specified
-          if (inputs.prLabels.length > 0) {
+          if (labelsToAdd.length > 0) {
             await octokit.rest.issues.addLabels({
               owner: targetOwner,
               repo: targetRepoName,
               issue_number: pr.number,
-              labels: inputs.prLabels,
+              labels: labelsToAdd,
             });
-            core.info(`Added labels: ${inputs.prLabels.join(', ')}`);
+            core.info(`Added labels: ${labelsToAdd.join(', ')}`);
           }
           
           // Request reviewers if specified

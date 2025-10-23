@@ -20,6 +20,7 @@ export interface ActionInputs {
     prLabels: string[];
     prReviewers: string[];
     prTeamReviewers: string[];
+    testMode: boolean;
 }
 export interface GlossaryTerm {
     en: string;

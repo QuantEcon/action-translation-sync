@@ -18,3 +18,7 @@ coverage/
 # Temporary files
 *.tmp
 .cache/
+
+# Test repositories (cloned locally for testing)
+test-translation-sync/
+test-translation-sync.zh-cn/

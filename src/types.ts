@@ -25,6 +25,7 @@ export interface ActionInputs {
   prLabels: string[];
   prReviewers: string[];
   prTeamReviewers: string[];
+  testMode: boolean;        // If true, run on PR head instead of merge commit
 }
 
 // ============================================================================

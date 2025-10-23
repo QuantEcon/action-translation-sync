@@ -338,9 +338,10 @@ export class FileProcessor {
       parts.push(''); // Empty line after intro
     }
 
-    // 4. SECTIONS (can be empty array)
+    // 4. SECTIONS (can be empty array) - includes subsections
     for (const section of sections) {
-      parts.push(section.content);
+      // Use serializeSection to include subsections
+      parts.push(this.serializeSection(section));
       parts.push(''); // Empty line between sections
     }
 

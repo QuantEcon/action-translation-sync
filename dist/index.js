@@ -480,9 +480,10 @@ class FileProcessor {
             parts.push(intro);
             parts.push(''); // Empty line after intro
         }
-        // 4. SECTIONS (can be empty array)
+        // 4. SECTIONS (can be empty array) - includes subsections
         for (const section of sections) {
-            parts.push(section.content);
+            // Use serializeSection to include subsections
+            parts.push(this.serializeSection(section));
             parts.push(''); // Empty line between sections
         }
         return parts.join('\n').trim() + '\n';
@@ -933,14 +934,17 @@ async function run() {
         // Get and validate inputs
         core.info('Getting action inputs...');
         const inputs = (0, inputs_1.getInputs)();
-        // Validate this is a merged PR event or manual dispatch
+        // Validate this is a merged PR event, test mode, or manual dispatch
         core.info('Validating PR event...');
-        const { merged, prNumber } = (0, inputs_1.validatePREvent)(github.context);
+        const { merged, prNumber, isTestMode } = (0, inputs_1.validatePREvent)(github.context, inputs.testMode);
         if (!merged) {
             core.info('PR was not merged. Exiting.');
             return;
         }
-        if (prNumber) {
+        if (isTestMode) {
+            core.info(`🧪 TEST MODE: Processing PR #${prNumber} (using head commit)`);
+        }
+        else if (prNumber) {
             core.info(`Processing merged PR #${prNumber}`);
         }
         else {
@@ -1166,15 +1170,21 @@ ${prNumber ? `- **PR**: #${prNumber}` : '- **Trigger**: Manual workflow dispatch
                         base: defaultBranch,
                     });
                     core.info(`Created PR: ${pr.html_url}`);
+                    // Prepare labels - add test-translation if in test mode
+                    const labelsToAdd = [...inputs.prLabels];
+                    if (isTestMode) {
+                        labelsToAdd.push('test-translation');
+                        core.info('🧪 Test mode: Adding test-translation label to PR');
+                    }
                     // Add labels if specified
-                    if (inputs.prLabels.length > 0) {
+                    if (labelsToAdd.length > 0) {
                         await octokit.rest.issues.addLabels({
                             owner: targetOwner,
                             repo: targetRepoName,
                             issue_number: pr.number,
-                            labels: inputs.prLabels,
+                            labels: labelsToAdd,
                         });
-                        core.info(`Added labels: ${inputs.prLabels.join(', ')}`);
+                        core.info(`Added labels: ${labelsToAdd.join(', ')}`);
                     }
                     // Request reviewers if specified
                     if (inputs.prReviewers.length > 0 || inputs.prTeamReviewers.length > 0) {
@@ -1287,6 +1297,9 @@ function getInputs() {
     const prReviewers = prReviewersRaw.split(',').map((r) => r.trim()).filter((r) => r.length > 0);
     const prTeamReviewersRaw = core.getInput('pr-team-reviewers', { required: false }) || '';
     const prTeamReviewers = prTeamReviewersRaw.split(',').map((t) => t.trim()).filter((t) => t.length > 0);
+    // Test mode: use PR head instead of merge commit
+    const testModeRaw = core.getInput('test-mode', { required: false }) || 'false';
+    const testMode = testModeRaw.toLowerCase() === 'true';
     // Validate target repo format
     if (!targetRepo.includes('/')) {
         throw new Error(`Invalid target-repo format: ${targetRepo}. Expected format: owner/repo`);
@@ -1306,25 +1319,36 @@ function getInputs() {
         prLabels,
         prReviewers,
         prTeamReviewers,
+        testMode,
     };
 }
 /**
- * Validate that the event is a merged PR or manual dispatch
+ * Validate that the event is a merged PR, test mode label, or manual dispatch
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function validatePREvent(context) {
+function validatePREvent(context, testMode) {
     const { eventName, payload } = context;
     // Handle workflow_dispatch for manual testing
     if (eventName === 'workflow_dispatch') {
         core.info('Manual workflow dispatch - will process latest commit');
-        return { merged: true, prNumber: null };
+        return { merged: true, prNumber: null, isTestMode: false };
     }
     // Handle pull_request events
     if (eventName !== 'pull_request') {
         throw new Error(`This action only works on pull_request or workflow_dispatch events. Got: ${eventName}`);
     }
+    // Test mode: triggered by label, use PR head (not merged)
+    if (testMode || (payload.action === 'labeled' && payload.label?.name === 'test-translation')) {
+        const prNumber = payload.pull_request?.number;
+        if (!prNumber) {
+            throw new Error('Could not determine PR number from event payload');
+        }
+        core.info(`🧪 Running in TEST mode for PR #${prNumber} (using PR head commit, not merge)`);
+        return { merged: true, prNumber, isTestMode: true }; // merged=true to continue processing
+    }
+    // Production mode: must be closed and merged
     if (payload.action !== 'closed') {
-        throw new Error(`This action only runs when PRs are closed. Got action: ${payload.action}`);
+        throw new Error(`This action only runs when PRs are closed or labeled with test-translation. Got action: ${payload.action}`);
     }
     const merged = payload.pull_request?.merged === true;
     const prNumber = payload.pull_request?.number;
@@ -1334,7 +1358,8 @@ function validatePREvent(context) {
     if (!prNumber) {
         throw new Error('Could not determine PR number from event payload');
     }
-    return { merged, prNumber };
+    core.info(`🚀 Running in PRODUCTION mode for merged PR #${prNumber}`);
+    return { merged, prNumber, isTestMode: false };
 }
 //# sourceMappingURL=inputs.js.map
 

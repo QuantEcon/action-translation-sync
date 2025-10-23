@@ -1,0 +1,14 @@
+---
+jupytext:
+  text_representation:
+    extension: .md
+    format_name: myst
+---
+
+# Economics Lecture
+
+This is the introduction paragraph.
+
+## Supply and Demand
+
+Supply and demand are fundamental concepts in economics.
