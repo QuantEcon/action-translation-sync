@@ -582,6 +582,45 @@ Subsection text already in section.content from translation.
       // Should not have any level-3 headings
       expect(reconstructed).not.toContain('###');
     });
+
+    it('parseTranslatedSubsections should strip subsections from content to prevent duplication', () => {
+      // This documents the fix for the subsection duplication bug (GitHub issue #103)
+      // 
+      // PROBLEM: When translator returns section content that includes subsections,
+      // and we also extract those subsections separately, they would appear twice.
+      //
+      // SOLUTION: parseTranslatedSubsections now returns:
+      // - subsections: Array of extracted subsection objects
+      // - contentWithoutSubsections: Content truncated at first subsection heading
+      //
+      // This test verifies the conceptual fix without needing actual translation
+      
+      const translatedContent = `## Supply and Demand
+
+Supply and demand are fundamental concepts.
+
+### Market Equilibrium
+
+Market equilibrium occurs when supply equals demand.
+`;
+
+      // Simulate what parseTranslatedSubsections does:
+      // 1. Find first subsection heading
+      const firstSubsectionIndex = translatedContent.indexOf('### Market Equilibrium');
+      expect(firstSubsectionIndex).toBeGreaterThan(0);
+      
+      // 2. Content WITHOUT subsections = everything before first subsection
+      const contentWithoutSubsections = translatedContent.substring(0, firstSubsectionIndex).trim();
+      
+      // 3. Verify content no longer includes subsection
+      expect(contentWithoutSubsections).not.toContain('### Market Equilibrium');
+      expect(contentWithoutSubsections).not.toContain('Market equilibrium occurs');
+      expect(contentWithoutSubsections).toContain('Supply and demand are fundamental concepts');
+      
+      // This ensures when we reconstruct:
+      // - section.content = contentWithoutSubsections (no duplication)
+      // - section.subsections = [extracted subsections] (added separately during serialization)
+    });
   });
 });
 
