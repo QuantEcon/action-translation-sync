@@ -68,8 +68,8 @@ function getInputs() {
     if (!targetRepo.includes('/')) {
         throw new Error(`Invalid target-repo format: ${targetRepo}. Expected format: owner/repo`);
     }
-    // Ensure docs folder ends with /
-    const normalizedDocsFolder = docsFolder.endsWith('/') ? docsFolder : `${docsFolder}/`;
+    // Ensure docs folder ends with / (unless it's empty string for root level)
+    const normalizedDocsFolder = docsFolder === '' ? '' : (docsFolder.endsWith('/') ? docsFolder : `${docsFolder}/`);
     return {
         targetRepo,
         targetLanguage,
