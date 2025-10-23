@@ -48,7 +48,7 @@ jobs:
           target-repo: ${{ github.repository }}.zh-cn
           target-language: zh-cn
           source-language: en
-          docs-folder: ''
+          docs-folder: '.'
           anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           test-mode: ${{ steps.mode.outputs.mode == 'test' }}
