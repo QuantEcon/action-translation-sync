@@ -55,13 +55,6 @@ async function run(): Promise<void> {
       files = commit.files || [];
     }
 
-    // Debug logging for docs folder
-    core.info(`Docs folder input: "${inputs.docsFolder}" (length: ${inputs.docsFolder.length})`);
-    core.info(`Total files changed: ${files.length}`);
-    files.forEach((file: any) => {
-      core.info(`  File: ${file.filename}, Status: ${file.status}`);
-    });
-
     // Filter for markdown files in docs folder
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const changedMarkdownFiles = files.filter(
@@ -70,11 +63,6 @@ async function run(): Promise<void> {
         file.filename.endsWith('.md') &&
         file.status !== 'removed'
     );
-
-    core.info(`Filtered markdown files: ${changedMarkdownFiles.length}`);
-    changedMarkdownFiles.forEach((file: any) => {
-      core.info(`  Matched: ${file.filename}`);
-    });
 
     if (changedMarkdownFiles.length === 0) {
       core.info('No markdown files changed in docs folder. Exiting.');

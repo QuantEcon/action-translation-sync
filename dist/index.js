@@ -971,21 +971,11 @@ async function run() {
             });
             files = commit.files || [];
         }
-        // Debug logging for docs folder
-        core.info(`Docs folder input: "${inputs.docsFolder}" (length: ${inputs.docsFolder.length})`);
-        core.info(`Total files changed: ${files.length}`);
-        files.forEach((file) => {
-            core.info(`  File: ${file.filename}, Status: ${file.status}`);
-        });
         // Filter for markdown files in docs folder
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const changedMarkdownFiles = files.filter((file) => file.filename.startsWith(inputs.docsFolder) &&
             file.filename.endsWith('.md') &&
             file.status !== 'removed');
-        core.info(`Filtered markdown files: ${changedMarkdownFiles.length}`);
-        changedMarkdownFiles.forEach((file) => {
-            core.info(`  Matched: ${file.filename}`);
-        });
         if (changedMarkdownFiles.length === 0) {
             core.info('No markdown files changed in docs folder. Exiting.');
             return;
@@ -1294,13 +1284,9 @@ const core = __importStar(__nccwpck_require__(7484));
 function getInputs() {
     const targetRepo = core.getInput('target-repo', { required: true });
     const targetLanguage = core.getInput('target-language', { required: true });
-    // Handle docs-folder: '.' or '/' means root level (GitHub Actions normalizes '.' to '/')
+    // Handle docs-folder: '.' means root level (empty string for no prefix filter)
     const docsFolderInput = core.getInput('docs-folder', { required: false });
-    core.info(`Raw docs-folder input: "${docsFolderInput}" (length: ${docsFolderInput.length})`);
-    core.info(`Checking: docsFolderInput === '.' is ${docsFolderInput === '.'}`);
-    core.info(`Checking: docsFolderInput === '/' is ${docsFolderInput === '/'}`);
     const docsFolder = (docsFolderInput === '.' || docsFolderInput === '/') ? '' : docsFolderInput;
-    core.info(`Converted docsFolder: "${docsFolder}" (length: ${docsFolder.length})`);
     const sourceLanguage = core.getInput('source-language', { required: false }) || 'en';
     const glossaryPath = core.getInput('glossary-path', { required: false }) || ''; // Empty by default - uses built-in
     const tocFile = core.getInput('toc-file', { required: false }) || '_toc.yml';
