@@ -217,19 +217,39 @@ class FileProcessor {
                 };
                 // Helper to merge source subsections with target translations
                 // Takes source structure (English) and applies target headings/content where they exist
-                const mergeSubsectionsWithTargetTranslations = (sourceSubs, targetSubs) => {
+                // Also checks heading-map for Chinese translations of subsections not in target array
+                const mergeSubsectionsWithTargetTranslations = (sourceSubs, targetSubs, parentPath = '') => {
                     return sourceSubs.map((sourceSub, i) => {
                         const targetSub = targetSubs[i];
                         if (targetSub) {
                             // Use target heading AND content (Chinese), but source structure
+                            const currentPath = parentPath
+                                ? `${parentPath}::${sourceSub.heading.replace(/^#+\s+/, '')}`
+                                : sourceSub.heading.replace(/^#+\s+/, '');
                             return {
                                 ...targetSub, // Use target (Chinese heading + content)
                                 subsections: mergeSubsectionsWithTargetTranslations(sourceSub.subsections, // Source structure (may have more subsections)
-                                targetSub.subsections // Target translations
+                                targetSub.subsections, // Target translations
+                                currentPath // Track path for heading-map lookup
                                 )
                             };
                         }
-                        // No target match - keep source as-is (will be English)
+                        // No target in array - check if it exists in heading-map
+                        const sourcePath = parentPath
+                            ? `${parentPath}::${sourceSub.heading.replace(/^#+\s+/, '')}`
+                            : sourceSub.heading.replace(/^#+\s+/, '');
+                        const chineseHeading = headingMap.get(sourcePath);
+                        if (chineseHeading) {
+                            // Found in heading-map - use Chinese heading but keep English content
+                            // (translator will provide Chinese content when we serialize and pass to updateHeadingMap)
+                            this.log(`Found Chinese heading in map for: ${sourcePath} → ${chineseHeading}`);
+                            return {
+                                ...sourceSub,
+                                heading: sourceSub.heading.replace(/^(#+\s+).*/, `$1${chineseHeading}`),
+                                subsections: mergeSubsectionsWithTargetTranslations(sourceSub.subsections, [], sourcePath)
+                            };
+                        }
+                        // Not in heading-map - keep source as-is (will be English, truly new)
                         return sourceSub;
                     });
                 };
@@ -243,7 +263,8 @@ class FileProcessor {
                     else {
                         // Structure mismatch - merge source structure with target headings
                         this.log(`Warning: Subsection structure mismatch (counts match but nested structure differs), merging with target headings`);
-                        finalSubsections = mergeSubsectionsWithTargetTranslations(newSection.subsections, targetSection.subsections);
+                        const parentPath = newSection.heading.replace(/^#+\s+/, '');
+                        finalSubsections = mergeSubsectionsWithTargetTranslations(newSection.subsections, targetSection.subsections, parentPath);
                     }
                 }
                 else if (parsedSubsectionCount === 0 && expectedSubsectionCount === 0) {
@@ -259,7 +280,8 @@ class FileProcessor {
                 else {
                     // Mismatch: merge source structure with target headings
                     this.log(`Warning: Expected ${expectedSubsectionCount} subsections but got ${parsedSubsectionCount}, merging with target headings`);
-                    finalSubsections = mergeSubsectionsWithTargetTranslations(newSection.subsections, targetSection.subsections);
+                    const parentPath = newSection.heading.replace(/^#+\s+/, '');
+                    finalSubsections = mergeSubsectionsWithTargetTranslations(newSection.subsections, targetSection.subsections, parentPath);
                 }
                 resultSections.push({
                     ...targetSection,
