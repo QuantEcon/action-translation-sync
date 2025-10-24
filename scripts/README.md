@@ -115,7 +115,7 @@ gh repo delete mmcky/test-translation-sync --yes
 gh repo delete mmcky/test-translation-sync.zh-cn --yes
 
 # Clean local working directory
-rm -rf tmp/test-repos
+rm -rf /tmp/test-repos
 ```
 
 ### Troubleshooting

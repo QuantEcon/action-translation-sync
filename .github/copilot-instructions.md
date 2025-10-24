@@ -365,11 +365,11 @@ Now we can match!
 - `npm run package` - Bundle for distribution
 
 **GitHub CLI Usage**:
-When using `gh` commands, write output to `tmp/` directory to avoid interactive prompts:
+When using `gh` commands, write output to `/tmp/` directory to avoid interactive prompts:
 ```bash
 # Good: Write to file for reading
-gh pr view 123 > tmp/pr-details.txt
-cat tmp/pr-details.txt
+gh pr view 123 > /tmp/pr-details.txt
+cat /tmp/pr-details.txt
 
 # Avoid: Direct reading (may have interactive prompts)
 gh pr view 123
