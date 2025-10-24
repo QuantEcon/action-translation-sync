@@ -72,7 +72,8 @@ function extractHeadingMap(content) {
  * - Removes deleted sections
  * - Preserves existing mappings
  */
-function updateHeadingMap(existingMap, sourceSections, targetSections) {
+function updateHeadingMap(existingMap, sourceSections, targetSections, titleHeading // Optional: preserve this heading even if not in sections
+) {
     const updated = new Map(existingMap);
     // Helper to extract clean heading text (without ## markers)
     const cleanHeading = (heading) => {
@@ -80,6 +81,10 @@ function updateHeadingMap(existingMap, sourceSections, targetSections) {
     };
     // Build set of current source headings (for cleanup)
     const currentSourceHeadings = new Set();
+    // Add title to current headings if provided (so it won't be deleted)
+    if (titleHeading) {
+        currentSourceHeadings.add(titleHeading);
+    }
     // Process all sections and subsections recursively
     const processSections = (sourceSecs, targetSecs, level = 0) => {
         sourceSecs.forEach((sourceSection, i) => {

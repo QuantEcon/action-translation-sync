@@ -14,7 +14,7 @@ export declare function extractHeadingMap(content: string): HeadingMap;
  * - Removes deleted sections
  * - Preserves existing mappings
  */
-export declare function updateHeadingMap(existingMap: HeadingMap, sourceSections: Section[], targetSections: Section[]): HeadingMap;
+export declare function updateHeadingMap(existingMap: HeadingMap, sourceSections: Section[], targetSections: Section[], titleHeading?: string): HeadingMap;
 /**
  * Serialize heading map to YAML string for frontmatter
  */
