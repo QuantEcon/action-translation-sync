@@ -283,6 +283,7 @@ docs/
 ✅ **Always update existing documentation in place** (STATUS-REPORT.md, TODO.md, release notes)
 ✅ **CHANGELOG.md is OK** - Can be built from `docs/releases/` content
 ✅ **Update README.md for user-facing changes**
+✅ **Clean up backup files** - Remove any `.backup` or `-old` files before committing
 
 ## What NOT to Do
 
