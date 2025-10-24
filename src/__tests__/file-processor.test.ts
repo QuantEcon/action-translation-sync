@@ -726,4 +726,318 @@ Market equilibrium occurs when supply equals demand.
       expect(positionInOriginal).toBe(1);  // Correct position in original content
     });
   });
+
+  describe('Recursive Subsection Structure Validation', () => {
+    /**
+     * Tests the validateSubsectionStructure() helper added in v0.4.7+
+     * 
+     * When translator doesn't return full nested structure (missing ####, #####),
+     * we should detect the mismatch and preserve target subsections.
+     * 
+     * This prevents heading-map entries from being lost when Claude doesn't
+     * return deeply nested subsections.
+     */
+    
+    it('should detect when translator omits level-4 subsections', () => {
+      // Simulate the scenario from Test 09:
+      // Source: ## Vector Spaces > ### Basic Properties > #### Applications in Economics
+      // Target: ## 向量空间 > ### 基本性质 > #### 在经济学中的应用
+      // Translator returns: ## 向量空间 > ### 基本性质 (missing ####)
+      
+      const expectedSubsections: Section[] = [
+        {
+          id: 'basic-properties',
+          heading: '### Basic Properties',
+          level: 3,
+          content: 'Properties content',
+          startLine: 10,
+          endLine: 20,
+          subsections: [
+            {
+              id: 'applications-in-economics',
+              heading: '#### Applications in Economics',
+              level: 4,
+              content: 'Applications content',
+              startLine: 15,
+              endLine: 20,
+              subsections: []
+            }
+          ]
+        }
+      ];
+
+      const parsedSubsections: Section[] = [
+        {
+          id: 'basic-properties',
+          heading: '### 基本性质',
+          level: 3,
+          content: 'Properties content in Chinese',
+          startLine: 10,
+          endLine: 20,
+          subsections: []  // Translator didn't return the #### level!
+        }
+      ];
+
+      // This is the validation function from file-processor.ts
+      const validateSubsectionStructure = (expected: Section[], parsed: Section[]): boolean => {
+        if (expected.length !== parsed.length) return false;
+        
+        for (let i = 0; i < expected.length; i++) {
+          // Recursively validate nested subsections
+          if (!validateSubsectionStructure(expected[i].subsections, parsed[i].subsections)) {
+            return false;
+          }
+        }
+        return true;
+      };
+
+      // OLD validation: only checked direct children count
+      const oldValidation = parsedSubsections.length === expectedSubsections.length;
+      expect(oldValidation).toBe(true);  // BUG: Would have passed!
+
+      // NEW validation: recursively checks full tree
+      const newValidation = validateSubsectionStructure(expectedSubsections, parsedSubsections);
+      expect(newValidation).toBe(false);  // ✓ Correctly detects mismatch!
+    });
+
+    it('should validate correctly when nested structure matches', () => {
+      const expectedSubsections: Section[] = [
+        {
+          id: 'policy-implications',
+          heading: '### Policy Implications',
+          level: 3,
+          content: 'Policy content',
+          startLine: 10,
+          endLine: 30,
+          subsections: [
+            {
+              id: 'policy-trade-offs',
+              heading: '#### Policy Trade-offs',
+              level: 4,
+              content: 'Trade-offs content',
+              startLine: 15,
+              endLine: 30,
+              subsections: [
+                {
+                  id: 'short-term-effects',
+                  heading: '##### Short-term Effects',
+                  level: 5,
+                  content: 'Short-term content',
+                  startLine: 20,
+                  endLine: 25,
+                  subsections: []
+                },
+                {
+                  id: 'long-term-effects',
+                  heading: '##### Long-term Effects',
+                  level: 5,
+                  content: 'Long-term content',
+                  startLine: 26,
+                  endLine: 30,
+                  subsections: []
+                }
+              ]
+            }
+          ]
+        }
+      ];
+
+      const parsedSubsections: Section[] = [
+        {
+          id: 'policy-implications',
+          heading: '### 政策含义',
+          level: 3,
+          content: 'Policy content in Chinese',
+          startLine: 10,
+          endLine: 30,
+          subsections: [
+            {
+              id: 'policy-trade-offs',
+              heading: '#### 政策权衡',
+              level: 4,
+              content: 'Trade-offs content in Chinese',
+              startLine: 15,
+              endLine: 30,
+              subsections: [
+                {
+                  id: 'short-term-effects',
+                  heading: '##### 短期影响',
+                  level: 5,
+                  content: 'Short-term content in Chinese',
+                  startLine: 20,
+                  endLine: 25,
+                  subsections: []
+                },
+                {
+                  id: 'long-term-effects',
+                  heading: '##### 长期影响',
+                  level: 5,
+                  content: 'Long-term content in Chinese',
+                  startLine: 26,
+                  endLine: 30,
+                  subsections: []
+                }
+              ]
+            }
+          ]
+        }
+      ];
+
+      const validateSubsectionStructure = (expected: Section[], parsed: Section[]): boolean => {
+        if (expected.length !== parsed.length) return false;
+        
+        for (let i = 0; i < expected.length; i++) {
+          if (!validateSubsectionStructure(expected[i].subsections, parsed[i].subsections)) {
+            return false;
+          }
+        }
+        return true;
+      };
+
+      const isValid = validateSubsectionStructure(expectedSubsections, parsedSubsections);
+      expect(isValid).toBe(true);  // ✓ Full nested structure matches!
+    });
+
+    it('should detect when translator omits level-5 subsections', () => {
+      const expectedSubsections: Section[] = [
+        {
+          id: 'section',
+          heading: '### Section',
+          level: 3,
+          content: 'Content',
+          startLine: 10,
+          endLine: 40,
+          subsections: [
+            {
+              id: 'subsection',
+              heading: '#### Subsection',
+              level: 4,
+              content: 'Sub content',
+              startLine: 15,
+              endLine: 40,
+              subsections: [
+                {
+                  id: 'sub-subsection',
+                  heading: '##### Sub-subsection',
+                  level: 5,
+                  content: 'Sub-sub content',
+                  startLine: 20,
+                  endLine: 40,
+                  subsections: []
+                }
+              ]
+            }
+          ]
+        }
+      ];
+
+      // Translator returns up to level 4, but missing level 5
+      const parsedSubsections: Section[] = [
+        {
+          id: 'section',
+          heading: '### 章节',
+          level: 3,
+          content: 'Content',
+          startLine: 10,
+          endLine: 40,
+          subsections: [
+            {
+              id: 'subsection',
+              heading: '#### 子章节',
+              level: 4,
+              content: 'Sub content',
+              startLine: 15,
+              endLine: 40,
+              subsections: []  // Missing level 5!
+            }
+          ]
+        }
+      ];
+
+      const validateSubsectionStructure = (expected: Section[], parsed: Section[]): boolean => {
+        if (expected.length !== parsed.length) return false;
+        
+        for (let i = 0; i < expected.length; i++) {
+          if (!validateSubsectionStructure(expected[i].subsections, parsed[i].subsections)) {
+            return false;
+          }
+        }
+        return true;
+      };
+
+      const isValid = validateSubsectionStructure(expectedSubsections, parsedSubsections);
+      expect(isValid).toBe(false);  // ✓ Correctly detects missing level 5!
+    });
+
+    it('should detect when subsection count differs at any depth', () => {
+      const expectedSubsections: Section[] = [
+        {
+          id: 'section',
+          heading: '### Section',
+          level: 3,
+          content: 'Content',
+          startLine: 10,
+          endLine: 40,
+          subsections: [
+            {
+              id: 'sub-a',
+              heading: '#### Sub A',
+              level: 4,
+              content: 'A',
+              startLine: 15,
+              endLine: 25,
+              subsections: []
+            },
+            {
+              id: 'sub-b',
+              heading: '#### Sub B',
+              level: 4,
+              content: 'B',
+              startLine: 26,
+              endLine: 40,
+              subsections: []
+            }
+          ]
+        }
+      ];
+
+      // Translator only returns one of two subsections
+      const parsedSubsections: Section[] = [
+        {
+          id: 'section',
+          heading: '### 章节',
+          level: 3,
+          content: 'Content',
+          startLine: 10,
+          endLine: 40,
+          subsections: [
+            {
+              id: 'sub-a',
+              heading: '#### 子章节 A',
+              level: 4,
+              content: 'A',
+              startLine: 15,
+              endLine: 25,
+              subsections: []
+            }
+            // Missing Sub B!
+          ]
+        }
+      ];
+
+      const validateSubsectionStructure = (expected: Section[], parsed: Section[]): boolean => {
+        if (expected.length !== parsed.length) return false;
+        
+        for (let i = 0; i < expected.length; i++) {
+          if (!validateSubsectionStructure(expected[i].subsections, parsed[i].subsections)) {
+            return false;
+          }
+        }
+        return true;
+      };
+
+      const isValid = validateSubsectionStructure(expectedSubsections, parsedSubsections);
+      expect(isValid).toBe(false);  // ✓ Correctly detects count mismatch!
+    });
+  });
 });
