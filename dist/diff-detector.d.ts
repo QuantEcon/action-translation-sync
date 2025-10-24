@@ -33,9 +33,5 @@ export declare class DiffDetector {
      * Check if section content has changed
      */
     private sectionContentEqual;
-    /**
-     * Extract code blocks from content
-     */
-    private extractCodeBlocks;
 }
 //# sourceMappingURL=diff-detector.d.ts.map
