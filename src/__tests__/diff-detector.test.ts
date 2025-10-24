@@ -131,7 +131,7 @@ Short old content.
 `;
       const newContent = `## Section A
 
-Much longer new content that exceeds the 20% threshold for detecting changes. This is substantially different text.
+Much longer new content with different text.
 `;
       
       const changes = await detector.detectSectionChanges(oldContent, newContent, 'test.md');
@@ -140,6 +140,42 @@ Much longer new content that exceeds the 20% threshold for detecting changes. Th
       expect(modifiedSections).toHaveLength(1);
       expect(modifiedSections[0].oldSection?.content).toContain('Short old');
       expect(modifiedSections[0].newSection?.content).toContain('Much longer');
+    });
+
+    it('should detect subtle content changes (typo fixes, added words)', async () => {
+      const oldContent = `## Section A
+
+This is the orignal content with a typo.
+`;
+      const newContent = `## Section A
+
+This is the original content with a typo fix.
+`;
+      
+      const changes = await detector.detectSectionChanges(oldContent, newContent, 'test.md');
+      
+      // Should detect the change even though it's just 2 character differences
+      const modifiedSections = changes.filter((c: any) => c.type === 'modified');
+      expect(modifiedSections).toHaveLength(1);
+      expect(modifiedSections[0].oldSection?.heading).toBe('## Section A');
+      expect(modifiedSections[0].newSection?.heading).toBe('## Section A');
+    });
+
+    it('should detect added phrases in sections', async () => {
+      const oldContent = `## Economic Models
+
+Economic models are used to analyze markets.
+`;
+      const newContent = `## Economic Models
+
+Economic models are used to analyze markets, with updated examples from recent research.
+`;
+      
+      const changes = await detector.detectSectionChanges(oldContent, newContent, 'test.md');
+      
+      // Should detect the added phrase
+      const modifiedSections = changes.filter((c: any) => c.type === 'modified');
+      expect(modifiedSections).toHaveLength(1);
     });
 
     it('should detect deleted sections', async () => {
