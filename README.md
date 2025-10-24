@@ -8,13 +8,13 @@ This action monitors a source repository for merged pull requests and automatica
 
 ## Features
 
-- **Heading-Map System** (v0.4.0): Robust cross-language section matching that survives reordering
-- **Intelligent Diff Translation**: Only translates changed sections, preserving existing translations
-- **Full File Translation**: Handles new files with complete translation
-- **MyST Markdown Support**: Preserves code blocks, math equations, and MyST directives
-- **Glossary Support**: Built-in glossaries for consistent technical terminology
-- **Automatic TOC Updates**: Updates `_toc.yml` when new files are added
-- **PR-Based Workflow**: All translations go through pull request review
+- 🗺️ **Heading-Map System** (v0.4.0): Robust cross-language section matching that survives reordering
+- 🔄 **Intelligent Diff Translation**: Only translates changed sections, preserving existing translations
+- 📄 **Full File Translation**: Handles new files with complete translation
+- ✍️ **MyST Markdown Support**: Preserves code blocks, math equations, and MyST directives
+- 📚 **Glossary Support**: Built-in glossaries for consistent technical terminology (342 terms)
+- 📑 **Automatic TOC Updates**: Updates `_toc.yml` when new files are added
+- 🔍 **PR-Based Workflow**: All translations go through pull request review
 
 ## Usage
 
