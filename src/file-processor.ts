@@ -278,11 +278,12 @@ export class FileProcessor {
     const resultTitleText = resultTitle.replace(/^#\s+/, '').trim();
     updatedHeadingMap.set(newTitleText, resultTitleText);
     
-    // Add sections to heading map
+    // Add sections to heading map (pass title so it's preserved)
     const finalHeadingMap = updateHeadingMap(
       updatedHeadingMap,
       newSource.sections,
-      resultSections
+      resultSections,
+      newTitleText  // Pass title to prevent it from being deleted
     );
     this.log(`Updated heading map to ${finalHeadingMap.size} entries`);
     

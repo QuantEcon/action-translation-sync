@@ -221,6 +221,60 @@ Content`;
       expect(updated.get('Second')).toBe('第二');
       expect(updated.has('Third')).toBe(false);
     });
+
+    it('should preserve title in heading-map when provided', () => {
+      const existingMap = new Map([
+        ['Introduction to Economics', '经济学导论'],
+        ['Supply and Demand', '供给与需求'],
+        ['Economic Models', '经济模型']
+      ]);
+      const sourceSections = [
+        createSection('## Supply and Demand'),
+        createSection('## Economic Models')
+      ];
+      const targetSections = [
+        createSection('## 供给与需求'),
+        createSection('## 经济模型')
+      ];
+      const titleHeading = 'Comprehensive Introduction to Economic Principles';
+
+      // Without title parameter, title would be deleted
+      const updatedWithoutTitle = updateHeadingMap(existingMap, sourceSections, targetSections);
+      expect(updatedWithoutTitle.has('Introduction to Economics')).toBe(false);
+      expect(updatedWithoutTitle.has('Comprehensive Introduction to Economic Principles')).toBe(false);
+
+      // With title parameter, title should be preserved
+      existingMap.set(titleHeading, '经济学原理综合导论');
+      const updatedWithTitle = updateHeadingMap(existingMap, sourceSections, targetSections, titleHeading);
+      
+      expect(updatedWithTitle.size).toBe(3);
+      expect(updatedWithTitle.get('Comprehensive Introduction to Economic Principles')).toBe('经济学原理综合导论');
+      expect(updatedWithTitle.get('Supply and Demand')).toBe('供给与需求');
+      expect(updatedWithTitle.get('Economic Models')).toBe('经济模型');
+      expect(updatedWithTitle.has('Introduction to Economics')).toBe(false); // Old title removed
+    });
+
+    it('should handle title changes correctly', () => {
+      const existingMap = new Map([
+        ['Old Title', '旧标题'],
+        ['Section One', '第一节']
+      ]);
+      const sourceSections = [
+        createSection('## Section One')
+      ];
+      const targetSections = [
+        createSection('## 第一节')
+      ];
+      const newTitle = 'New Title';
+
+      existingMap.set(newTitle, '新标题');
+      const updated = updateHeadingMap(existingMap, sourceSections, targetSections, newTitle);
+
+      expect(updated.size).toBe(2);
+      expect(updated.get('New Title')).toBe('新标题');
+      expect(updated.get('Section One')).toBe('第一节');
+      expect(updated.has('Old Title')).toBe(false); // Old title removed
+    });
   });
 
   describe('serializeHeadingMap', () => {

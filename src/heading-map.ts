@@ -47,7 +47,8 @@ export function extractHeadingMap(content: string): HeadingMap {
 export function updateHeadingMap(
   existingMap: HeadingMap,
   sourceSections: Section[],
-  targetSections: Section[]
+  targetSections: Section[],
+  titleHeading?: string  // Optional: preserve this heading even if not in sections
 ): HeadingMap {
   const updated = new Map(existingMap);
   
@@ -58,6 +59,11 @@ export function updateHeadingMap(
   
   // Build set of current source headings (for cleanup)
   const currentSourceHeadings = new Set<string>();
+  
+  // Add title to current headings if provided (so it won't be deleted)
+  if (titleHeading) {
+    currentSourceHeadings.add(titleHeading);
+  }
   
   // Process all sections and subsections recursively
   const processSections = (
