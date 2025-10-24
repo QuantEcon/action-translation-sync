@@ -602,7 +602,8 @@ ${translatedContent}`;
     ) {
         this.log(`Finding target for source section: "${sourceSection.heading}" (id: ${sourceSection.id})`);
         // Strategy 1: Use heading map to find translated heading
-        const translatedHeading = (0, heading_map_1.lookupTargetHeading)(sourceSection.heading, headingMap);
+        // For top-level sections, parent path is empty
+        const translatedHeading = (0, heading_map_1.lookupTargetHeading)(sourceSection.heading, headingMap, '');
         if (translatedHeading) {
             this.log(`  Strategy 1: Looking for translated heading: "${translatedHeading}"`);
             // Search for the translated heading in target sections
@@ -668,7 +669,8 @@ ${translatedContent}`;
             return -1;
         }
         // Strategy 1: Use heading map to find translated heading
-        const translatedHeading = (0, heading_map_1.lookupTargetHeading)(sourceSection.heading, headingMap);
+        // For top-level sections, parent path is empty
+        const translatedHeading = (0, heading_map_1.lookupTargetHeading)(sourceSection.heading, headingMap, '');
         if (translatedHeading) {
             this.log(`Looking for translated heading: "${translatedHeading}"`);
             // Search for the translated heading in target sections
@@ -774,12 +776,18 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.PATH_SEPARATOR = void 0;
 exports.extractHeadingMap = extractHeadingMap;
 exports.updateHeadingMap = updateHeadingMap;
 exports.serializeHeadingMap = serializeHeadingMap;
 exports.lookupTargetHeading = lookupTargetHeading;
 exports.injectHeadingMap = injectHeadingMap;
 const yaml = __importStar(__nccwpck_require__(4281));
+/**
+ * Path separator for hierarchical heading keys
+ * Example: "Vector Spaces::Basic Properties::Applications in Economics"
+ */
+exports.PATH_SEPARATOR = '::';
 /**
  * Extract heading map from target document frontmatter
  */
@@ -810,6 +818,7 @@ function extractHeadingMap(content) {
 /**
  * Update heading map with new translations
  * - Adds new English→Translation pairs for ALL headings (sections and subsections)
+ * - Uses path-based keys (Parent::Child::Grandchild) for uniqueness
  * - Removes deleted sections
  * - Preserves existing mappings
  */
@@ -821,62 +830,66 @@ function updateHeadingMap(existingMap, sourceSections, targetSections, titleHead
     const cleanHeading = (heading) => {
         return heading.replace(/^#+\s+/, '').trim();
     };
-    // Build set of current source headings (for cleanup)
-    const currentSourceHeadings = new Set();
-    // Add title to current headings if provided (so it won't be deleted)
+    // Build set of current source paths (for cleanup)
+    const currentSourcePaths = new Set();
+    // Add title to current paths if provided (so it won't be deleted)
     if (titleHeading) {
-        currentSourceHeadings.add(titleHeading);
+        currentSourcePaths.add(titleHeading);
         // Add title to map first (if it exists in old map)
         const titleTranslation = existingMap.get(titleHeading);
         if (titleTranslation) {
             updated.set(titleHeading, titleTranslation);
         }
     }
-    // Process all sections and subsections recursively
-    const processSections = (sourceSecs, targetSecs, level = 0) => {
+    // Process all sections and subsections recursively with path tracking
+    const processSections = (sourceSecs, targetSecs, parentPath = '', // NEW: Track parent path
+    level = 0) => {
         sourceSecs.forEach((sourceSection, i) => {
             const sourceHeading = cleanHeading(sourceSection.heading);
-            currentSourceHeadings.add(sourceHeading);
+            // Build path: either "Section" or "Parent::Child"
+            const path = parentPath ? `${parentPath}${exports.PATH_SEPARATOR}${sourceHeading}` : sourceHeading;
+            currentSourcePaths.add(path);
             // Find matching target section (same position or by ID)
             const targetSection = targetSecs[i];
             // Add to map if we have a matching target
             if (targetSection) {
                 const targetHeading = cleanHeading(targetSection.heading);
-                // Always update to ensure latest translation is captured
-                updated.set(sourceHeading, targetHeading);
+                // Store with path-based key
+                updated.set(path, targetHeading);
                 // Debug logging
                 const indent = '  '.repeat(level);
-                console.log(`${indent}[HeadingMap] Added: "${sourceHeading}" → "${targetHeading}"`);
+                console.log(`${indent}[HeadingMap] Added: "${path}" → "${targetHeading}"`);
                 console.log(`${indent}  Source subsections: ${sourceSection.subsections.length}, Target subsections: ${targetSection.subsections.length}`);
-                // Process subsections recursively
+                // Process subsections recursively with current path as parent
                 if (sourceSection.subsections.length > 0 && targetSection.subsections.length > 0) {
                     console.log(`${indent}  ✓ Processing ${sourceSection.subsections.length} subsections recursively`);
-                    processSections(sourceSection.subsections, targetSection.subsections, level + 1);
+                    processSections(sourceSection.subsections, targetSection.subsections, path, level + 1);
                 }
                 else if (sourceSection.subsections.length > 0) {
                     console.log(`${indent}  ⚠ Source has subsections but target doesn't`);
-                    // Source has subsections but target doesn't - add subsection headings to tracking
+                    // Source has subsections but target doesn't - add subsection paths to tracking
                     // (they'll be removed later if truly missing)
-                    addSourceSubsections(sourceSection.subsections);
+                    addSourceSubsections(sourceSection.subsections, path);
                 }
             }
         });
     };
-    // Helper to add all subsection headings to the tracking set
-    const addSourceSubsections = (subsections) => {
+    // Helper to add all subsection paths to the tracking set
+    const addSourceSubsections = (subsections, parentPath) => {
         for (const sub of subsections) {
             const subHeading = cleanHeading(sub.heading);
-            currentSourceHeadings.add(subHeading);
+            const path = `${parentPath}${exports.PATH_SEPARATOR}${subHeading}`;
+            currentSourcePaths.add(path);
             if (sub.subsections.length > 0) {
-                addSourceSubsections(sub.subsections);
+                addSourceSubsections(sub.subsections, path);
             }
         }
     };
     processSections(sourceSections, targetSections);
-    // Remove deleted headings from map (headings that existed before but not in current source)
-    for (const [sourceHeading] of updated) {
-        if (!currentSourceHeadings.has(sourceHeading)) {
-            updated.delete(sourceHeading);
+    // Remove deleted headings from map (paths that existed before but not in current source)
+    for (const [sourcePath] of updated) {
+        if (!currentSourcePaths.has(sourcePath)) {
+            updated.delete(sourcePath);
         }
     }
     return updated;
@@ -900,12 +913,24 @@ function serializeHeadingMap(map) {
     });
 }
 /**
- * Find target section by looking up heading in map
+ * Find target section by looking up heading path in map
  * Returns the target heading to search for, or undefined if not in map
+ *
+ * @param sourceHeading - The source heading text (e.g., "## Applications in Economics")
+ * @param headingMap - The heading map
+ * @param parentPath - The path of parent sections (e.g., "Vector Spaces::Basic Properties")
  */
-function lookupTargetHeading(sourceHeading, headingMap) {
+function lookupTargetHeading(sourceHeading, headingMap, parentPath) {
     // Clean the source heading (remove ## markers)
     const clean = sourceHeading.replace(/^#+\s+/, '').trim();
+    // Build full path: either "Section" or "Parent::Child"
+    const path = parentPath ? `${parentPath}${exports.PATH_SEPARATOR}${clean}` : clean;
+    // Try path-based lookup first (new format)
+    const translation = headingMap.get(path);
+    if (translation) {
+        return translation;
+    }
+    // Fallback: Try simple heading lookup (for backwards compatibility with old maps)
     return headingMap.get(clean);
 }
 /**

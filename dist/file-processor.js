@@ -388,7 +388,8 @@ ${translatedContent}`;
     ) {
         this.log(`Finding target for source section: "${sourceSection.heading}" (id: ${sourceSection.id})`);
         // Strategy 1: Use heading map to find translated heading
-        const translatedHeading = (0, heading_map_1.lookupTargetHeading)(sourceSection.heading, headingMap);
+        // For top-level sections, parent path is empty
+        const translatedHeading = (0, heading_map_1.lookupTargetHeading)(sourceSection.heading, headingMap, '');
         if (translatedHeading) {
             this.log(`  Strategy 1: Looking for translated heading: "${translatedHeading}"`);
             // Search for the translated heading in target sections
@@ -454,7 +455,8 @@ ${translatedContent}`;
             return -1;
         }
         // Strategy 1: Use heading map to find translated heading
-        const translatedHeading = (0, heading_map_1.lookupTargetHeading)(sourceSection.heading, headingMap);
+        // For top-level sections, parent path is empty
+        const translatedHeading = (0, heading_map_1.lookupTargetHeading)(sourceSection.heading, headingMap, '');
         if (translatedHeading) {
             this.log(`Looking for translated heading: "${translatedHeading}"`);
             // Search for the translated heading in target sections

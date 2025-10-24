@@ -178,8 +178,9 @@ Content`;
 
       expect(updated.size).toBe(3);
       expect(updated.get('Introduction')).toBe('简介');
-      expect(updated.get('Setup')).toBe('设置');
-      expect(updated.get('Usage')).toBe('用法');
+      // Subsections use path-based keys
+      expect(updated.get('Introduction::Setup')).toBe('设置');
+      expect(updated.get('Introduction::Usage')).toBe('用法');
     });
 
     it('should match by position when adding new sections', () => {
@@ -720,10 +721,10 @@ heading-map:
       const existingMap = new Map<string, string>();
       const updatedMap = updateHeadingMap(existingMap, sourceSections, targetSections);
 
-      // Should have entries for BOTH section and subsection
+      // Should have entries for BOTH section and subsection (with path-based keys)
       expect(updatedMap.size).toBe(2);
       expect(updatedMap.get('Overview')).toBe('概述');
-      expect(updatedMap.get('Core Principles')).toBe('核心原则');
+      expect(updatedMap.get('Overview::Core Principles')).toBe('核心原则');
     });
 
     it('should handle multiple subsections per section', () => {
@@ -743,11 +744,11 @@ heading-map:
 
       const updatedMap = updateHeadingMap(new Map(), sourceSections, targetSections);
 
-      // Should have 3 entries: 1 section + 2 subsections
+      // Should have 3 entries: 1 section + 2 subsections (with path-based keys)
       expect(updatedMap.size).toBe(3);
       expect(updatedMap.get('Basic Concepts')).toBe('基本概念');
-      expect(updatedMap.get('Key Terms')).toBe('关键术语');
-      expect(updatedMap.get('Examples')).toBe('示例');
+      expect(updatedMap.get('Basic Concepts::Key Terms')).toBe('关键术语');
+      expect(updatedMap.get('Basic Concepts::Examples')).toBe('示例');
     });
 
     it('should handle nested subsections (level 4)', () => {
@@ -771,12 +772,12 @@ heading-map:
 
       const updatedMap = updateHeadingMap(new Map(), sourceSections, targetSections);
 
-      // Should have 4 entries: 1 level-2 + 1 level-3 + 2 level-4
+      // Should have 4 entries: 1 level-2 + 1 level-3 + 2 level-4 (with path-based keys)
       expect(updatedMap.size).toBe(4);
       expect(updatedMap.get('Policy Implications')).toBe('政策含义');
-      expect(updatedMap.get('Policy Trade-offs')).toBe('政策权衡');
-      expect(updatedMap.get('Short-term Effects')).toBe('短期影响');
-      expect(updatedMap.get('Long-term Effects')).toBe('长期影响');
+      expect(updatedMap.get('Policy Implications::Policy Trade-offs')).toBe('政策权衡');
+      expect(updatedMap.get('Policy Implications::Policy Trade-offs::Short-term Effects')).toBe('短期影响');
+      expect(updatedMap.get('Policy Implications::Policy Trade-offs::Long-term Effects')).toBe('长期影响');
     });
 
     it('should handle sections with and without subsections', () => {
@@ -802,13 +803,13 @@ heading-map:
 
       const updatedMap = updateHeadingMap(new Map(), sourceSections, targetSections);
 
-      // Should have 5 entries: 3 sections + 2 subsections
+      // Should have 5 entries: 3 sections + 2 subsections (with path-based keys)
       expect(updatedMap.size).toBe(5);
       expect(updatedMap.get('Overview')).toBe('概述');
-      expect(updatedMap.get('Core Principles')).toBe('核心原则');
+      expect(updatedMap.get('Overview::Core Principles')).toBe('核心原则');
       expect(updatedMap.get('Mathematical Example')).toBe('数学示例');
       expect(updatedMap.get('Exercises')).toBe('练习');
-      expect(updatedMap.get('Exercise Solutions')).toBe('练习答案');
+      expect(updatedMap.get('Exercises::Exercise Solutions')).toBe('练习答案');
     });
 
     it('BUG #10: demonstrates v0.4.1 behavior (missing subsections)', () => {
@@ -853,11 +854,11 @@ heading-map:
       expect(buggyMap.get('Section')).toBe('部分');
       expect(buggyMap.get('Subsection')).toBeUndefined();  // Missing!
 
-      // Correct version has both
+      // Correct version has both (with path-based keys)
       const correctMap = updateHeadingMap(new Map(), sourceSections, targetSections);
       expect(correctMap.size).toBe(2);
       expect(correctMap.get('Section')).toBe('部分');
-      expect(correctMap.get('Subsection')).toBe('子部分');  // Present!
+      expect(correctMap.get('Section::Subsection')).toBe('子部分');  // Present!
     });
   });
 });
