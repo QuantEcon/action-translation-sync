@@ -228,7 +228,7 @@ async function run(): Promise<void> {
           
           const [targetOwner, targetRepoName] = inputs.targetRepo.split('/');
           const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
-          const branchName = `translation-sync-${timestamp}`;
+          const branchName = `translation-sync-${timestamp}-pr-${prNumber}`;
           
           // Get default branch of target repo
           const { data: targetRepoData } = await octokit.rest.repos.get({
