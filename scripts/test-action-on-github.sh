@@ -292,12 +292,18 @@ declare -a scenarios=(
     "06-delete-section-minimal:Section removed"
     "07-subsection-change-minimal:Subsection content updated"
     "08-multi-element-minimal:Multiple elements changed"
+    "09-real-world-lecture:Real-world lecture update"
+    "10-add-subsubsection-lecture:Sub-subsection added (####)"
+    "11-change-subsubsection-lecture:Sub-subsection content changed"
+    "12-change-code-cell-lecture:Code cell comments/titles changed"
+    "13-change-display-math-lecture:Display math equations changed"
+    "14-delete-subsection-lecture:Subsection deleted (Matrix Operations)"
+    "15-delete-subsubsection-lecture:Sub-subsection deleted (Closure Property)"
 )
 
-# Special case for real-world (uses lecture base)
-REAL_WORLD_SCENARIO="09-real-world-lecture:Real-world lecture update"
+# Note: Tests 01-08 use base-minimal.md, tests 09-15 use base-lecture.md
 
-# Create PRs for minimal scenarios
+# Create PRs for all test scenarios
 for scenario in "${scenarios[@]}"; do
     IFS=':' read -r file_prefix description <<< "$scenario"
     branch_name="test/${file_prefix}"
@@ -352,47 +358,6 @@ This is an automated test PR to validate the translation action.
     fi
 done
 
-# Handle real-world scenario
-if [ "$DRY_RUN" = true ]; then
-    echo -e "${CYAN}[DRY RUN] Would create PR: Real-world lecture update${NC}"
-    echo -e "${CYAN}  Branch: test/09-real-world-lecture${NC}"
-    echo -e "${CYAN}  File: 09-real-world-lecture.md${NC}"
-    echo -e "${CYAN}  Label: test-translation${NC}"
-else
-    # Create the real-world PR from main (don't modify main)
-    IFS=':' read -r file_prefix description <<< "$REAL_WORLD_SCENARIO"
-    branch_name="test/${file_prefix}"
-
-    echo -e "${YELLOW}Creating PR: ${description}${NC}"
-
-    git checkout -b "$branch_name" main
-    cp "$DATA_DIR/${file_prefix}.md" "$TEST_FILE"
-    git add "$TEST_FILE"
-    git commit -m "Test: ${description}"
-    git push -f origin "$branch_name"
-
-    PR_URL=$(gh pr create \
-        --title "TEST: ${description}" \
-        --body "**Test Scenario**: ${description}
-
-This is an automated test PR with realistic lecture content.
-
-**Changes**: Multiple sections updated with real content.
-
-**Testing**: The \`test-translation\` label will trigger the action." \
-        --draft \
-        --base main \
-        --head "$branch_name")
-
-    PR_NUMBER=$(echo "$PR_URL" | grep -o '[0-9]*$')
-    gh pr edit "$PR_NUMBER" --add-label "test-translation"
-
-    echo -e "${GREEN}✓${NC} Created PR #${PR_NUMBER}: ${PR_URL}"
-    echo ""
-
-    git checkout main
-fi
-
 #
 # STEP 5: Summary
 #
@@ -411,22 +376,35 @@ if [ "$DRY_RUN" = true ]; then
     echo ""
     echo "1. Reset both repositories to base state"
     echo "2. Close all open PRs on source repo"
-    echo "3. Create 9 new test PRs:"
-    echo "   - 01: Intro text updated"
-    echo "   - 02: Title changed"
-    echo "   - 03: Section content updated"
-    echo "   - 04: Sections reordered"
-    echo "   - 05: New section added"
-    echo "   - 06: Section removed"
-    echo "   - 07: Subsection content updated"
-    echo "   - 08: Multiple elements changed"
-    echo "   - 09: Real-world lecture update"
+    echo "3. Create 15 new test PRs:"
+    echo "   Basic Tests (01-08):"
+    echo "     - 01: Intro text updated"
+    echo "     - 02: Title changed"
+    echo "     - 03: Section content updated"
+    echo "     - 04: Sections reordered"
+    echo "     - 05: New section added"
+    echo "     - 06: Section removed"
+    echo "     - 07: Subsection content updated"
+    echo "     - 08: Multiple elements changed"
+    echo "   Scientific Content Tests (09-15):"
+    echo "     - 09: Real-world lecture with code & math"
+    echo "     - 10: Sub-subsection added (####)"
+    echo "     - 11: Sub-subsection content changed"
+    echo "     - 12: Code cell comments/titles changed"
+    echo "     - 13: Display math equations changed"
+    echo "     - 14: Subsection deleted"
+    echo "     - 15: Sub-subsection deleted"
     echo "4. Add 'test-translation' label to each PR"
     echo ""
     echo -e "${YELLOW}To actually run these changes, execute without --dry-run:${NC}"
     echo "  ./scripts/test-action-on-github.sh"
 else
-    echo -e "${GREEN}Created 9 test PRs in ${SOURCE_REPO}${NC}"
+    echo -e "${GREEN}Created 15 test PRs in ${SOURCE_REPO}${NC}"
+    echo ""
+    echo "Test Coverage:"
+    echo "  - Basic structure changes (8 tests)"
+    echo "  - Scientific content (code cells, math) (6 tests)"
+    echo "  - Subsection & sub-subsection handling (5 tests)"
     echo ""
     echo "Next steps:"
     echo "1. Each PR has the 'test-translation' label"
