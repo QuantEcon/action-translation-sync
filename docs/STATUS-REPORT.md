@@ -1,6 +1,6 @@
 # Project Status Report
 
-**Version**: v0.4.7 (Production-Ready)  
+**Version**: v0.4.10 (Production-Ready)  
 **Date**: October 24, 2025  
 **Status**: Ready for v1.0 API Stabilization ✅
 
@@ -8,7 +8,7 @@
 
 ## Current Status
 
-**v0.4.7** is production-ready with full recursive heading support (##-######), enabling detection of changes at any nesting depth. Critical fix for subsection change detection ensures complete translations of complex document structures.
+**v0.4.10** is production-ready with unified recursive parser architecture. Critical fix eliminates parser duplication by making `parseDocumentComponents()` use the same recursive `parseSections()` logic, ensuring #### and deeper subsections are properly preserved in heading-maps.
 
 ### What's Complete ✅
 
@@ -46,6 +46,7 @@ The v0.4.x series focused on subsection handling and developer experience:
 6. **v0.4.5** - Issue #1 documentation (LLM improvements)
 7. **v0.4.6** - Critical bug fixes (exact comparison, branch naming) ✅
 8. **v0.4.7** - Full recursive heading support (##-######) ✅
+9. **v0.4.10** - Parser unification fix (parseDocumentComponents now uses recursive parser) ✅
 
 **Result**: 
 - **Full recursive structure** - arbitrary nesting depth supported

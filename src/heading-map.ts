@@ -107,17 +107,10 @@ export function updateHeadingMap(
         // Store with path-based key
         updated.set(path, targetHeading);
         
-        // Debug logging
-        const indent = '  '.repeat(level);
-        console.log(`${indent}[HeadingMap] Added: "${path}" → "${targetHeading}"`);
-        console.log(`${indent}  Source subsections: ${sourceSection.subsections.length}, Target subsections: ${targetSection.subsections.length}`);
-        
         // Process subsections recursively with current path as parent
         if (sourceSection.subsections.length > 0 && targetSection.subsections.length > 0) {
-          console.log(`${indent}  ✓ Processing ${sourceSection.subsections.length} subsections recursively`);
           processSections(sourceSection.subsections, targetSection.subsections, path, level + 1);
         } else if (sourceSection.subsections.length > 0) {
-          console.log(`${indent}  ⚠ Source has subsections but target doesn't`);
           // Source has subsections but target doesn't - add subsection paths to tracking
           // (they'll be removed later if truly missing)
           addSourceSubsections(sourceSection.subsections, path);
