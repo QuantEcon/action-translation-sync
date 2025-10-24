@@ -223,9 +223,9 @@ class FileProcessor {
                         this.log(`Using ${parsedSubsectionCount} translated subsections (structure validated)`);
                     }
                     else {
-                        // Structure mismatch - preserve target to avoid data loss
-                        this.log(`Warning: Subsection structure mismatch (counts match but nested structure differs), preserving target subsections`);
-                        finalSubsections = targetSection.subsections;
+                        // Structure mismatch - use source subsections (English) until next translation
+                        this.log(`Warning: Subsection structure mismatch (counts match but nested structure differs), using source subsections`);
+                        finalSubsections = newSection.subsections;
                     }
                 }
                 else if (parsedSubsectionCount === 0 && expectedSubsectionCount === 0) {
@@ -239,9 +239,9 @@ class FileProcessor {
                     finalSubsections = [];
                 }
                 else {
-                    // Mismatch: preserve target subsections to avoid data loss
-                    this.log(`Warning: Expected ${expectedSubsectionCount} subsections but got ${parsedSubsectionCount}, preserving target subsections`);
-                    finalSubsections = targetSection.subsections;
+                    // Mismatch: use source subsections (English) until next translation
+                    this.log(`Warning: Expected ${expectedSubsectionCount} subsections but got ${parsedSubsectionCount}, using source subsections`);
+                    finalSubsections = newSection.subsections;
                 }
                 resultSections.push({
                     ...targetSection,

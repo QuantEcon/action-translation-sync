@@ -20,6 +20,7 @@ Complete documentation for the Translation Sync GitHub Action.
 1. **[Project Design](PROJECT-DESIGN.md)** - Overall design decisions and philosophy
 2. **[Architecture](ARCHITECTURE.md)** - System architecture and component design
 3. **[Implementation](IMPLEMENTATION.md)** - Technical implementation details
+4. **[Recursive Implementation](RECURSIVE-IMPLEMENTATION.md)** - Deep dive into recursive reading/writing (NEW)
 
 ---
 
@@ -60,6 +61,7 @@ Complete documentation for the Translation Sync GitHub Action.
 **Need to...**
 
 - **Understand subsections?** → [IMPLEMENTATION.md](IMPLEMENTATION.md)
+- **Understand recursive parsing?** → [RECURSIVE-IMPLEMENTATION.md](RECURSIVE-IMPLEMENTATION.md) ⭐
 - **Understand heading-maps?** → [HEADING-MAPS.md](HEADING-MAPS.md)
 - **Understand the tests?** → [TESTING.md](TESTING.md)
 - **Set up testing?** → [TEST-REPOSITORIES.md](TEST-REPOSITORIES.md)
@@ -77,18 +79,19 @@ Complete documentation for the Translation Sync GitHub Action.
 ```
 docs/
 ├── INDEX.md                  # This file - documentation hub
-├── QUICKSTART.md             # Developer onboarding guide
-├── QUICK-REFERENCE.md        # Command cheat sheet
-├── PROJECT-DESIGN.md         # Design decisions and philosophy
-├── ARCHITECTURE.md           # System architecture
-├── IMPLEMENTATION.md         # Comprehensive implementation guide
-├── TESTING.md                # Testing guide (125 tests)
-├── TODO.md                   # Development roadmap
-├── STATUS-REPORT.md          # Project status
-├── HEADING-MAPS.md           # Heading-map system guide
-├── CLAUDE-MODELS.md          # Claude model configuration
-├── TEST-REPOSITORIES.md      # Testing with isolated repos
-└── releases/                 # Release notes
+├── QUICKSTART.md                # Developer onboarding guide
+├── QUICK-REFERENCE.md           # Command cheat sheet
+├── PROJECT-DESIGN.md            # Design decisions and philosophy
+├── ARCHITECTURE.md              # System architecture
+├── IMPLEMENTATION.md            # Comprehensive implementation guide
+├── RECURSIVE-IMPLEMENTATION.md  # Recursive parsing deep dive (NEW)
+├── TESTING.md                   # Testing guide (137 tests)
+├── TODO.md                      # Development roadmap
+├── STATUS-REPORT.md             # Project status
+├── HEADING-MAPS.md              # Heading-map system guide
+├── CLAUDE-MODELS.md             # Claude model configuration
+├── TEST-REPOSITORIES.md         # Testing with isolated repos
+└── releases/                    # Release notes
     ├── v0.1.0.md
     ├── v0.1.1.md
     ├── v0.1.2.md
@@ -96,7 +99,7 @@ docs/
     └── v0.3.0.md
 ```
 
-**Total**: 12 documentation files
+**Total**: 13 documentation files
 
 ---
 
