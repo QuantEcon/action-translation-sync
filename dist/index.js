@@ -809,7 +809,8 @@ function extractHeadingMap(content) {
  */
 function updateHeadingMap(existingMap, sourceSections, targetSections, titleHeading // Optional: preserve this heading even if not in sections
 ) {
-    const updated = new Map(existingMap);
+    // Build new map in document order (title first, then sections)
+    const updated = new Map();
     // Helper to extract clean heading text (without ## markers)
     const cleanHeading = (heading) => {
         return heading.replace(/^#+\s+/, '').trim();
@@ -819,6 +820,11 @@ function updateHeadingMap(existingMap, sourceSections, targetSections, titleHead
     // Add title to current headings if provided (so it won't be deleted)
     if (titleHeading) {
         currentSourceHeadings.add(titleHeading);
+        // Add title to map first (if it exists in old map)
+        const titleTranslation = existingMap.get(titleHeading);
+        if (titleTranslation) {
+            updated.set(titleHeading, titleTranslation);
+        }
     }
     // Process all sections and subsections recursively
     const processSections = (sourceSecs, targetSecs, level = 0) => {
