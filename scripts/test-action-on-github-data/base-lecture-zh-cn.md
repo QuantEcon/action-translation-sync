@@ -8,6 +8,7 @@ kernelspec:
   language: python
   name: python3
 heading-map:
+  Linear Algebra Foundations: 线性代数基础
   Vector Spaces: 向量空间
   Basic Properties: 基本性质
   Matrix Operations: 矩阵运算
