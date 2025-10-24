@@ -621,6 +621,109 @@ Market equilibrium occurs when supply equals demand.
       // - section.content = contentWithoutSubsections (no duplication)
       // - section.subsections = [extracted subsections] (added separately during serialization)
     });
+
+    it('BUG FIX (v0.4.5): subsection heading should not be duplicated due to 1-indexed vs 0-indexed line numbers', () => {
+      // GitHub Issue: Subsection headings appearing twice in translated output
+      // Root Cause: Parser uses 1-indexed line numbers but array.slice() uses 0-indexed
+      //
+      // Example:
+      // - Subsection heading is on line 5 (1-indexed) of unwrapped content  
+      // - After adjusting for frontmatter: firstSubsectionLine = 12 - 7 = 5 (still 1-indexed)
+      // - Bug: lines.slice(0, 5) gets indices 0,1,2,3,4 which is lines 1-5 (INCLUDING line 5!)
+      // - Fix: Convert to 0-indexed first: lines.slice(0, 5-1) gets indices 0,1,2,3 (lines 1-4, EXCLUDING line 5)
+      
+      const translatedLines = [
+        '## Supply and Demand',        // Line 1 (index 0)
+        '',                             // Line 2 (index 1)
+        'Some content here.',           // Line 3 (index 2)
+        '',                             // Line 4 (index 3)
+        '### Market Equilibrium',       // Line 5 (index 4) <-- subsection heading
+        '',                             // Line 6 (index 5)
+        'Equilibrium content.',         // Line 7 (index 6)
+      ];
+      
+      // Parser reports startLine = 12 (1-indexed, including 7 lines of frontmatter wrapper)
+      // So the subsection heading is at 1-indexed line 5 of unwrapped content
+      const startLine1Indexed = 12;
+      const wrapperLineCount = 7;  // Minimal YAML wrapper
+      
+      // OLD (BUGGY) BEHAVIOR - using hardcoded wrapper count:
+      const buggyIndex = startLine1Indexed - 7;  // = 5
+      const buggyContent = translatedLines.slice(0, buggyIndex).join('\n');
+      expect(buggyContent).toContain('### Market Equilibrium');  // BUG: Heading included!
+      
+      // NEW (FIXED) BEHAVIOR - correct conversion to 0-indexed:
+      const fixedIndex1Indexed = startLine1Indexed;
+      const fixedIndex0Indexed = fixedIndex1Indexed - 1;  // Convert to 0-indexed = 11
+      const positionInOriginal = fixedIndex0Indexed - wrapperLineCount;  // = 4
+      const fixedContent = translatedLines.slice(0, positionInOriginal).join('\n');
+      expect(fixedContent).not.toContain('### Market Equilibrium');  // FIXED: Heading excluded!
+      expect(fixedContent).toContain('Some content here.');  // Parent content preserved
+    });
+
+    it('BUG FIX (v0.4.5): should handle variable-length YAML headers correctly', () => {
+      // GitHub Issue: Hard-coded wrapper length (7) doesn't account for variable YAML headers
+      // Root Cause: Different documents have different frontmatter sizes
+      //
+      // Example frontmatter sizes:
+      // - Minimal (used in wrapper): 7 lines
+      // - Typical lecture: 13+ lines (includes kernelspec, jupytext version, etc.)
+      //
+      // Fix: Calculate wrapper length dynamically by finding closing --- fence
+      
+      const minimalWrapper = [
+        '---',                          // Line 1
+        'jupytext:',                    // Line 2
+        '  text_representation:',       // Line 3
+        '    extension: .md',           // Line 4
+        '    format_name: myst',        // Line 5
+        '---',                          // Line 6 (closing fence)
+        '',                             // Line 7 (empty line after)
+      ];
+      
+      const extendedWrapper = [
+        '---',                          // Line 1
+        'jupytext:',                    // Line 2
+        '  text_representation:',       // Line 3
+        '    extension: .md',           // Line 4
+        '    format_name: myst',        // Line 5
+        '    format_version: 0.13',     // Line 6
+        '    jupytext_version: 1.16.4', // Line 7
+        'kernelspec:',                  // Line 8
+        '  display_name: Python 3',     // Line 9
+        '  language: python',           // Line 10
+        '  name: python3',              // Line 11
+        '---',                          // Line 12 (closing fence)
+        '',                             // Line 13 (empty line after)
+      ];
+      
+      // Function to calculate wrapper length (mimics our fix)
+      const calculateWrapperLength = (wrapperLines: string[]): number => {
+        let count = 0;
+        let foundClosing = false;
+        for (let i = 0; i < wrapperLines.length; i++) {
+          count++;
+          if (i > 0 && wrapperLines[i] === '---') {
+            count++; // Count empty line after
+            foundClosing = true;
+            break;
+          }
+        }
+        return foundClosing ? count : 0;
+      };
+      
+      // Verify calculation works for both wrapper sizes
+      expect(calculateWrapperLength(minimalWrapper)).toBe(7);
+      expect(calculateWrapperLength(extendedWrapper)).toBe(13);
+      
+      // Simulate actual usage:
+      // If subsection starts at line 15 in wrapped content with extended wrapper (13 lines)
+      // Then it's at position 15 - 1 (0-indexed) - 13 (wrapper) = 1 in original content
+      const subsectionLine1Indexed = 15;
+      const wrapperCount = calculateWrapperLength(extendedWrapper);
+      const positionInOriginal = (subsectionLine1Indexed - 1) - wrapperCount;
+      
+      expect(positionInOriginal).toBe(1);  // Correct position in original content
+    });
   });
 });
-

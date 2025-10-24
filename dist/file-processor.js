@@ -302,11 +302,32 @@ ${translatedContent}`;
             if (parsed.sections.length > 0 && parsed.sections[0].subsections.length > 0) {
                 const section = parsed.sections[0];
                 this.log(`Extracted ${section.subsections.length} subsections from translated content`);
-                // Get content without subsections by removing everything from first subsection onward
-                // The wrapped content adds 7 lines of frontmatter, so adjust line numbers
-                const firstSubsectionLine = section.subsections[0].startLine - 7;
+                // Calculate wrapper length by counting lines up to and including the closing ---
+                // This handles variable-length YAML headers correctly
+                const wrapperLines = wrappedContent.split('\n');
+                let wrapperLineCount = 0;
+                let foundClosingFence = false;
+                for (let i = 0; i < wrapperLines.length; i++) {
+                    wrapperLineCount++;
+                    if (i > 0 && wrapperLines[i] === '---') {
+                        // Found closing fence, count one more line for the empty line after
+                        wrapperLineCount++;
+                        foundClosingFence = true;
+                        break;
+                    }
+                }
+                if (!foundClosingFence) {
+                    this.log('Warning: Could not find closing YAML fence in wrapper');
+                    return { subsections: [], contentWithoutSubsections: translatedContent };
+                }
+                // Convert parser's 1-indexed line number to position in original content
+                // Parser line numbers are 1-indexed, array indices are 0-indexed
+                const firstSubsectionLine1Indexed = section.subsections[0].startLine;
+                const firstSubsectionLine0Indexed = firstSubsectionLine1Indexed - 1;
+                const positionInOriginalContent = firstSubsectionLine0Indexed - wrapperLineCount;
+                // Extract content before first subsection
                 const lines = translatedContent.split('\n');
-                const contentLines = lines.slice(0, firstSubsectionLine);
+                const contentLines = lines.slice(0, positionInOriginalContent);
                 const contentWithoutSubsections = contentLines.join('\n').trim();
                 return {
                     subsections: section.subsections,
