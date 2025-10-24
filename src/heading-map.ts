@@ -50,7 +50,8 @@ export function updateHeadingMap(
   targetSections: Section[],
   titleHeading?: string  // Optional: preserve this heading even if not in sections
 ): HeadingMap {
-  const updated = new Map(existingMap);
+  // Build new map in document order (title first, then sections)
+  const updated = new Map<string, string>();
   
   // Helper to extract clean heading text (without ## markers)
   const cleanHeading = (heading: string): string => {
@@ -63,6 +64,11 @@ export function updateHeadingMap(
   // Add title to current headings if provided (so it won't be deleted)
   if (titleHeading) {
     currentSourceHeadings.add(titleHeading);
+    // Add title to map first (if it exists in old map)
+    const titleTranslation = existingMap.get(titleHeading);
+    if (titleTranslation) {
+      updated.set(titleHeading, titleTranslation);
+    }
   }
   
   // Process all sections and subsections recursively
