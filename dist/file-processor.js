@@ -196,9 +196,26 @@ class FileProcessor {
                     // Combine target heading with translated body
                     finalContent = `${targetSection.heading}\n${bodyLines.join('\n')}`;
                 }
-                // If no subsections found in translated content, preserve subsections from target
-                // This handles cases where translator doesn't return full structure (e.g., TEST mode)
-                const finalSubsections = subsections.length > 0 ? subsections : targetSection.subsections;
+                // Determine final subsections based on what the translator returned
+                // If translator returned the expected number of subsections, use them
+                // Otherwise, preserve target subsections to avoid data loss
+                let finalSubsections;
+                const expectedSubsectionCount = newSection.subsections.length;
+                const parsedSubsectionCount = subsections.length;
+                if (parsedSubsectionCount === expectedSubsectionCount && parsedSubsectionCount > 0) {
+                    // Translation returned all expected subsections
+                    finalSubsections = subsections;
+                    this.log(`Using ${parsedSubsectionCount} translated subsections`);
+                }
+                else if (parsedSubsectionCount === 0 && expectedSubsectionCount === 0) {
+                    // No subsections expected or returned - correct
+                    finalSubsections = [];
+                }
+                else {
+                    // Mismatch: preserve target subsections to avoid data loss
+                    this.log(`Warning: Expected ${expectedSubsectionCount} subsections but got ${parsedSubsectionCount}, preserving target subsections`);
+                    finalSubsections = targetSection.subsections;
+                }
                 resultSections.push({
                     ...targetSection,
                     content: finalContent,
