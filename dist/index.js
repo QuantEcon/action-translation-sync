@@ -180,14 +180,27 @@ class DiffDetector {
         return section1.id === section2.id;
     }
     /**
-     * Check if section content has changed
+     * Check if section content has changed (including all nested subsections recursively)
      */
     sectionContentEqual(section1, section2) {
         // Compare source documents (old English vs new English) using exact string equality
         // Any change in content, even a single character, should be detected
         // This ensures we catch typo fixes, word changes, added sentences, etc.
-        // Direct string comparison - trim to ignore trailing whitespace differences
-        return section1.content.trim() === section2.content.trim();
+        // 1. Compare direct content (excluding subsections)
+        if (section1.content.trim() !== section2.content.trim()) {
+            return false;
+        }
+        // 2. Compare subsection count
+        if (section1.subsections.length !== section2.subsections.length) {
+            return false;
+        }
+        // 3. Recursively compare each subsection
+        for (let i = 0; i < section1.subsections.length; i++) {
+            if (!this.sectionContentEqual(section1.subsections[i], section2.subsections[i])) {
+                return false;
+            }
+        }
+        return true;
     }
 }
 exports.DiffDetector = DiffDetector;
@@ -387,10 +400,23 @@ class FileProcessor {
                 }
                 // Parse subsections from translated content and strip them from content
                 const { subsections, contentWithoutSubsections } = await this.parseTranslatedSubsections(result.translatedSection || '', newSection);
+                // Extract heading from target section (Chinese) and body from translated content
+                // This preserves the Chinese heading while using the new translated body
+                let finalContent = contentWithoutSubsections || targetSection.content;
+                if (contentWithoutSubsections) {
+                    const translatedLines = contentWithoutSubsections.split('\n');
+                    // Skip the first line (translated heading) and keep the rest
+                    const bodyLines = translatedLines.slice(1);
+                    // Combine target heading with translated body
+                    finalContent = `${targetSection.heading}\n${bodyLines.join('\n')}`;
+                }
+                // If no subsections found in translated content, preserve subsections from target
+                // This handles cases where translator doesn't return full structure (e.g., TEST mode)
+                const finalSubsections = subsections.length > 0 ? subsections : targetSection.subsections;
                 resultSections.push({
                     ...targetSection,
-                    content: contentWithoutSubsections || targetSection.content,
-                    subsections: subsections,
+                    content: finalContent,
+                    subsections: finalSubsections,
                 });
                 this.log(`Updated section at position ${i}`);
             }
@@ -1407,12 +1433,11 @@ class MystParser {
     /**
      * Parse markdown content into sections based on ## headings
      * Each section includes all content until the next ## heading
+     * Handles arbitrary nesting depth (##, ###, ####, #####, ######)
      */
     async parseSections(content, filepath) {
         const lines = content.split('\n');
         const sections = [];
-        let currentSection = null;
-        let currentSubsection = null;
         // Extract frontmatter (YAML between --- markers)
         let frontmatter;
         let preamble;
@@ -1437,84 +1462,76 @@ class MystParser {
             }
             contentStartIndex = contentStartIndex + firstSectionIndex;
         }
+        // Stack-based parsing for recursive subsections (handles ##, ###, ####, #####, ######)
+        // Stack tracks the current nesting: [level2Section, level3Sub, level4SubSub, ...]
+        const sectionStack = [];
         for (let i = contentStartIndex; i < lines.length; i++) {
             const line = lines[i];
             const lineNum = i + 1;
-            // Check for ## heading (top-level section)
-            const h2Match = line.match(/^##\s+(.+)$/);
-            if (h2Match) {
-                // Save previous section if exists
-                if (currentSection) {
-                    // Save current subsection to section before pushing
-                    if (currentSubsection) {
-                        currentSubsection.endLine = lineNum - 1;
-                        currentSection.subsections.push(currentSubsection);
+            // Check for any heading level (## through ######)
+            const headingMatch = line.match(/^(#{2,6})\s+(.+)$/);
+            if (headingMatch) {
+                const level = headingMatch[1].length;
+                const headingText = headingMatch[2];
+                const id = this.generateHeadingId(headingText);
+                // Create new section
+                const newSection = {
+                    heading: line,
+                    level,
+                    id,
+                    content: line + '\n',
+                    startLine: lineNum,
+                    endLine: lineNum,
+                    subsections: [],
+                };
+                // Set parentId if this is a subsection
+                if (level > 2 && sectionStack.length > 0) {
+                    newSection.parentId = sectionStack[sectionStack.length - 1].id;
+                }
+                // Pop stack until we find the parent level (level - 1)
+                // or reach a level lower than current
+                while (sectionStack.length > 0 && sectionStack[sectionStack.length - 1].level >= level) {
+                    const completed = sectionStack.pop();
+                    completed.endLine = lineNum - 1;
+                    if (sectionStack.length > 0) {
+                        // Add to parent's subsections
+                        sectionStack[sectionStack.length - 1].subsections.push(completed);
                     }
-                    currentSection.endLine = lineNum - 1;
-                    sections.push(currentSection);
+                    else {
+                        // Top-level section completed
+                        sections.push(completed);
+                    }
                 }
-                // Start new section
-                const headingText = h2Match[1];
-                const id = this.generateHeadingId(headingText);
-                currentSection = {
-                    heading: line,
-                    level: 2,
-                    id,
-                    content: line + '\n',
-                    startLine: lineNum,
-                    endLine: lineNum,
-                    subsections: [],
-                };
-                currentSubsection = null;
+                // Push new section onto stack
+                sectionStack.push(newSection);
                 continue;
             }
-            // Check for ### heading (subsection)
-            const h3Match = line.match(/^###\s+(.+)$/);
-            if (h3Match && currentSection) {
-                // Save previous subsection if exists
-                if (currentSubsection) {
-                    currentSubsection.endLine = lineNum - 1;
-                    currentSection.subsections.push(currentSubsection);
-                }
-                // Start new subsection
-                const headingText = h3Match[1];
-                const id = this.generateHeadingId(headingText);
-                currentSubsection = {
-                    heading: line,
-                    level: 3,
-                    id,
-                    content: line + '\n',
-                    startLine: lineNum,
-                    endLine: lineNum,
-                    parentId: currentSection.id,
-                    subsections: [],
-                };
-                continue;
-            }
-            // Add content to current section/subsection
-            if (currentSubsection) {
-                currentSubsection.content += line + '\n';
-                currentSubsection.endLine = lineNum;
-            }
-            else if (currentSection) {
-                currentSection.content += line + '\n';
-                currentSection.endLine = lineNum;
+            // Add content to the deepest section in the stack
+            if (sectionStack.length > 0) {
+                const currentDeepest = sectionStack[sectionStack.length - 1];
+                currentDeepest.content += line + '\n';
+                currentDeepest.endLine = lineNum;
             }
         }
-        // Save last section
-        if (currentSection) {
-            if (currentSubsection) {
-                currentSection.subsections.push(currentSubsection);
+        // Save remaining sections in stack
+        while (sectionStack.length > 0) {
+            const completed = sectionStack.pop();
+            if (sectionStack.length > 0) {
+                // Add to parent's subsections
+                sectionStack[sectionStack.length - 1].subsections.push(completed);
             }
-            sections.push(currentSection);
+            else {
+                // Top-level section
+                sections.push(completed);
+            }
         }
         // Trim trailing newlines from content
-        sections.forEach(section => {
+        // Recursively trim trailing newlines from content
+        const trimSection = (section) => {
             section.content = section.content.trimEnd();
-            section.subsections.forEach(sub => {
-                sub.content = sub.content.trimEnd();
-            });
-        });
+            section.subsections.forEach(trimSection);
+        };
+        sections.forEach(trimSection);
         return {
             sections,
             frontmatter,
@@ -1525,7 +1542,8 @@ class MystParser {
                 sectionCount: sections.length,
             },
         };
-    } /**
+    }
+    /**
      * Generate heading ID/anchor from heading text
      * Follows the same rules as MyST/Sphinx for consistency
      */

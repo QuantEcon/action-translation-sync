@@ -474,4 +474,222 @@ Content B.
       expect(sectionAddition).toBeDefined();
     });
   });
+
+  describe('Nested Subsection Changes (#### and deeper)', () => {
+    it('should detect #### sub-subsection added to ### subsection', async () => {
+      const oldContent = `## Vector Spaces
+
+Introduction to vector spaces.
+
+### Basic Properties
+
+Vector spaces have properties.
+
+The sum of vectors is defined.
+`;
+
+      const newContent = `## Vector Spaces
+
+Introduction to vector spaces.
+
+### Basic Properties
+
+Vector spaces have properties.
+
+#### Closure Property
+
+The closure property is important.
+
+$$
+\\alpha \\mathbf{u} + \\beta \\mathbf{v} \\in V
+$$
+
+This is crucial for economics.
+
+The sum of vectors is defined.
+`;
+
+      const changes = await detector.detectSectionChanges(oldContent, newContent, 'test.md');
+      
+      expect(changes).toHaveLength(1);
+      expect(changes[0].type).toBe('modified');
+      expect(changes[0].newSection?.heading).toBe('## Vector Spaces');
+    });
+
+    it('should detect #### content modification within ### subsection', async () => {
+      const oldContent = `## Economics
+
+Introduction.
+
+### Models
+
+Economic models.
+
+#### Growth Model
+
+Old growth model description.
+
+Some equations here.
+`;
+
+      const newContent = `## Economics
+
+Introduction.
+
+### Models
+
+Economic models.
+
+#### Growth Model
+
+Updated growth model with new insights and better equations.
+
+Some equations here.
+`;
+
+      const changes = await detector.detectSectionChanges(oldContent, newContent, 'test.md');
+      
+      expect(changes).toHaveLength(1);
+      expect(changes[0].type).toBe('modified');
+      expect(changes[0].newSection?.heading).toBe('## Economics');
+    });
+
+    it('should detect ##### deeply nested changes', async () => {
+      const oldContent = `## Main Topic
+
+Content.
+
+### Subtopic A
+
+Content A.
+
+#### Detail 1
+
+Detail content.
+
+##### Fine Point 1
+
+Original fine point.
+`;
+
+      const newContent = `## Main Topic
+
+Content.
+
+### Subtopic A
+
+Content A.
+
+#### Detail 1
+
+Detail content.
+
+##### Fine Point 1
+
+Modified fine point with additional information.
+`;
+
+      const changes = await detector.detectSectionChanges(oldContent, newContent, 'test.md');
+      
+      expect(changes).toHaveLength(1);
+      expect(changes[0].type).toBe('modified');
+      expect(changes[0].newSection?.heading).toBe('## Main Topic');
+    });
+
+    it('should detect multiple #### subsections added', async () => {
+      const oldContent = `## Section
+
+Content.
+
+### Subsection
+
+Text.
+`;
+
+      const newContent = `## Section
+
+Content.
+
+### Subsection
+
+Text.
+
+#### Part A
+
+New part A.
+
+#### Part B
+
+New part B.
+
+#### Part C
+
+New part C.
+`;
+
+      const changes = await detector.detectSectionChanges(oldContent, newContent, 'test.md');
+      
+      expect(changes).toHaveLength(1);
+      expect(changes[0].type).toBe('modified');
+    });
+
+    it('should handle mixed depth changes (#### added, ### modified)', async () => {
+      const oldContent = `## Main
+
+Content.
+
+### Sub1
+
+Text 1.
+
+### Sub2
+
+Text 2.
+`;
+
+      const newContent = `## Main
+
+Content.
+
+### Sub1
+
+Modified text 1.
+
+### Sub2
+
+Text 2.
+
+#### SubSub2A
+
+New deep section.
+`;
+
+      const changes = await detector.detectSectionChanges(oldContent, newContent, 'test.md');
+      
+      expect(changes).toHaveLength(1);
+      expect(changes[0].type).toBe('modified');
+      expect(changes[0].newSection?.heading).toBe('## Main');
+    });
+
+    it('should NOT detect change when #### content unchanged', async () => {
+      const content = `## Section
+
+Content.
+
+### Subsection
+
+Text.
+
+#### SubSubsection
+
+Deep content.
+
+More deep content.
+`;
+
+      const changes = await detector.detectSectionChanges(content, content, 'test.md');
+      
+      expect(changes).toHaveLength(0);
+    });
+  });
 });

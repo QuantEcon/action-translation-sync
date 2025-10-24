@@ -163,10 +163,11 @@ describe('E2E Fixture-Based Tests', () => {
       expect(result).toContain('# 经济学讲座');
       expect(result).toContain('这是介绍段落');
 
-      // Changed section should have translated marker
-      expect(result).toContain('[已翻译]');
+      // Changed section should have translated content (mock translation marker in body)
+      expect(result).toContain('[模拟翻译内容]');
 
-      // Unchanged section preserved
+      // Both sections should have Chinese headings preserved
+      expect(result).toContain('## 供给与需求');
       expect(result).toContain('## 经济模型');
 
       // Count sections - should have 2

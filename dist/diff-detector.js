@@ -173,14 +173,27 @@ class DiffDetector {
         return section1.id === section2.id;
     }
     /**
-     * Check if section content has changed
+     * Check if section content has changed (including all nested subsections recursively)
      */
     sectionContentEqual(section1, section2) {
         // Compare source documents (old English vs new English) using exact string equality
         // Any change in content, even a single character, should be detected
         // This ensures we catch typo fixes, word changes, added sentences, etc.
-        // Direct string comparison - trim to ignore trailing whitespace differences
-        return section1.content.trim() === section2.content.trim();
+        // 1. Compare direct content (excluding subsections)
+        if (section1.content.trim() !== section2.content.trim()) {
+            return false;
+        }
+        // 2. Compare subsection count
+        if (section1.subsections.length !== section2.subsections.length) {
+            return false;
+        }
+        // 3. Recursively compare each subsection
+        for (let i = 0; i < section1.subsections.length; i++) {
+            if (!this.sectionContentEqual(section1.subsections[i], section2.subsections[i])) {
+                return false;
+            }
+        }
+        return true;
     }
 }
 exports.DiffDetector = DiffDetector;

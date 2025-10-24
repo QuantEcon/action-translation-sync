@@ -186,10 +186,23 @@ class FileProcessor {
                 }
                 // Parse subsections from translated content and strip them from content
                 const { subsections, contentWithoutSubsections } = await this.parseTranslatedSubsections(result.translatedSection || '', newSection);
+                // Extract heading from target section (Chinese) and body from translated content
+                // This preserves the Chinese heading while using the new translated body
+                let finalContent = contentWithoutSubsections || targetSection.content;
+                if (contentWithoutSubsections) {
+                    const translatedLines = contentWithoutSubsections.split('\n');
+                    // Skip the first line (translated heading) and keep the rest
+                    const bodyLines = translatedLines.slice(1);
+                    // Combine target heading with translated body
+                    finalContent = `${targetSection.heading}\n${bodyLines.join('\n')}`;
+                }
+                // If no subsections found in translated content, preserve subsections from target
+                // This handles cases where translator doesn't return full structure (e.g., TEST mode)
+                const finalSubsections = subsections.length > 0 ? subsections : targetSection.subsections;
                 resultSections.push({
                     ...targetSection,
-                    content: contentWithoutSubsections || targetSection.content,
-                    subsections: subsections,
+                    content: finalContent,
+                    subsections: finalSubsections,
                 });
                 this.log(`Updated section at position ${i}`);
             }

@@ -15,12 +15,11 @@ export class MystParser {
   /**
    * Parse markdown content into sections based on ## headings
    * Each section includes all content until the next ## heading
+   * Handles arbitrary nesting depth (##, ###, ####, #####, ######)
    */
   async parseSections(content: string, filepath: string): Promise<ParsedSections> {
     const lines = content.split('\n');
     const sections: Section[] = [];
-    let currentSection: Section | null = null;
-    let currentSubsection: Section | null = null;
     
     // Extract frontmatter (YAML between --- markers)
     let frontmatter: string | undefined;
@@ -49,90 +48,87 @@ export class MystParser {
       contentStartIndex = contentStartIndex + firstSectionIndex;
     }
     
+    // Stack-based parsing for recursive subsections (handles ##, ###, ####, #####, ######)
+    // Stack tracks the current nesting: [level2Section, level3Sub, level4SubSub, ...]
+    const sectionStack: Section[] = [];
+    
     for (let i = contentStartIndex; i < lines.length; i++) {
       const line = lines[i];
       const lineNum = i + 1;
       
-      // Check for ## heading (top-level section)
-      const h2Match = line.match(/^##\s+(.+)$/);
-      if (h2Match) {
-        // Save previous section if exists
-        if (currentSection) {
-          // Save current subsection to section before pushing
-          if (currentSubsection) {
-            currentSubsection.endLine = lineNum - 1;
-            currentSection.subsections.push(currentSubsection);
+      // Check for any heading level (## through ######)
+      const headingMatch = line.match(/^(#{2,6})\s+(.+)$/);
+      
+      if (headingMatch) {
+        const level = headingMatch[1].length;
+        const headingText = headingMatch[2];
+        const id = this.generateHeadingId(headingText);
+        
+        // Create new section
+        const newSection: Section = {
+          heading: line,
+          level,
+          id,
+          content: line + '\n',
+          startLine: lineNum,
+          endLine: lineNum,
+          subsections: [],
+        };
+        
+        // Set parentId if this is a subsection
+        if (level > 2 && sectionStack.length > 0) {
+          newSection.parentId = sectionStack[sectionStack.length - 1].id;
+        }
+        
+        // Pop stack until we find the parent level (level - 1)
+        // or reach a level lower than current
+        while (sectionStack.length > 0 && sectionStack[sectionStack.length - 1].level >= level) {
+          const completed = sectionStack.pop()!;
+          completed.endLine = lineNum - 1;
+          
+          if (sectionStack.length > 0) {
+            // Add to parent's subsections
+            sectionStack[sectionStack.length - 1].subsections.push(completed);
+          } else {
+            // Top-level section completed
+            sections.push(completed);
           }
-          currentSection.endLine = lineNum - 1;
-          sections.push(currentSection);
         }
         
-        // Start new section
-        const headingText = h2Match[1];
-        const id = this.generateHeadingId(headingText);
-        currentSection = {
-          heading: line,
-          level: 2,
-          id,
-          content: line + '\n',
-          startLine: lineNum,
-          endLine: lineNum,
-          subsections: [],
-        };
-        currentSubsection = null;
+        // Push new section onto stack
+        sectionStack.push(newSection);
         continue;
       }
       
-      // Check for ### heading (subsection)
-      const h3Match = line.match(/^###\s+(.+)$/);
-      if (h3Match && currentSection) {
-        // Save previous subsection if exists
-        if (currentSubsection) {
-          currentSubsection.endLine = lineNum - 1;
-          currentSection.subsections.push(currentSubsection);
-        }
-        
-        // Start new subsection
-        const headingText = h3Match[1];
-        const id = this.generateHeadingId(headingText);
-        currentSubsection = {
-          heading: line,
-          level: 3,
-          id,
-          content: line + '\n',
-          startLine: lineNum,
-          endLine: lineNum,
-          parentId: currentSection.id,
-          subsections: [],
-        };
-        continue;
-      }
-      
-      // Add content to current section/subsection
-      if (currentSubsection) {
-        currentSubsection.content += line + '\n';
-        currentSubsection.endLine = lineNum;
-      } else if (currentSection) {
-        currentSection.content += line + '\n';
-        currentSection.endLine = lineNum;
+      // Add content to the deepest section in the stack
+      if (sectionStack.length > 0) {
+        const currentDeepest = sectionStack[sectionStack.length - 1];
+        currentDeepest.content += line + '\n';
+        currentDeepest.endLine = lineNum;
       }
     }
     
-    // Save last section
-    if (currentSection) {
-      if (currentSubsection) {
-        currentSection.subsections.push(currentSubsection);
+    // Save remaining sections in stack
+    while (sectionStack.length > 0) {
+      const completed = sectionStack.pop()!;
+      
+      if (sectionStack.length > 0) {
+        // Add to parent's subsections
+        sectionStack[sectionStack.length - 1].subsections.push(completed);
+      } else {
+        // Top-level section
+        sections.push(completed);
       }
-      sections.push(currentSection);
     }
     
     // Trim trailing newlines from content
-    sections.forEach(section => {
+    
+    // Recursively trim trailing newlines from content
+    const trimSection = (section: Section) => {
       section.content = section.content.trimEnd();
-      section.subsections.forEach(sub => {
-        sub.content = sub.content.trimEnd();
-      });
-    });
+      section.subsections.forEach(trimSection);
+    };
+    sections.forEach(trimSection);
 
     return {
       sections,
@@ -144,7 +140,9 @@ export class MystParser {
         sectionCount: sections.length,
       },
     };
-  }  /**
+  }
+  
+  /**
    * Generate heading ID/anchor from heading text
    * Follows the same rules as MyST/Sphinx for consistency
    */

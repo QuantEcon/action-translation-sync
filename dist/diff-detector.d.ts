@@ -30,7 +30,7 @@ export declare class DiffDetector {
      */
     private sectionsMatch;
     /**
-     * Check if section content has changed
+     * Check if section content has changed (including all nested subsections recursively)
      */
     private sectionContentEqual;
 }

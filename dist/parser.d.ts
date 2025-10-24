@@ -13,8 +13,10 @@ export declare class MystParser {
     /**
      * Parse markdown content into sections based on ## headings
      * Each section includes all content until the next ## heading
+     * Handles arbitrary nesting depth (##, ###, ####, #####, ######)
      */
-    parseSections(content: string, filepath: string): Promise<ParsedSections>; /**
+    parseSections(content: string, filepath: string): Promise<ParsedSections>;
+    /**
      * Generate heading ID/anchor from heading text
      * Follows the same rules as MyST/Sphinx for consistency
      */
