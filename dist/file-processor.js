@@ -198,7 +198,7 @@ class FileProcessor {
                 }
                 // Determine final subsections based on what the translator returned
                 // If translator returned the expected subsection structure (recursively), use them
-                // Otherwise, preserve target subsections to avoid data loss
+                // Otherwise, preserve source structure with target translations where available
                 let finalSubsections;
                 const expectedSubsectionCount = newSection.subsections.length;
                 const parsedSubsectionCount = subsections.length;
@@ -215,6 +215,24 @@ class FileProcessor {
                     }
                     return true;
                 };
+                // Helper to merge source subsections with target translations
+                // Takes source structure (English) and applies target headings/content where they exist
+                const mergeSubsectionsWithTargetTranslations = (sourceSubs, targetSubs) => {
+                    return sourceSubs.map((sourceSub, i) => {
+                        const targetSub = targetSubs[i];
+                        if (targetSub) {
+                            // Use target heading AND content (Chinese), but source structure
+                            return {
+                                ...targetSub, // Use target (Chinese heading + content)
+                                subsections: mergeSubsectionsWithTargetTranslations(sourceSub.subsections, // Source structure (may have more subsections)
+                                targetSub.subsections // Target translations
+                                )
+                            };
+                        }
+                        // No target match - keep source as-is (will be English)
+                        return sourceSub;
+                    });
+                };
                 if (parsedSubsectionCount === expectedSubsectionCount && parsedSubsectionCount > 0) {
                     // Check if the full recursive structure matches
                     if (validateSubsectionStructure(newSection.subsections, subsections)) {
@@ -223,9 +241,9 @@ class FileProcessor {
                         this.log(`Using ${parsedSubsectionCount} translated subsections (structure validated)`);
                     }
                     else {
-                        // Structure mismatch - use source subsections (English) until next translation
-                        this.log(`Warning: Subsection structure mismatch (counts match but nested structure differs), using source subsections`);
-                        finalSubsections = newSection.subsections;
+                        // Structure mismatch - merge source structure with target headings
+                        this.log(`Warning: Subsection structure mismatch (counts match but nested structure differs), merging with target headings`);
+                        finalSubsections = mergeSubsectionsWithTargetTranslations(newSection.subsections, targetSection.subsections);
                     }
                 }
                 else if (parsedSubsectionCount === 0 && expectedSubsectionCount === 0) {
@@ -239,9 +257,9 @@ class FileProcessor {
                     finalSubsections = [];
                 }
                 else {
-                    // Mismatch: use source subsections (English) until next translation
-                    this.log(`Warning: Expected ${expectedSubsectionCount} subsections but got ${parsedSubsectionCount}, using source subsections`);
-                    finalSubsections = newSection.subsections;
+                    // Mismatch: merge source structure with target headings
+                    this.log(`Warning: Expected ${expectedSubsectionCount} subsections but got ${parsedSubsectionCount}, merging with target headings`);
+                    finalSubsections = mergeSubsectionsWithTargetTranslations(newSection.subsections, targetSection.subsections);
                 }
                 resultSections.push({
                     ...targetSection,

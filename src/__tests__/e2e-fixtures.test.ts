@@ -271,8 +271,8 @@ describe('E2E Fixture-Based Tests', () => {
       expect(result).toContain('## 经济模型');
 
       // Subsection structure mismatch: translator doesn't return subsection,
-      // so we keep English source subsection until next translation
-      expect(result).toContain('### Market Equilibrium');
+      // so we merge source structure with target Chinese heading
+      expect(result).toContain('### 市场均衡');
 
       // Count main sections - should have 2
       const sectionMatches = result.match(/^## /gm);

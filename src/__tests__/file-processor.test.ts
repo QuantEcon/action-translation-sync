@@ -1040,4 +1040,204 @@ Market equilibrium occurs when supply equals demand.
       expect(isValid).toBe(false);  // ✓ Correctly detects count mismatch!
     });
   });
+
+  describe('Heading Merge Logic', () => {
+    /**
+     * Simulates mergeSubsectionsWithTargetTranslations() helper
+     * Merges source structure with target headings
+     */
+    function mergeSubsectionsWithTargetTranslations(
+      sourceSubs: Section[],
+      targetSubs: Section[]
+    ): Section[] {
+      return sourceSubs.map((sourceSub, i) => {
+        const targetSub = targetSubs[i];
+        if (targetSub) {
+          return {
+            ...sourceSub,
+            heading: targetSub.heading,
+            subsections: mergeSubsectionsWithTargetTranslations(
+              sourceSub.subsections,
+              targetSub.subsections
+            )
+          };
+        }
+        return sourceSub;
+      });
+    }
+
+    it('should preserve Chinese headings when merging with source structure', () => {
+      const sourceSubsections: Section[] = [
+        {
+          id: 'basic-properties',
+          heading: '### Basic Properties',
+          level: 3,
+          content: 'Vector spaces satisfy...',
+          startLine: 10,
+          endLine: 20,
+          subsections: [
+            {
+              id: 'applications-in-economics',
+              heading: '#### Applications in Economics',
+              level: 4,
+              content: 'Vector space properties...',
+              startLine: 15,
+              endLine: 20,
+              subsections: []
+            }
+          ]
+        }
+      ];
+
+      const targetSubsections: Section[] = [
+        {
+          id: 'basic-properties',
+          heading: '### 基本性质',
+          level: 3,
+          content: '向量空间满足...',
+          startLine: 10,
+          endLine: 20,
+          subsections: [
+            {
+              id: 'applications-in-economics',
+              heading: '#### 在经济学中的应用',
+              level: 4,
+              content: '向量空间性质...',
+              startLine: 15,
+              endLine: 20,
+              subsections: []
+            }
+          ]
+        }
+      ];
+
+      const merged = mergeSubsectionsWithTargetTranslations(sourceSubsections, targetSubsections);
+
+      // Should use Chinese headings from target
+      expect(merged[0].heading).toBe('### 基本性质');
+      expect(merged[0].subsections[0].heading).toBe('#### 在经济学中的应用');
+      
+      // But use source content (the updates)
+      expect(merged[0].content).toBe('Vector spaces satisfy...');
+      expect(merged[0].subsections[0].content).toBe('Vector space properties...');
+    });
+
+    it('should use English headings for NEW subsections not in target', () => {
+      const sourceSubsections: Section[] = [
+        {
+          id: 'basic-properties',
+          heading: '### Basic Properties',
+          level: 3,
+          content: 'Content...',
+          startLine: 10,
+          endLine: 20,
+          subsections: []
+        },
+        {
+          id: 'new-section',
+          heading: '### New Section',
+          level: 3,
+          content: 'New content...',
+          startLine: 21,
+          endLine: 30,
+          subsections: []
+        }
+      ];
+
+      const targetSubsections: Section[] = [
+        {
+          id: 'basic-properties',
+          heading: '### 基本性质',
+          level: 3,
+          content: '内容...',
+          startLine: 10,
+          endLine: 20,
+          subsections: []
+        }
+        // Missing second section
+      ];
+
+      const merged = mergeSubsectionsWithTargetTranslations(sourceSubsections, targetSubsections);
+
+      // First section: Chinese heading
+      expect(merged[0].heading).toBe('### 基本性质');
+      
+      // Second section (NEW): English heading
+      expect(merged[1].heading).toBe('### New Section');
+      expect(merged[1].content).toBe('New content...');
+    });
+
+    it('should handle recursive merging at multiple levels', () => {
+      const sourceSubsections: Section[] = [
+        {
+          id: 'level3',
+          heading: '### Level 3',
+          level: 3,
+          content: 'Content',
+          startLine: 10,
+          endLine: 40,
+          subsections: [
+            {
+              id: 'level4',
+              heading: '#### Level 4',
+              level: 4,
+              content: 'Content',
+              startLine: 15,
+              endLine: 35,
+              subsections: [
+                {
+                  id: 'level5',
+                  heading: '##### Level 5',
+                  level: 5,
+                  content: 'Content',
+                  startLine: 20,
+                  endLine: 30,
+                  subsections: []
+                }
+              ]
+            }
+          ]
+        }
+      ];
+
+      const targetSubsections: Section[] = [
+        {
+          id: 'level3',
+          heading: '### 三级',
+          level: 3,
+          content: '内容',
+          startLine: 10,
+          endLine: 40,
+          subsections: [
+            {
+              id: 'level4',
+              heading: '#### 四级',
+              level: 4,
+              content: '内容',
+              startLine: 15,
+              endLine: 35,
+              subsections: [
+                {
+                  id: 'level5',
+                  heading: '##### 五级',
+                  level: 5,
+                  content: '内容',
+                  startLine: 20,
+                  endLine: 30,
+                  subsections: []
+                }
+              ]
+            }
+          ]
+        }
+      ];
+
+      const merged = mergeSubsectionsWithTargetTranslations(sourceSubsections, targetSubsections);
+
+      // All levels should have Chinese headings
+      expect(merged[0].heading).toBe('### 三级');
+      expect(merged[0].subsections[0].heading).toBe('#### 四级');
+      expect(merged[0].subsections[0].subsections[0].heading).toBe('##### 五级');
+    });
+  });
 });
