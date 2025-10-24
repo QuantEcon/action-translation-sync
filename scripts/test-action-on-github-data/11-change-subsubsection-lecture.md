@@ -58,6 +58,10 @@ Vector spaces satisfy several fundamental axioms that define their algebraic str
 
 These axioms ensure that vector spaces behave predictably under mathematical operations, making them ideal for representing economic choice sets and constraint sets in optimization problems.
 
+#### Applications in Economics
+
+Vector space properties are fundamental in economic modeling. The closure property ensures that combinations of feasible allocations remain feasible, while the existence of inverses allows us to model debts and obligations.
+
 The sum of two vectors $\mathbf{u}$ and $\mathbf{v}$ is defined component-wise:
 
 ```{math}
