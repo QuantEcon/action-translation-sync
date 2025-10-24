@@ -1,8 +1,44 @@
 # Development Roadmap
 
-**Current Version**: v0.4.6  
-**Status**: Production-Ready  
+**Current Version**: v0.4.7  
+**Status**: Production-Ready ✅  
 **Next**: v1.0 (API Stabilization)
+
+---
+
+## v0.4.7 - COMPLETE ✅
+
+**Full Recursive Heading Support** - All nesting levels (##-######) with critical bug fixes
+
+### Features
+- ✅ Full recursive parser for all heading levels (##-######)
+- ✅ Stack-based parsing with arbitrary nesting depth
+- ✅ Recursive section comparison at all depths
+- ✅ Subsection count validation (prevents data loss)
+- ✅ Title preservation in heading-map
+- ✅ Document order preservation in heading-map
+- ✅ Recursive serializeSection (handles nested subsections)
+
+### Bug Fixes
+- ✅ **CRITICAL**: Sub-subsections (####) not detected (Test 10)
+- ✅ serializeSection not recursive (lost nested subsections)
+- ✅ Incomplete translations when translator returns simplified content
+- ✅ Title entries deleted from heading-map
+- ✅ heading-map out of document order
+
+### Testing
+- ✅ 133 tests (was 125), all passing
+- ✅ 6 new tests for nested subsection detection
+- ✅ 2 new tests for title preservation in heading-map
+- ✅ GitHub Test 10 now passing (was failing)
+- ✅ All 16 GitHub test scenarios passing
+
+### Commits
+- `d36eadd` - feat: implement full recursive heading support
+- `76c0368` - fix: make serializeSection fully recursive
+- `17a3b87` - fix: preserve target subsections when incomplete
+- `fba6013` - fix: preserve title in heading-map
+- `ce6bd3a` - fix: preserve document order in heading-map
 
 ---
 
