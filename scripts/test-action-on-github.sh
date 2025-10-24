@@ -41,7 +41,8 @@ TARGET_REPO="test-translation-sync.zh-cn"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 DATA_DIR="$SCRIPT_DIR/test-action-on-github-data"
 WORK_DIR="."  # Clone to current directory
-TEST_FILE="lecture.md"
+TEST_FILE_MINIMAL="lecture-minimal.md"
+TEST_FILE_LECTURE="lecture.md"
 
 # Colors for output
 GREEN='\033[0;32m'
@@ -127,7 +128,9 @@ echo -e "${BLUE}Step 1: Preparing source repository...${NC}"
 
 if [ "$DRY_RUN" = true ]; then
     echo -e "${CYAN}[DRY RUN] Would clone/update $OWNER/$SOURCE_REPO${NC}"
-    echo -e "${CYAN}[DRY RUN] Would reset to base-minimal.md${NC}"
+    echo -e "${CYAN}[DRY RUN] Would reset to two base files:${NC}"
+    echo -e "${CYAN}  - lecture-minimal.md (from base-minimal.md)${NC}"
+    echo -e "${CYAN}  - lecture.md (from base-lecture.md)${NC}"
     echo -e "${CYAN}[DRY RUN] Would ensure workflow file exists${NC}"
     echo -e "${CYAN}[DRY RUN] Would force push to main${NC}"
 else
@@ -147,8 +150,9 @@ else
 
     # Reset to base state
     echo "Resetting to base state..."
-    rm -f *.md
-    cp "$DATA_DIR/base-minimal.md" "$TEST_FILE"
+    rm -rf *.md lectures/
+    cp "$DATA_DIR/base-minimal.md" "$TEST_FILE_MINIMAL"
+    cp "$DATA_DIR/base-lecture.md" "$TEST_FILE_LECTURE"
 
     # Ensure workflow exists
     mkdir -p .github/workflows
@@ -171,7 +175,9 @@ echo -e "${BLUE}Step 2: Preparing target repository...${NC}"
 
 if [ "$DRY_RUN" = true ]; then
     echo -e "${CYAN}[DRY RUN] Would clone/update $OWNER/$TARGET_REPO${NC}"
-    echo -e "${CYAN}[DRY RUN] Would reset to base-minimal-zh-cn.md${NC}"
+    echo -e "${CYAN}[DRY RUN] Would reset to two base Chinese files:${NC}"
+    echo -e "${CYAN}  - lecture-minimal.md (from base-minimal-zh-cn.md)${NC}"
+    echo -e "${CYAN}  - lecture.md (from base-lecture-zh-cn.md)${NC}"
     echo -e "${CYAN}[DRY RUN] Would force push to main${NC}"
 else
     if [ -d "$TARGET_REPO" ]; then
@@ -190,8 +196,9 @@ else
 
     # Reset to base state
     echo "Resetting to base state..."
-    rm -f *.md
-    cp "$DATA_DIR/base-minimal-zh-cn.md" "$TEST_FILE"
+    rm -rf *.md lectures/
+    cp "$DATA_DIR/base-minimal-zh-cn.md" "$TEST_FILE_MINIMAL"
+    cp "$DATA_DIR/base-lecture-zh-cn.md" "$TEST_FILE_LECTURE"
 
     # Force push to main
     git add -A
@@ -283,44 +290,59 @@ fi
 echo ""
 
 # Array of test scenarios
+# Format: "file-prefix:description:target-file"
+# target-file: "minimal" = lecture-minimal.md, "lecture" = lecture.md
 declare -a scenarios=(
-    "01-intro-change-minimal:Intro text updated"
-    "02-title-change-minimal:Title changed"
-    "03-section-content-minimal:Section content updated"
-    "04-section-reorder-minimal:Sections reordered"
-    "05-add-section-minimal:New section added"
-    "06-delete-section-minimal:Section removed"
-    "07-subsection-change-minimal:Subsection content updated"
-    "08-multi-element-minimal:Multiple elements changed"
-    "09-real-world-lecture:Real-world lecture update"
-    "10-add-subsubsection-lecture:Sub-subsection added (####)"
-    "11-change-subsubsection-lecture:Sub-subsection content changed"
-    "12-change-code-cell-lecture:Code cell comments/titles changed"
-    "13-change-display-math-lecture:Display math equations changed"
-    "14-delete-subsection-lecture:Subsection deleted (Matrix Operations)"
-    "15-delete-subsubsection-lecture:Sub-subsection deleted (Closure Property)"
+    "01-intro-change-minimal:Intro text updated:minimal"
+    "02-title-change-minimal:Title changed:minimal"
+    "03-section-content-minimal:Section content updated:minimal"
+    "04-section-reorder-minimal:Sections reordered:minimal"
+    "05-add-section-minimal:New section added:minimal"
+    "06-delete-section-minimal:Section removed:minimal"
+    "07-subsection-change-minimal:Subsection content updated:minimal"
+    "08-multi-element-minimal:Multiple elements changed:minimal"
+    "09-real-world-lecture:Real-world lecture update:lecture"
+    "10-add-subsubsection-lecture:Sub-subsection added (####):lecture"
+    "11-change-subsubsection-lecture:Sub-subsection content changed:lecture"
+    "12-change-code-cell-lecture:Code cell comments/titles changed:lecture"
+    "13-change-display-math-lecture:Display math equations changed:lecture"
+    "14-delete-subsection-lecture:Subsection deleted (Matrix Operations):lecture"
+    "15-delete-subsubsection-lecture:Sub-subsection deleted (Closure Property):lecture"
 )
 
-# Note: Tests 01-08 use base-minimal.md, tests 09-15 use base-lecture.md
+# Note: Tests 01-08 modify lecture-minimal.md, tests 09-15 modify lecture.md
 
 # Create PRs for all test scenarios
 for scenario in "${scenarios[@]}"; do
-    IFS=':' read -r file_prefix description <<< "$scenario"
+    IFS=':' read -r file_prefix description target_file <<< "$scenario"
     branch_name="test/${file_prefix}"
     
+    # Extract test number from file_prefix (e.g., "01" from "01-intro-change-minimal")
+    test_number=$(echo "$file_prefix" | grep -o '^[0-9]\+')
+    
+    # Determine which file to modify based on target_file
+    if [ "$target_file" = "minimal" ]; then
+        TEST_FILE="$TEST_FILE_MINIMAL"
+        pr_title="TEST: ${description} (${test_number} - minimal)"
+    else
+        TEST_FILE="$TEST_FILE_LECTURE"
+        pr_title="TEST: ${description} (${test_number} - lecture)"
+    fi
+    
     if [ "$DRY_RUN" = true ]; then
-        echo -e "${CYAN}[DRY RUN] Would create PR: ${description}${NC}"
+        echo -e "${CYAN}[DRY RUN] Would create PR: ${pr_title}${NC}"
         echo -e "${CYAN}  Branch: ${branch_name}${NC}"
-        echo -e "${CYAN}  File: ${file_prefix}.md${NC}"
+        echo -e "${CYAN}  Source: ${file_prefix}.md${NC}"
+        echo -e "${CYAN}  Target: ${TEST_FILE}${NC}"
         echo -e "${CYAN}  Label: test-translation${NC}"
         echo ""
     else
-        echo -e "${YELLOW}Creating PR: ${description}${NC}"
+        echo -e "${YELLOW}Creating PR: ${pr_title}${NC}"
         
         # Create branch
         git checkout -b "$branch_name" main
         
-        # Copy test file
+        # Copy test file to the appropriate target
         cp "$DATA_DIR/${file_prefix}.md" "$TEST_FILE"
         
         # Commit changes
@@ -332,10 +354,14 @@ for scenario in "${scenarios[@]}"; do
         
         # Create draft PR with label
         PR_URL=$(gh pr create \
-            --title "TEST: ${description}" \
-            --body "**Test Scenario**: ${description}
+            --title "${pr_title}" \
+            --body "**Test Number**: ${test_number}
+**Test Type**: ${target_file}
+**Test Scenario**: ${description}
 
 This is an automated test PR to validate the translation action.
+
+**File Modified**: \`${TEST_FILE}\`
 
 **Changes**: See file diff for details.
 
