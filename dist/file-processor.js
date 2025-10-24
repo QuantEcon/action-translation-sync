@@ -130,12 +130,6 @@ class FileProcessor {
         // SECTIONS: Detect changes and process each section
         const changes = await this.diffDetector.detectSectionChanges(oldContent, newContent, filepath);
         this.log(`Detected ${changes.length} section-level changes`);
-        // DEBUG: Check if newSource.sections have nested structure BEFORE loop
-        this.log(`[DEBUG-BEFORE-LOOP] newSource.sections.length = ${newSource.sections.length}`);
-        if (newSource.sections.length > 0 && newSource.sections[0].subsections.length > 0) {
-            this.log(`[DEBUG-BEFORE-LOOP] sections[0] = "${newSource.sections[0].heading}", subsections=${newSource.sections[0].subsections.length}`);
-            this.log(`[DEBUG-BEFORE-LOOP] subsections[0] = "${newSource.sections[0].subsections[0].heading}", nested=${newSource.sections[0].subsections[0].subsections.length}`);
-        }
         const resultSections = [];
         // Process each section from new source (ensures proper order)
         for (let i = 0; i < newSource.sections.length; i++) {
@@ -208,56 +202,37 @@ class FileProcessor {
                 let finalSubsections;
                 const expectedSubsectionCount = newSection.subsections.length;
                 const parsedSubsectionCount = subsections.length;
-                // DEBUG: Log the actual structure we're comparing
-                this.log(`[DEBUG] newSection.subsections.length = ${newSection.subsections.length}`);
-                if (newSection.subsections.length > 0) {
-                    this.log(`[DEBUG] newSection.subsections[0].heading = "${newSection.subsections[0].heading}"`);
-                    this.log(`[DEBUG] newSection.subsections[0].subsections.length = ${newSection.subsections[0].subsections.length}`);
-                }
                 // Helper to recursively validate subsection structure
-                const validateSubsectionStructure = (expected, parsed, level = 0) => {
-                    const indent = '  '.repeat(level);
-                    this.log(`${indent}[Validate] Comparing ${expected.length} expected vs ${parsed.length} parsed`);
+                const validateSubsectionStructure = (expected, parsed) => {
                     if (expected.length !== parsed.length) {
-                        this.log(`${indent}[Validate] ✗ Count mismatch`);
                         return false;
                     }
                     for (let i = 0; i < expected.length; i++) {
-                        const expHeading = expected[i].heading.replace(/^#+\s+/, '');
-                        const parsedHeading = parsed[i].heading.replace(/^#+\s+/, '');
-                        this.log(`${indent}[Validate] Checking [${i}]: "${expHeading}" (${expected[i].subsections.length} subs) vs "${parsedHeading}" (${parsed[i].subsections.length} subs)`);
                         // Check if nested subsections match recursively
-                        if (!validateSubsectionStructure(expected[i].subsections, parsed[i].subsections, level + 1)) {
-                            this.log(`${indent}[Validate] ✗ Nested structure mismatch`);
+                        if (!validateSubsectionStructure(expected[i].subsections, parsed[i].subsections)) {
                             return false;
                         }
                     }
-                    this.log(`${indent}[Validate] ✓ Structure matches`);
                     return true;
                 };
                 // Helper to merge source subsections with target translations
                 // Takes source structure (English) and applies target headings/content where they exist
                 // Also checks heading-map for Chinese translations of subsections not in target array
-                const mergeSubsectionsWithTargetTranslations = (sourceSubs, targetSubs, parentPath = '', level = 0) => {
-                    const indent = '  '.repeat(level);
-                    this.log(`${indent}[Merge] Processing ${sourceSubs.length} source subsections, ${targetSubs.length} target subsections, parentPath="${parentPath}"`);
+                const mergeSubsectionsWithTargetTranslations = (sourceSubs, targetSubs, parentPath = '') => {
                     return sourceSubs.map((sourceSub, i) => {
                         const sourceHeading = sourceSub.heading.replace(/^#+\s+/, '');
                         const targetSub = targetSubs[i];
                         if (targetSub) {
                             // Use target heading AND content (Chinese), but source structure
-                            const targetHeading = targetSub.heading.replace(/^#+\s+/, '');
                             const currentPath = parentPath
                                 ? `${parentPath}::${sourceHeading}`
                                 : sourceHeading;
-                            this.log(`${indent}[Merge] Found target match: "${sourceHeading}" → "${targetHeading}"`);
-                            this.log(`${indent}[Merge] Recursing into ${sourceSub.subsections.length} source subsections`);
                             return {
                                 ...targetSub, // Use target (Chinese heading + content)
                                 subsections: mergeSubsectionsWithTargetTranslations(sourceSub.subsections, // Source structure (may have more subsections)
                                 targetSub.subsections, // Target translations
-                                currentPath, // Track path for heading-map lookup
-                                level + 1)
+                                currentPath // Track path for heading-map lookup
+                                )
                             };
                         }
                         // No target in array - check if it exists in heading-map
@@ -265,21 +240,16 @@ class FileProcessor {
                             ? `${parentPath}::${sourceHeading}`
                             : sourceHeading;
                         const chineseHeading = headingMap.get(sourcePath);
-                        this.log(`${indent}[Merge] No target match for "${sourceHeading}"`);
-                        this.log(`${indent}[Merge] Checking heading-map for path: "${sourcePath}"`);
-                        this.log(`${indent}[Merge] Heading-map has ${headingMap.size} entries: ${Array.from(headingMap.keys()).join(', ')}`);
                         if (chineseHeading) {
-                            // Found in heading-map - use Chinese heading but keep English content
-                            // (translator will provide Chinese content when we serialize and pass to updateHeadingMap)
-                            this.log(`${indent}[Merge] ✓ Found in heading-map: "${sourcePath}" → "${chineseHeading}"`);
+                            // Found in heading-map - use Chinese heading from map
+                            this.log(`Found Chinese heading in map for: ${sourcePath} → ${chineseHeading}`);
                             return {
                                 ...sourceSub,
                                 heading: sourceSub.heading.replace(/^(#+\s+).*/, `$1${chineseHeading}`),
-                                subsections: mergeSubsectionsWithTargetTranslations(sourceSub.subsections, [], sourcePath, level + 1)
+                                subsections: mergeSubsectionsWithTargetTranslations(sourceSub.subsections, [], sourcePath)
                             };
                         }
                         // Not in heading-map - keep source as-is (will be English, truly new)
-                        this.log(`${indent}[Merge] ✗ Not found in heading-map, keeping English: "${sourceHeading}"`);
                         return sourceSub;
                     });
                 };
