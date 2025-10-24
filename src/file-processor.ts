@@ -247,16 +247,24 @@ export class FileProcessor {
         const parsedSubsectionCount = subsections.length;
         
         // Helper to recursively validate subsection structure
-        const validateSubsectionStructure = (expected: Section[], parsed: Section[]): boolean => {
+        const validateSubsectionStructure = (expected: Section[], parsed: Section[], level: number = 0): boolean => {
+          const indent = '  '.repeat(level);
+          this.log(`${indent}[Validate] Comparing ${expected.length} expected vs ${parsed.length} parsed`);
           if (expected.length !== parsed.length) {
+            this.log(`${indent}[Validate] ✗ Count mismatch`);
             return false;
           }
           for (let i = 0; i < expected.length; i++) {
+            const expHeading = expected[i].heading.replace(/^#+\s+/, '');
+            const parsedHeading = parsed[i].heading.replace(/^#+\s+/, '');
+            this.log(`${indent}[Validate] Checking [${i}]: "${expHeading}" (${expected[i].subsections.length} subs) vs "${parsedHeading}" (${parsed[i].subsections.length} subs)`);
             // Check if nested subsections match recursively
-            if (!validateSubsectionStructure(expected[i].subsections, parsed[i].subsections)) {
+            if (!validateSubsectionStructure(expected[i].subsections, parsed[i].subsections, level + 1)) {
+              this.log(`${indent}[Validate] ✗ Nested structure mismatch`);
               return false;
             }
           }
+          this.log(`${indent}[Validate] ✓ Structure matches`);
           return true;
         };
         
