@@ -52,6 +52,8 @@ export class MystParser {
     // Stack tracks the current nesting: [level2Section, level3Sub, level4SubSub, ...]
     const sectionStack: Section[] = [];
     
+    console.log(`[Parser] Starting to parse ${lines.length} lines, contentStart=${contentStartIndex}`);
+    
     for (let i = contentStartIndex; i < lines.length; i++) {
       const line = lines[i];
       const lineNum = i + 1;
@@ -63,6 +65,7 @@ export class MystParser {
         const level = headingMatch[1].length;
         const headingText = headingMatch[2];
         const id = this.generateHeadingId(headingText);
+        console.log(`[Parser] Line ${lineNum}: Found level-${level} heading: "${headingText}"`);
         
         // Create new section
         const newSection: Section = {
@@ -129,6 +132,14 @@ export class MystParser {
       section.subsections.forEach(trimSection);
     };
     sections.forEach(trimSection);
+    
+    // Log parsed structure
+    const logStructure = (section: Section, indent: string = '') => {
+      console.log(`${indent}${section.heading.substring(0, 50)} (${section.subsections.length} subsections)`);
+      section.subsections.forEach(sub => logStructure(sub, indent + '  '));
+    };
+    console.log(`[Parser] Final structure: ${sections.length} top-level sections`);
+    sections.forEach(s => logStructure(s));
 
     return {
       sections,
