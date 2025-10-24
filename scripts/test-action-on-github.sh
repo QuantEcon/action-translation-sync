@@ -308,9 +308,10 @@ declare -a scenarios=(
     "13-change-display-math-lecture:Display math equations changed:lecture"
     "14-delete-subsection-lecture:Subsection deleted (Matrix Operations):lecture"
     "15-delete-subsubsection-lecture:Sub-subsection deleted (Closure Property):lecture"
+    "16-pure-section-reorder-minimal:Pure section reorder (no content change):minimal"
 )
 
-# Note: Tests 01-08 modify lecture-minimal.md, tests 09-15 modify lecture.md
+# Note: Tests 01-08 modify lecture-minimal.md, tests 09-15 modify lecture.md, test 16 tests pure reordering
 
 # Create PRs for all test scenarios
 for scenario in "${scenarios[@]}"; do
@@ -402,7 +403,7 @@ if [ "$DRY_RUN" = true ]; then
     echo ""
     echo "1. Reset both repositories to base state"
     echo "2. Close all open PRs on source repo"
-    echo "3. Create 15 new test PRs:"
+    echo "3. Create 16 new test PRs:"
     echo "   Basic Tests (01-08):"
     echo "     - 01: Intro text updated"
     echo "     - 02: Title changed"
@@ -420,17 +421,20 @@ if [ "$DRY_RUN" = true ]; then
     echo "     - 13: Display math equations changed"
     echo "     - 14: Subsection deleted"
     echo "     - 15: Sub-subsection deleted"
+    echo "   Position-Based Tests (16):"
+    echo "     - 16: Pure section reorder (no content change)"
     echo "4. Add 'test-translation' label to each PR"
     echo ""
     echo -e "${YELLOW}To actually run these changes, execute without --dry-run:${NC}"
     echo "  ./scripts/test-action-on-github.sh"
 else
-    echo -e "${GREEN}Created 15 test PRs in ${SOURCE_REPO}${NC}"
+    echo -e "${GREEN}Created 16 test PRs in ${SOURCE_REPO}${NC}"
     echo ""
     echo "Test Coverage:"
     echo "  - Basic structure changes (8 tests)"
-    echo "  - Scientific content (code cells, math) (6 tests)"
+    echo "  - Scientific content (code cells, math) (7 tests)"
     echo "  - Subsection & sub-subsection handling (5 tests)"
+    echo "  - Position-based matching (1 test)"
     echo ""
     echo "Next steps:"
     echo "1. Each PR has the 'test-translation' label"
