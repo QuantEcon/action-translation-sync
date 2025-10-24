@@ -1,6 +1,6 @@
 # Testing Guide
 
-**Current Test Status**: ✅ 121 tests passing | 0 failing | ~2s execution time
+**Current Test Status**: ✅ 125 tests passing | 0 failing | ~3s execution time
 
 ---
 
@@ -35,10 +35,11 @@ src/__tests__/
 
 **Test Breakdown**:
 - Parser: 15 tests
-- Diff Detector: 15 tests  
+- Diff Detector: 18 tests (including v0.4.6 section comparison tests)
 - File Processor: 54 tests (including subsection duplication regression test)
 - Heading-Map: 28 tests (including v0.4.3 subsection regression tests)
 - Integration: 9 tests
+- Component tests: 1 test
 
 ---
 
@@ -337,7 +338,7 @@ it('BUG #X: should not do incorrect thing', () => {
 
 ## Test Coverage Goals
 
-**Current Coverage** (v0.4.3):
+**Current Coverage** (v0.4.6):
 - Core logic: ~90%
 - Edge cases: ~80%
 - Integration paths: ~85%
@@ -413,4 +414,4 @@ Update tests when:
 
 ---
 
-**Last Updated**: October 2025 (v0.4.3)
+**Last Updated**: October 24, 2025 (v0.4.6)

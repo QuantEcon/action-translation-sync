@@ -2,7 +2,7 @@
 
 Complete documentation for the Translation Sync GitHub Action.
 
-**Current Version**: v0.4.3 (Production-Ready)  
+**Current Version**: v0.4.6 (Production-Ready)  
 **Status**: Ready for v1.0 API Stabilization
 
 ---
@@ -40,8 +40,10 @@ Complete documentation for the Translation Sync GitHub Action.
 
 ---
 
-## 📦 Release Notes
+## 📋 Release Notes
 
+- **[v0.4.6](releases/v0.4.6.md)** - Exact section comparison, branch name collision fix ✅
+- **[v0.4.5](releases/v0.4.5.md)** - Bug fixes and stability improvements
 - **[v0.4.4](releases/v0.4.4.md)** - Developer experience, GitHub testing, root-level support
 - **[v0.4.3](releases/v0.4.3.md)** - Subsection support complete with regression tests
 - **[v0.3.0](releases/v0.3.0.md)** - Section-based refactor, Claude 4.5, test suite
@@ -79,7 +81,7 @@ docs/
 ├── PROJECT-DESIGN.md         # Design decisions and philosophy
 ├── ARCHITECTURE.md           # System architecture
 ├── IMPLEMENTATION.md         # Comprehensive implementation guide
-├── TESTING.md                # Testing guide (121 tests)
+├── TESTING.md                # Testing guide (125 tests)
 ├── TODO.md                   # Development roadmap
 ├── STATUS-REPORT.md          # Project status
 ├── HEADING-MAPS.md           # Heading-map system guide
@@ -108,4 +110,4 @@ docs/
 
 ---
 
-**Last Updated**: October 2025 (v0.4.3)
+**Last Updated**: October 24, 2025 (v0.4.6)

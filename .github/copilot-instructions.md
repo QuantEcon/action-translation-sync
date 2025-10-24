@@ -5,8 +5,8 @@
 **action-translation-sync** is a GitHub Action that automatically translates MyST Markdown documents from English to Chinese using Claude AI (Anthropic). It uses a **section-based approach** for robust, maintainable translation.
 
 **Core Architecture**: Section-based translation (not block-based)
-**Current Version**: v0.4.3 (Production-Ready)
-**Test Coverage**: 121 tests, all passing
+**Current Version**: v0.4.6 (Production-Ready)
+**Test Coverage**: 125 tests, all passing
 **Code Size**: ~1,200 lines core logic across 6 modules
 
 ## Key Design Principles
@@ -185,14 +185,17 @@ if (docsFolder === '') {
 **Purpose**: Fast, comprehensive testing of core logic
 **Location**: `src/__tests__/*.test.ts`
 **Run**: `npm test`
-**Coverage**: 121 tests across 5 files
+**Coverage**: 125 tests across 8 files
 
 **Test Files**:
 - `parser.test.ts` - MyST parsing, frontmatter (15 tests)
-- `diff-detector.test.ts` - Change detection (15 tests)
+- `diff-detector.test.ts` - Change detection (18 tests)
 - `file-processor.test.ts` - Section reconstruction (54 tests)
 - `heading-map.test.ts` - Map updates (28 tests)
 - `integration.test.ts` - End-to-end (9 tests)
+- `component-reconstruction.test.ts` - Component assembly
+- `parser-components.test.ts` - Component parsing
+- `e2e-fixtures.test.ts` - End-to-end fixtures
 
 **Key Regression Tests** (v0.4.3):
 - Subsection duplication prevention
@@ -335,16 +338,6 @@ Now we can match!
 3. Prevent duplication in output
 
 **Solution**: Parse translated content to extract subsections, strip them from content, store in array.
-
-## Version History
-
-- **v0.1.0** (May 2024) - Initial development
-- **v0.2.2** (July 2024) - Block-based prototype
-- **v0.3.0** (Aug 2024) - Section-based rewrite (43% code reduction)
-- **v0.4.0** (Nov 2024) - Heading-map system
-- **v0.4.1** (Dec 2024) - Subsection parsing
-- **v0.4.2** (Dec 2024) - Heading-map subsection integration
-- **v0.4.3** (Oct 2025) - Subsection duplication fix, GitHub testing, root-level support ✅
 
 ## Quick Reference
 

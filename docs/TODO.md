@@ -1,8 +1,27 @@
 # Development Roadmap
 
-**Current Version**: v0.4.4  
+**Current Version**: v0.4.6  
 **Status**: Production-Ready  
 **Next**: v1.0 (API Stabilization)
+
+---
+
+## v0.4.6 - COMPLETE ✅
+
+**Critical Bug Fixes** - Section comparison and branch naming
+
+### Bug Fixes
+- ✅ Section comparison using exact string equality (not 20% threshold)
+- ✅ Branch name collisions fixed (include PR number)
+- ✅ 125 tests (was 121), all passing
+
+### Test Enhancements
+- ✅ Test 16: Pure section reordering
+- ✅ Enhanced PR titles with test metadata
+- ✅ Added tests for typo fixes and subtle changes
+
+### Known Issues
+- 📝 LLM improvement behavior (Issue #1) - Accepting as beneficial
 
 ---
 
@@ -12,7 +31,7 @@
 
 ### Features
 - ✅ Root-level file support (`docs-folder: '.'`)
-- ✅ GitHub test infrastructure (9 automated scenarios)
+- ✅ GitHub test infrastructure (16 automated scenarios)
 - ✅ Improved PR titles (use filenames, not "1 file(s)")
 - ✅ Hyperlinked source PRs in descriptions
 - ✅ TEST mode for quick validation

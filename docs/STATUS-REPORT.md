@@ -1,6 +1,6 @@
 # Project Status Report
 
-**Version**: v0.4.4 (Production-Ready)  
+**Version**: v0.4.6 (Production-Ready)  
 **Date**: October 24, 2025  
 **Status**: Ready for v1.0 API Stabilization ✅
 
@@ -8,26 +8,28 @@
 
 ## Current Status
 
-**v0.4.4** is production-ready with all core features complete, comprehensively tested (121 passing tests), and validated with real-world documents and GitHub test infrastructure.
+**v0.4.6** is production-ready with critical bug fixes (exact section comparison, branch name collisions), comprehensively tested (125 passing tests), and validated with real-world documents and GitHub test infrastructure.
 
 ### What's Complete ✅
 
 - **Core Translation**: Section-based translation with Claude Sonnet 4.5
+- **Exact Section Comparison**: Any content change detected (v0.4.6)
+- **Unique Branch Names**: No more collisions with concurrent PRs (v0.4.6)
 - **Subsection Support**: Full parsing and tracking of `### Subsections`
 - **Heading Maps**: Language-independent section matching
 - **Diff Detection**: Multi-strategy change detection
 - **Root-Level Support**: Works with `docs-folder: '.'` for root-level files
-- **GitHub Testing**: 9 automated test scenarios with PR validation
-- **Test Suite**: 121 tests covering all components
+- **GitHub Testing**: 16 automated test scenarios with PR validation
+- **Test Suite**: 125 tests covering all components
 - **Documentation**: 12 comprehensive documentation files
 
 ### Key Metrics
 
 - **Code Size**: ~1,200 lines core logic
-- **Test Coverage**: 121 tests, 100% passing
-- **Bundle Size**: 1794kB (28% reduction from v0.2.x)
-- **Glossary**: 342 terms (zh-cn)
-- **GitHub Tests**: 9 scenarios with automated reset script
+- **Test Coverage**: 125 tests, 100% passing
+- **Bundle Size**: 1935kB
+- **Glossary**: 355 terms (zh-cn)
+- **GitHub Tests**: 16 scenarios with automated reset script
 
 ---
 
