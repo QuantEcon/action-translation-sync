@@ -344,6 +344,12 @@ class FileProcessor {
         // SECTIONS: Detect changes and process each section
         const changes = await this.diffDetector.detectSectionChanges(oldContent, newContent, filepath);
         this.log(`Detected ${changes.length} section-level changes`);
+        // DEBUG: Check if newSource.sections have nested structure BEFORE loop
+        this.log(`[DEBUG-BEFORE-LOOP] newSource.sections.length = ${newSource.sections.length}`);
+        if (newSource.sections.length > 0 && newSource.sections[0].subsections.length > 0) {
+            this.log(`[DEBUG-BEFORE-LOOP] sections[0] = "${newSource.sections[0].heading}", subsections=${newSource.sections[0].subsections.length}`);
+            this.log(`[DEBUG-BEFORE-LOOP] subsections[0] = "${newSource.sections[0].subsections[0].heading}", nested=${newSource.sections[0].subsections[0].subsections.length}`);
+        }
         const resultSections = [];
         // Process each section from new source (ensures proper order)
         for (let i = 0; i < newSource.sections.length; i++) {
