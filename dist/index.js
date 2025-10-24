@@ -1603,9 +1603,10 @@ class MystParser {
                 contentStartIndex = endIndex + 2;
             }
         }
-        // Extract preamble (content before first ## heading)
+        // Extract preamble (content before first ## heading, or all content if no ## sections)
         const firstSectionIndex = lines.slice(contentStartIndex).findIndex(line => line.match(/^##\s+/));
         if (firstSectionIndex !== -1) {
+            // There are ## sections, extract content before them
             const preambleLines = lines.slice(contentStartIndex, contentStartIndex + firstSectionIndex);
             // Only keep preamble if it has non-empty content
             const preambleText = preambleLines.join('\n').trim();
@@ -1613,6 +1614,15 @@ class MystParser {
                 preamble = preambleText;
             }
             contentStartIndex = contentStartIndex + firstSectionIndex;
+        }
+        else {
+            // No ## sections, all remaining content is preamble
+            const preambleLines = lines.slice(contentStartIndex);
+            const preambleText = preambleLines.join('\n').trim();
+            if (preambleText) {
+                preamble = preambleText;
+            }
+            contentStartIndex = lines.length; // No sections to parse
         }
         // Stack-based parsing for recursive subsections (handles ##, ###, ####, #####, ######)
         // Stack tracks the current nesting: [level2Section, level3Sub, level4SubSub, ...]
@@ -1764,16 +1774,16 @@ class MystParser {
      * @returns DocumentComponents with all parts explicitly separated
      */
     async parseDocumentComponents(content, filepath) {
+        // Use the full recursive parser to get sections with all nested subsections (##, ###, ####, etc.)
+        const parsed = await this.parseSections(content, filepath);
         const lines = content.split('\n');
         let contentStartIndex = 0;
-        // 1. Extract CONFIG (frontmatter YAML)
-        let config = '';
-        if (lines[0] === '---') {
-            const endIndex = lines.slice(1).findIndex(line => line === '---');
-            if (endIndex !== -1) {
-                config = lines.slice(0, endIndex + 2).join('\n');
-                contentStartIndex = endIndex + 2;
-            }
+        // 1. Extract CONFIG (frontmatter YAML) - reuse from parseSections
+        const config = parsed.frontmatter || '';
+        if (config) {
+            // Calculate where content starts after frontmatter
+            const configLines = config.split('\n');
+            contentStartIndex = configLines.length;
         }
         // 2. Extract TITLE (# heading)
         let title = '';
@@ -1799,103 +1809,17 @@ class MystParser {
         else {
             throw new Error('Document must have a # title heading');
         }
-        // 3. Extract INTRO (content between title and first ##)
-        const firstSectionIndex = lines.slice(titleEndIndex).findIndex(line => line.match(/^##\s+/));
+        // 3. Extract INTRO (content after title, before first ##)
+        // parseSections.preamble includes the title line, so we need to strip it
         let intro = '';
-        let sectionsStartIndex = titleEndIndex;
-        if (firstSectionIndex !== -1) {
-            // There are ## sections, so extract intro
-            const introLines = lines.slice(titleEndIndex, titleEndIndex + firstSectionIndex);
-            intro = introLines.join('\n').trim();
-            sectionsStartIndex = titleEndIndex + firstSectionIndex;
+        if (parsed.preamble) {
+            const preambleLines = parsed.preamble.split('\n');
+            // Skip the first line if it's the title
+            const startIndex = preambleLines[0].match(/^#\s+/) ? 1 : 0;
+            intro = preambleLines.slice(startIndex).join('\n').trim();
         }
-        else {
-            // No ## sections, everything after title is intro
-            const introLines = lines.slice(titleEndIndex);
-            intro = introLines.join('\n').trim();
-            sectionsStartIndex = lines.length; // No sections to parse
-        }
-        // 4. Extract SECTIONS (## headings)
-        const sections = [];
-        let currentSection = null;
-        let currentSubsection = null;
-        for (let i = sectionsStartIndex; i < lines.length; i++) {
-            const line = lines[i];
-            const lineNum = i + 1;
-            // Check for ## heading (top-level section)
-            const h2Match = line.match(/^##\s+(.+)$/);
-            if (h2Match) {
-                // Save previous section if exists
-                if (currentSection) {
-                    if (currentSubsection) {
-                        currentSubsection.endLine = lineNum - 1;
-                        currentSection.subsections.push(currentSubsection);
-                    }
-                    currentSection.endLine = lineNum - 1;
-                    sections.push(currentSection);
-                }
-                // Start new section
-                const headingText = h2Match[1];
-                const id = this.generateHeadingId(headingText);
-                currentSection = {
-                    heading: line,
-                    level: 2,
-                    id,
-                    content: line + '\n',
-                    startLine: lineNum,
-                    endLine: lineNum,
-                    subsections: [],
-                };
-                currentSubsection = null;
-                continue;
-            }
-            // Check for ### heading (subsection)
-            const h3Match = line.match(/^###\s+(.+)$/);
-            if (h3Match && currentSection) {
-                // Save previous subsection if exists
-                if (currentSubsection) {
-                    currentSubsection.endLine = lineNum - 1;
-                    currentSection.subsections.push(currentSubsection);
-                }
-                // Start new subsection
-                const headingText = h3Match[1];
-                const id = this.generateHeadingId(headingText);
-                currentSubsection = {
-                    heading: line,
-                    level: 3,
-                    id,
-                    content: line + '\n',
-                    startLine: lineNum,
-                    endLine: lineNum,
-                    parentId: currentSection.id,
-                    subsections: [],
-                };
-                continue;
-            }
-            // Add content to current section/subsection
-            if (currentSubsection) {
-                currentSubsection.content += line + '\n';
-                currentSubsection.endLine = lineNum;
-            }
-            else if (currentSection) {
-                currentSection.content += line + '\n';
-                currentSection.endLine = lineNum;
-            }
-        }
-        // Save last section
-        if (currentSection) {
-            if (currentSubsection) {
-                currentSection.subsections.push(currentSubsection);
-            }
-            sections.push(currentSection);
-        }
-        // Trim trailing newlines from section content
-        sections.forEach(section => {
-            section.content = section.content.trimEnd();
-            section.subsections.forEach(sub => {
-                sub.content = sub.content.trimEnd();
-            });
-        });
+        // 4. Use sections from parseSections (includes full recursive structure)
+        const sections = parsed.sections;
         return {
             config,
             title,
