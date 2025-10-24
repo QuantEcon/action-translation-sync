@@ -477,10 +477,11 @@ ${translatedContent}`;
         const parts = [];
         // Add section content (heading and direct content)
         parts.push(section.content);
-        // Add subsections if present
+        // Add subsections recursively if present
         for (const subsection of section.subsections) {
             parts.push(''); // Empty line before subsection
-            parts.push(subsection.content);
+            // Recursively serialize subsection to handle nested subsections
+            parts.push(this.serializeSection(subsection));
         }
         return parts.join('\n');
     }
