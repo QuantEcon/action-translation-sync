@@ -4,24 +4,26 @@
 
 **action-translation-sync** is a GitHub Action that automatically translates MyST Markdown documents from English to Chinese using Claude AI (Anthropic). It uses a **section-based approach** for robust, maintainable translation.
 
-**Core Architecture**: Section-based translation (not block-based)
-**Current Version**: v0.4.6 (Production-Ready)
-**Test Coverage**: 125 tests, all passing
+**Core Architecture**: Section-based translation with full recursive heading support
+**Current Version**: v0.4.7 (Production-Ready)
+**Test Coverage**: 131 tests, all passing
 **Code Size**: ~1,200 lines core logic across 6 modules
 
 ## Key Design Principles
 
 1. **Section-Based, Not Block-Based**: Documents are structured into `## Section` blocks. Translations operate at the section level, not individual paragraphs or blocks.
 
-2. **Position-Based Matching**: Sections match by position (1st → 1st), not by content matching. This works across languages.
+2. **Full Recursive Structure**: Handles all heading levels (##, ###, ####, #####, ######) with arbitrary nesting depth.
 
-3. **Heading-Map System**: Maps English heading IDs to Chinese headings for language-independent section matching.
+3. **Position-Based Matching**: Sections match by position (1st → 1st), not by content matching. This works across languages.
 
-4. **Subsection Support**: `### Subsections` are parsed from translated content and integrated into heading-maps (v0.4.0+).
+4. **Heading-Map System**: Maps English heading IDs to Chinese headings for language-independent section matching.
 
-5. **Simple Line-by-Line Parsing**: No AST, no `unified`/`remark`. Just split on `##` headings.
+5. **Recursive Subsection Support**: Subsections at any depth are parsed, compared, and integrated into heading-maps (v0.4.7+).
 
-6. **Incremental Translation**: Only translate changed sections (UPDATE mode), not entire documents.
+6. **Simple Stack-Based Parsing**: No AST, no `unified`/`remark`. Stack-based recursive parser handles arbitrary nesting.
+
+7. **Incremental Translation**: Only translate changed sections (UPDATE mode), not entire documents.
 
 ## Core Concepts
 
@@ -30,24 +32,18 @@
 ```typescript
 interface Section {
   heading: string;        // "## Economic Models"
-  level: number;          // 2, 3, 4, etc.
+  level: number;          // 2, 3, 4, 5, or 6
   id: string;            // "economic-models"
-  content: string;        // Full content (WITHOUT subsections as of v0.4.3)
+  content: string;        // Direct content (WITHOUT subsections)
   startLine: number;      // Source line number
   endLine: number;        // End line number
-  subsections: Section[]; // Nested subsections (### headings)
+  subsections: Section[]; // Recursively nested subsections (any depth)
 }
 ```
 
-### Critical: Subsection Handling (v0.4.3 Fix)
+### Critical: Recursive Subsection Handling (v0.4.7)
 
-**Problem**: Subsections can duplicate if not handled carefully.
-
-**Solution**:
-- `parseTranslatedSubsections()` returns BOTH:
-  - `subsections`: Array of subsection objects
-  - `contentWithoutSubsections`: Content stripped of subsections
-- Use `contentWithoutSubsections` when reconstructing
+**Design**: Full recursion for arbitrary nesting depth.
 - Append subsections from `section.subsections` array
 
 **Why**: Prevents duplication (subsections in both content and array).
@@ -104,13 +100,14 @@ src/
 ### Module Responsibilities
 
 **parser.ts**:
-- Split MyST on `## ` headings (line-by-line)
-- Extract subsections (`### `) recursively
+- **Stack-based recursive parsing** for all heading levels (##-######)
+- Extract subsections at arbitrary depth
 - Generate heading IDs from text
 - Basic MyST validation
 
 **diff-detector.ts**:
 - Detect ADDED/MODIFIED/DELETED sections
+- **Recursive comparison** including all nested subsections
 - Position-based matching with ID fallback
 - Preamble change detection
 
@@ -123,14 +120,14 @@ src/
 **file-processor.ts**:
 - Orchestrate translation workflow
 - Parse subsections from translated content
-- Reconstruct documents
-- Critical: Use `contentWithoutSubsections` to prevent duplication
+- Reconstruct documents with recursive structure
+- **Preserve target headings** and subsections when translation doesn't return full structure
 
 **heading-map.ts**:
 - Extract map from frontmatter
 - Update map with new translations
 - Inject map back into frontmatter
-- Recursive subsection processing
+- **Recursive subsection processing** at any depth
 
 **index.ts**:
 - GitHub Actions entry point
@@ -185,19 +182,21 @@ if (docsFolder === '') {
 **Purpose**: Fast, comprehensive testing of core logic
 **Location**: `src/__tests__/*.test.ts`
 **Run**: `npm test`
-**Coverage**: 125 tests across 8 files
+**Coverage**: 131 tests across 8 files
 
 **Test Files**:
 - `parser.test.ts` - MyST parsing, frontmatter (15 tests)
-- `diff-detector.test.ts` - Change detection (18 tests)
+- `diff-detector.test.ts` - Change detection (24 tests, includes 6 nested subsection tests)
 - `file-processor.test.ts` - Section reconstruction (54 tests)
 - `heading-map.test.ts` - Map updates (28 tests)
 - `integration.test.ts` - End-to-end (9 tests)
 - `component-reconstruction.test.ts` - Component assembly
 - `parser-components.test.ts` - Component parsing
-- `e2e-fixtures.test.ts` - End-to-end fixtures
+- `e2e-fixtures.test.ts` - End-to-end fixtures (1 test)
 
-**Key Regression Tests** (v0.4.3):
+**Key Regression Tests** (v0.4.7):
+- Nested subsection change detection (####, #####)
+- Recursive section comparison
 - Subsection duplication prevention
 - Heading-map completeness
 - Root-level file handling

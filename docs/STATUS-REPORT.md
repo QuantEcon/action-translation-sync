@@ -1,6 +1,6 @@
 # Project Status Report
 
-**Version**: v0.4.6 (Production-Ready)  
+**Version**: v0.4.7 (Production-Ready)  
 **Date**: October 24, 2025  
 **Status**: Ready for v1.0 API Stabilization ✅
 
@@ -8,26 +8,27 @@
 
 ## Current Status
 
-**v0.4.6** is production-ready with critical bug fixes (exact section comparison, branch name collisions), comprehensively tested (125 passing tests), and validated with real-world documents and GitHub test infrastructure.
+**v0.4.7** is production-ready with full recursive heading support (##-######), enabling detection of changes at any nesting depth. Critical fix for subsection change detection ensures complete translations of complex document structures.
 
 ### What's Complete ✅
 
 - **Core Translation**: Section-based translation with Claude Sonnet 4.5
-- **Exact Section Comparison**: Any content change detected (v0.4.6)
+- **Recursive Heading Support**: Full parsing and comparison of all heading levels (##-######) (v0.4.7)
+- **Exact Section Comparison**: Any content change detected at any depth (v0.4.7)
 - **Unique Branch Names**: No more collisions with concurrent PRs (v0.4.6)
-- **Subsection Support**: Full parsing and tracking of `### Subsections`
-- **Heading Maps**: Language-independent section matching
-- **Diff Detection**: Multi-strategy change detection
+- **Subsection Support**: Full recursive subsection tracking at arbitrary depth
+- **Heading Maps**: Language-independent section matching with recursive structure
+- **Diff Detection**: Multi-strategy change detection with recursive comparison
 - **Root-Level Support**: Works with `docs-folder: '.'` for root-level files
 - **GitHub Testing**: 16 automated test scenarios with PR validation
-- **Test Suite**: 125 tests covering all components
+- **Test Suite**: 131 tests covering all components including nested subsections
 - **Documentation**: 12 comprehensive documentation files
 
 ### Key Metrics
 
 - **Code Size**: ~1,200 lines core logic
-- **Test Coverage**: 125 tests, 100% passing
-- **Bundle Size**: 1935kB
+- **Test Coverage**: 131 tests, 100% passing (125 original + 6 nested subsection tests)
+- **Bundle Size**: 1937kB
 - **Glossary**: 355 terms (zh-cn)
 - **GitHub Tests**: 16 scenarios with automated reset script
 
@@ -40,15 +41,19 @@ The v0.4.x series focused on subsection handling and developer experience:
 1. **v0.4.0** - Discovered heading-map missing subsections
 2. **v0.4.1** - Fixed subsection parsing from translated content
 3. **v0.4.2** - Fixed heading-map recursive processing  
-4. **v0.4.3** - Initial subsection duplication investigation
-5. **v0.4.4** - Complete developer experience overhaul ✅
+4. **v0.4.3** - Subsection duplication fixes
+5. **v0.4.4** - Complete developer experience overhaul
+6. **v0.4.5** - Issue #1 documentation (LLM improvements)
+7. **v0.4.6** - Critical bug fixes (exact comparison, branch naming) ✅
+8. **v0.4.7** - Full recursive heading support (##-######) ✅
 
 **Result**: 
+- **Full recursive structure** - arbitrary nesting depth supported
 - Subsections fully supported - parsed, tracked, and integrated into heading-maps
 - Root-level file support (`docs-folder: '.'`)
 - Improved PR titles and descriptions
-- 9 automated GitHub test scenarios
-- 121 comprehensive tests (+39% from v0.4.3)
+- 16 automated GitHub test scenarios
+- 131 comprehensive tests (+6 nested subsection tests)
 
 ---
 
@@ -58,13 +63,13 @@ The v0.4.x series focused on subsection handling and developer experience:
 
 **6 Core Modules**:
 - `index.ts` - GitHub Action entry point (118 lines)
-- `file-processor.ts` - Translation orchestration (244 lines)
-- `parser.ts` - MyST Markdown parser (172 lines)
-- `diff-detector.ts` - Change detection (178 lines)
+- `file-processor.ts` - Translation orchestration (250 lines)
+- `parser.ts` - Recursive MyST parser (168 lines)
+- `diff-detector.ts` - Recursive change detection (180 lines)
 - `translator.ts` - Claude integration (257 lines)
 - `heading-map.ts` - Section matching (200 lines)
 
-**Design Philosophy**: Simple, maintainable, section-based approach
+**Design Philosophy**: Simple, maintainable, section-based approach with full recursion
 
 ### Key Features
 
@@ -73,10 +78,11 @@ The v0.4.x series focused on subsection handling and developer experience:
    - Claude Sonnet 4.5 with glossary support
    - UPDATE mode (incremental) and NEW mode (full document)
 
-2. **Subsection Handling** (v0.4.3)
-   - Parses `### Subsections` from translated content
+2. **Recursive Subsection Handling** (v0.4.7)
+   - **Stack-based parsing** for all heading levels (##, ###, ####, #####, ######)
+   - **Recursive comparison** detects changes at any depth
    - Recursive heading-map integration
-   - No duplication in reconstruction
+   - Handles arbitrarily nested document structures
 
 3. **Heading-Map System**
    - Language-independent section matching

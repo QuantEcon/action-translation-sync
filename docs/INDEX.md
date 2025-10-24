@@ -2,7 +2,7 @@
 
 Complete documentation for the Translation Sync GitHub Action.
 
-**Current Version**: v0.4.6 (Production-Ready)  
+**Current Version**: v0.4.7 (Production-Ready)  
 **Status**: Ready for v1.0 API Stabilization
 
 ---
@@ -27,14 +27,14 @@ Complete documentation for the Translation Sync GitHub Action.
 
 1. **[Heading Maps](HEADING-MAPS.md)** - Robust cross-language section matching
 2. **[Claude Models](CLAUDE-MODELS.md)** - Choosing and configuring Claude models
-3. **[Translation Glossary](../glossary/README.md)** - Built-in glossary system (342 terms)
+3. **[Translation Glossary](../glossary/README.md)** - Built-in glossary system (355 terms)
 4. **[Action Configuration](../README.md#inputs)** - Inputs, outputs, and parameters
 
 ---
 
 ## 🧪 Development & Testing
 
-1. **[Testing Guide](TESTING.md)** - Test suite design, fixtures, and how to write tests
+1. **[Testing Guide](TESTING.md)** - Test suite design, fixtures, and how to write tests (131 tests)
 2. **[TODO List](TODO.md)** - Development roadmap and task tracking
 3. **[Status Report](STATUS-REPORT.md)** - Current project status
 
@@ -42,7 +42,8 @@ Complete documentation for the Translation Sync GitHub Action.
 
 ## 📋 Release Notes
 
-- **[v0.4.6](releases/v0.4.6.md)** - Exact section comparison, branch name collision fix ✅
+- **[v0.4.7](releases/v0.4.7.md)** - Full recursive heading support (##-######) ✅
+- **[v0.4.6](releases/v0.4.6.md)** - Exact section comparison, branch name collision fix
 - **[v0.4.5](releases/v0.4.5.md)** - Bug fixes and stability improvements
 - **[v0.4.4](releases/v0.4.4.md)** - Developer experience, GitHub testing, root-level support
 - **[v0.4.3](releases/v0.4.3.md)** - Subsection support complete with regression tests
