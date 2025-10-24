@@ -15,7 +15,7 @@ This document provides a basic introduction to economic principles. We will expl
 
 ## Economic Models
 
-Economic models are simplified representations of economic processes. They help economists understand complex systems by focusing on the most important relationships.
+Economic models are simplified representations of economic processes. They help economists understand complex systems by focusing on the most important relationships and interactions.
 
 Models make assumptions to simplify reality. While no model is perfect, good models provide valuable insights into how the economy works.
 
