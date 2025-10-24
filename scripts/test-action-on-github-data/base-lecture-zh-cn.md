@@ -10,9 +10,10 @@ kernelspec:
 heading-map:
   Linear Algebra Foundations: 线性代数基础
   Vector Spaces: 向量空间
-  Basic Properties: 基本性质
+  Vector Spaces::Basic Properties: 基本性质
+  Vector Spaces::Basic Properties::Applications in Economics: 在经济学中的应用
   Matrix Operations: 矩阵运算
-  Applications in Economics: 经济学应用
+  Matrix Operations::Applications in Economics: 经济学应用
   Eigenvalues and Eigenvectors: 特征值与特征向量
 ---
 
