@@ -169,39 +169,11 @@ export class DiffDetector {
    * Check if section content has changed
    */
   private sectionContentEqual(section1: Section, section2: Section): boolean {
-    // For translations, we can't compare content directly
-    // Instead, compare structure: subsections, code blocks, math, etc.
+    // Compare source documents (old English vs new English) using exact string equality
+    // Any change in content, even a single character, should be detected
+    // This ensures we catch typo fixes, word changes, added sentences, etc.
     
-    // Same number of subsections
-    if (section1.subsections.length !== section2.subsections.length) {
-      return false;
-    }
-
-    // Compare content length (rough heuristic)
-    const lengthDiff = Math.abs(section1.content.length - section2.content.length);
-    const avgLength = (section1.content.length + section2.content.length) / 2;
-    
-    // If length changed by more than 20%, consider it modified
-    if (lengthDiff / avgLength > 0.2) {
-      return false;
-    }
-
-    // Check if code blocks match (these should be preserved)
-    const codeBlocks1 = this.extractCodeBlocks(section1.content);
-    const codeBlocks2 = this.extractCodeBlocks(section2.content);
-    
-    if (codeBlocks1.length !== codeBlocks2.length) {
-      return false;
-    }
-
-    return true;
-  }
-
-  /**
-   * Extract code blocks from content
-   */
-  private extractCodeBlocks(content: string): string[] {
-    const codeBlockRegex = /```[\s\S]*?```/g;
-    return content.match(codeBlockRegex) || [];
+    // Direct string comparison - trim to ignore trailing whitespace differences
+    return section1.content.trim() === section2.content.trim();
   }
 }
