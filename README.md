@@ -231,3 +231,10 @@ For development guidelines, see:
 - [Copilot Instructions](.github/copilot-instructions.md) - Project conventions and guidelines
 - [Documentation Index](docs/INDEX.md) - Complete documentation navigation
 - [Quick Start Guide](docs/QUICKSTART.md) - Developer setup
+
+## Acknowledgements
+
+We would like to thank the following contributors for their valuable reviews and contributions to this project:
+
+- [@HumphreyYang](https://github.com/HumphreyYang)
+- [@nisha617](https://github.com/nisha617)
