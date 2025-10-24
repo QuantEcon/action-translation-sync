@@ -416,6 +416,12 @@ class FileProcessor {
                 let finalSubsections;
                 const expectedSubsectionCount = newSection.subsections.length;
                 const parsedSubsectionCount = subsections.length;
+                // DEBUG: Log the actual structure we're comparing
+                this.log(`[DEBUG] newSection.subsections.length = ${newSection.subsections.length}`);
+                if (newSection.subsections.length > 0) {
+                    this.log(`[DEBUG] newSection.subsections[0].heading = "${newSection.subsections[0].heading}"`);
+                    this.log(`[DEBUG] newSection.subsections[0].subsections.length = ${newSection.subsections[0].subsections.length}`);
+                }
                 // Helper to recursively validate subsection structure
                 const validateSubsectionStructure = (expected, parsed, level = 0) => {
                     const indent = '  '.repeat(level);
