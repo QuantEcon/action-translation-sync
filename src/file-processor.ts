@@ -240,16 +240,37 @@ export class FileProcessor {
         }
 
         // Determine final subsections based on what the translator returned
-        // If translator returned the expected number of subsections, use them
+        // If translator returned the expected subsection structure (recursively), use them
         // Otherwise, preserve target subsections to avoid data loss
         let finalSubsections: Section[];
         const expectedSubsectionCount = newSection.subsections.length;
         const parsedSubsectionCount = subsections.length;
         
+        // Helper to recursively validate subsection structure
+        const validateSubsectionStructure = (expected: Section[], parsed: Section[]): boolean => {
+          if (expected.length !== parsed.length) {
+            return false;
+          }
+          for (let i = 0; i < expected.length; i++) {
+            // Check if nested subsections match recursively
+            if (!validateSubsectionStructure(expected[i].subsections, parsed[i].subsections)) {
+              return false;
+            }
+          }
+          return true;
+        };
+        
         if (parsedSubsectionCount === expectedSubsectionCount && parsedSubsectionCount > 0) {
-          // Translation returned all expected subsections
-          finalSubsections = subsections;
-          this.log(`Using ${parsedSubsectionCount} translated subsections`);
+          // Check if the full recursive structure matches
+          if (validateSubsectionStructure(newSection.subsections, subsections)) {
+            // Translation returned all expected subsections with correct structure
+            finalSubsections = subsections;
+            this.log(`Using ${parsedSubsectionCount} translated subsections (structure validated)`);
+          } else {
+            // Structure mismatch - preserve target to avoid data loss
+            this.log(`Warning: Subsection structure mismatch (counts match but nested structure differs), preserving target subsections`);
+            finalSubsections = targetSection.subsections;
+          }
         } else if (parsedSubsectionCount === 0 && expectedSubsectionCount === 0) {
           // No subsections expected or returned - correct
           finalSubsections = [];
