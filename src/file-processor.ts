@@ -253,6 +253,11 @@ export class FileProcessor {
         } else if (parsedSubsectionCount === 0 && expectedSubsectionCount === 0) {
           // No subsections expected or returned - correct
           finalSubsections = [];
+        } else if (expectedSubsectionCount === 0) {
+          // Source has no subsections (deletion case) - always use empty array
+          // Don't preserve target subsections when source explicitly has none
+          this.log(`Source has no subsections (deletion), using empty array (ignoring ${parsedSubsectionCount} parsed subsections)`);
+          finalSubsections = [];
         } else {
           // Mismatch: preserve target subsections to avoid data loss
           this.log(`Warning: Expected ${expectedSubsectionCount} subsections but got ${parsedSubsectionCount}, preserving target subsections`);
