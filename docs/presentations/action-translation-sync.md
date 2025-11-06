@@ -37,7 +37,6 @@ Monitor merged PRs → Detect changes → Translate → Create review PR
 ✓ **MyST Markdown Aware** – Preserves code, math, directives
 ✓ **Consistent Terminology** – Built-in glossaries (355+ terms for zh-cn)
 ✓ **Review Workflow** – All translations go through PR review
-✓ **GPT5 Validated** – 100% pass rate on comprehensive test suite
 
 ---
 
