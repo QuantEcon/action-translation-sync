@@ -13,6 +13,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { Glossary, SectionTranslationRequest, SectionTranslationResult, FullDocumentTranslationRequest } from './types';
 import * as core from '@actions/core';
+import { getLanguageConfig } from './language-config';
 
 export class TranslationService {
   private client: Anthropic;
@@ -64,6 +65,10 @@ export class TranslationService {
     }
 
     const glossarySection = glossary ? this.formatGlossary(glossary, targetLanguage) : '';
+    const languageConfig = getLanguageConfig(targetLanguage);
+    const additionalRules = languageConfig.additionalRules.length > 0
+      ? languageConfig.additionalRules.map((rule, i) => `${7 + i}. ${rule}`).join('\n')
+      : '';
 
     const prompt = `You are updating a translation of a technical document section from ${sourceLanguage} to ${targetLanguage}.
 
@@ -76,7 +81,8 @@ CRITICAL RULES:
 4. Preserve all MyST Markdown formatting, code blocks, math equations, and directives
 5. DO NOT translate code, math, URLs, or technical identifiers
 6. Use the glossary for consistent terminology
-7. Return ONLY the updated ${targetLanguage} section, no explanations
+${additionalRules}
+${additionalRules ? '' : '7. '}Return ONLY the updated ${targetLanguage} section, no explanations
 
 ${glossarySection}
 
@@ -137,6 +143,10 @@ Provide ONLY the updated ${targetLanguage} translation. Do not include any marke
     }
 
     const glossarySection = glossary ? this.formatGlossary(glossary, targetLanguage) : '';
+    const languageConfig = getLanguageConfig(targetLanguage);
+    const additionalRules = languageConfig.additionalRules.length > 0
+      ? languageConfig.additionalRules.map((rule, i) => `${8 + i}. ${rule}`).join('\n')
+      : '';
 
     const prompt = `You are translating a new section of technical documentation from ${sourceLanguage} to ${targetLanguage}.
 
@@ -148,7 +158,8 @@ RULES:
 5. DO NOT translate URLs, file paths, or technical identifiers
 6. Use the glossary for consistent terminology
 7. Maintain heading structure and levels
-8. Return ONLY the translated section, no explanations
+${additionalRules}
+${additionalRules ? '' : '8. '}Return ONLY the translated section, no explanations
 
 ${glossarySection}
 
@@ -191,6 +202,10 @@ Provide ONLY the ${targetLanguage} translation. Do not include any markers, expl
     const { content, sourceLanguage, targetLanguage, glossary } = request;
 
     const glossarySection = glossary ? this.formatGlossary(glossary, targetLanguage) : '';
+    const languageConfig = getLanguageConfig(targetLanguage);
+    const additionalRules = languageConfig.additionalRules.length > 0
+      ? languageConfig.additionalRules.map((rule, i) => `${8 + i}. ${rule}`).join('\n')
+      : '';
 
     const prompt = `You are translating a complete technical lecture from ${sourceLanguage} to ${targetLanguage}.
 
@@ -202,6 +217,7 @@ RULES:
 5. DO NOT translate URLs, file paths, or technical identifiers
 6. Use the provided glossary for consistent terminology
 7. Maintain the exact same heading structure and anchors
+${additionalRules}
 
 ${glossarySection}
 

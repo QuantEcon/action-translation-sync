@@ -2,19 +2,31 @@
 
 A GitHub Action that automatically synchronizes translations across repositories using Claude Sonnet 4.5.
 
+**Version**: v0.5.1 | **Status**: Production-Ready ✅
+
 ## Overview
 
 This action monitors a source repository for merged pull requests and automatically translates changed MyST Markdown files to a target repository, creating pull requests for review.
 
+**Key Features**:
+- 🌍 **Language-Extensible**: Easy configuration for multiple target languages
+- 🗺️ **Heading-Map System**: Robust cross-language section matching
+- 🔄 **Intelligent Diff Translation**: Only translates changed sections
+- ✍️ **MyST Markdown Support**: Preserves code blocks, math equations, and directives
+- 📚 **Glossary Support**: Built-in glossaries for consistent terminology
+- ✅ **GPT5 Validated**: 100% pass rate on 21 comprehensive test scenarios
+
 ## Features
 
+- 🌍 **Language Configuration** (v0.5.1): Extensible system for language-specific rules (punctuation, typography)
 - 🗺️ **Heading-Map System** (v0.4.0): Robust cross-language section matching that survives reordering
 - 🔄 **Intelligent Diff Translation**: Only translates changed sections, preserving existing translations
 - 📄 **Full File Translation**: Handles new files with complete translation
 - ✍️ **MyST Markdown Support**: Preserves code blocks, math equations, and MyST directives
-- 📚 **Glossary Support**: Built-in glossaries for consistent technical terminology (342 terms)
+- 📚 **Glossary Support**: Built-in glossaries for consistent technical terminology (355 terms)
 - 📑 **Automatic TOC Updates**: Updates `_toc.yml` when new files are added
 - 🔍 **PR-Based Workflow**: All translations go through pull request review
+- ♻️ **Recursive Subsections**: Full support for nested headings at any depth (##-######)
 
 ## Usage
 
@@ -57,13 +69,13 @@ jobs:
 | Input | Required | Default | Description |
 |-------|----------|---------|-------------|
 | `target-repo` | Yes | - | Target repository (format: `owner/repo`) |
-| `target-language` | Yes | - | Target language code (e.g., `zh-cn`) |
+| `target-language` | Yes | - | Target language code (e.g., `zh-cn`, `ja`, `es`) |
 | `docs-folder` | No | `lectures/` | Documentation folder to monitor |
 | `source-language` | No | `en` | Source language code |
 | `glossary-path` | No | - | Path to **custom** glossary (built-in glossary used by default) |
 | `toc-file` | No | `_toc.yml` | Table of contents file name |
 | `anthropic-api-key` | Yes | - | Anthropic API key for Claude |
-| `claude-model` | No | `claude-sonnet-4-20250514` | Claude model to use for translation |
+| `claude-model` | No | `claude-sonnet-4-5-20250929` | Claude model to use for translation |
 | `github-token` | Yes | - | GitHub token for API access |
 | `pr-labels` | No | `translation-sync,automated` | Comma-separated PR labels |
 | `pr-reviewers` | No | - | Comma-separated GitHub usernames (e.g., `user1,user2`) |
@@ -83,7 +95,7 @@ The action includes **built-in glossaries** for consistent translation across al
 **Location**: `glossary/{language}.json`
 
 Current glossaries:
-- **`glossary/zh-cn.json`** - Simplified Chinese (342 terms) ✅
+- **`glossary/zh-cn.json`** - Simplified Chinese (355 terms) ✅
 - **`glossary/ja.json`** - Japanese (planned)
 - **`glossary/es.json`** - Spanish (planned)
 

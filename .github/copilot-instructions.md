@@ -5,9 +5,9 @@
 **action-translation-sync** is a GitHub Action that automatically translates MyST Markdown documents from English to Chinese using Claude AI (Anthropic). It uses a **section-based approach** for robust, maintainable translation.
 
 **Core Architecture**: Section-based translation with full recursive heading support
-**Current Version**: v0.4.7 (Production-Ready)
-**Test Coverage**: 131 tests, all passing
-**Code Size**: ~1,200 lines core logic across 6 modules
+**Current Version**: v0.5.0 (Production-Ready)
+**Test Coverage**: 147 tests, all passing
+**Code Size**: ~1,200 lines core logic across 7 modules
 
 ## Key Design Principles
 
@@ -93,6 +93,7 @@ src/
 ├── translator.ts        # Claude API integration (257 lines)
 ├── file-processor.ts    # Translation orchestration (244 lines)
 ├── heading-map.ts       # Heading-map system (200 lines)
+├── language-config.ts   # Language-specific translation rules (66 lines)
 ├── inputs.ts            # Action inputs
 └── types.ts             # TypeScript types
 ```
@@ -116,6 +117,13 @@ src/
 - UPDATE mode (incremental)
 - NEW mode (full translation)
 - Glossary support
+- Language-specific prompt customization
+
+**language-config.ts**:
+- Language-specific translation rules
+- Extensible configuration for multiple target languages
+- Punctuation and typography rules per language
+- Easy addition of new target languages
 
 **file-processor.ts**:
 - Orchestrate translation workflow

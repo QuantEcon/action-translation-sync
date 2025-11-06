@@ -1677,6 +1677,74 @@ function validatePREvent(context, testMode) {
 
 /***/ }),
 
+/***/ 2142:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+/**
+ * Language-specific configuration for translation prompts
+ *
+ * Each target language can have specific instructions that are appended to the translation prompts.
+ * This allows for language-specific typography, punctuation, and stylistic rules.
+ */
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.getLanguageConfig = getLanguageConfig;
+exports.formatAdditionalRules = formatAdditionalRules;
+/**
+ * Language-specific configurations
+ */
+const LANGUAGE_CONFIGS = {
+    'zh-cn': {
+        code: 'zh-cn',
+        name: 'Chinese (Simplified)',
+        additionalRules: [
+            'Use proper full-width Chinese punctuation marks (，：。！？) not ASCII punctuation (,.!?) in prose text',
+        ],
+    },
+    // Future language configurations can be added here:
+    // 'ja': {
+    //   code: 'ja',
+    //   name: 'Japanese',
+    //   additionalRules: [
+    //     'Use proper Japanese punctuation marks (、。「」)',
+    //   ],
+    // },
+    // 'es': {
+    //   code: 'es',
+    //   name: 'Spanish',
+    //   additionalRules: [
+    //     'Use inverted punctuation marks (¿?) for questions and (¡!) for exclamations',
+    //   ],
+    // },
+};
+/**
+ * Get language-specific configuration
+ * Returns empty rules array if language not configured
+ */
+function getLanguageConfig(languageCode) {
+    const normalized = languageCode.toLowerCase();
+    return LANGUAGE_CONFIGS[normalized] || {
+        code: languageCode,
+        name: languageCode,
+        additionalRules: [],
+    };
+}
+/**
+ * Format additional rules for inclusion in prompts
+ * Returns empty string if no additional rules
+ */
+function formatAdditionalRules(languageCode) {
+    const config = getLanguageConfig(languageCode);
+    if (config.additionalRules.length === 0) {
+        return '';
+    }
+    return config.additionalRules.map(rule => rule).join('\n');
+}
+//# sourceMappingURL=language-config.js.map
+
+/***/ }),
+
 /***/ 4262:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -1999,6 +2067,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.TranslationService = void 0;
 const sdk_1 = __importDefault(__nccwpck_require__(121));
 const core = __importStar(__nccwpck_require__(7484));
+const language_config_1 = __nccwpck_require__(2142);
 class TranslationService {
     constructor(apiKey, model = 'claude-sonnet-4.5-20241022', debug = false) {
         this.client = new sdk_1.default({ apiKey });
@@ -2042,6 +2111,10 @@ class TranslationService {
             };
         }
         const glossarySection = glossary ? this.formatGlossary(glossary, targetLanguage) : '';
+        const languageConfig = (0, language_config_1.getLanguageConfig)(targetLanguage);
+        const additionalRules = languageConfig.additionalRules.length > 0
+            ? languageConfig.additionalRules.map((rule, i) => `${7 + i}. ${rule}`).join('\n')
+            : '';
         const prompt = `You are updating a translation of a technical document section from ${sourceLanguage} to ${targetLanguage}.
 
 TASK: The ${sourceLanguage} section has been modified. Update the existing ${targetLanguage} translation to reflect these changes.
@@ -2053,7 +2126,8 @@ CRITICAL RULES:
 4. Preserve all MyST Markdown formatting, code blocks, math equations, and directives
 5. DO NOT translate code, math, URLs, or technical identifiers
 6. Use the glossary for consistent terminology
-7. Return ONLY the updated ${targetLanguage} section, no explanations
+${additionalRules}
+${additionalRules ? '' : '7. '}Return ONLY the updated ${targetLanguage} section, no explanations
 
 ${glossarySection}
 
@@ -2106,6 +2180,10 @@ Provide ONLY the updated ${targetLanguage} translation. Do not include any marke
             };
         }
         const glossarySection = glossary ? this.formatGlossary(glossary, targetLanguage) : '';
+        const languageConfig = (0, language_config_1.getLanguageConfig)(targetLanguage);
+        const additionalRules = languageConfig.additionalRules.length > 0
+            ? languageConfig.additionalRules.map((rule, i) => `${8 + i}. ${rule}`).join('\n')
+            : '';
         const prompt = `You are translating a new section of technical documentation from ${sourceLanguage} to ${targetLanguage}.
 
 RULES:
@@ -2116,7 +2194,8 @@ RULES:
 5. DO NOT translate URLs, file paths, or technical identifiers
 6. Use the glossary for consistent terminology
 7. Maintain heading structure and levels
-8. Return ONLY the translated section, no explanations
+${additionalRules}
+${additionalRules ? '' : '8. '}Return ONLY the translated section, no explanations
 
 ${glossarySection}
 
@@ -2152,6 +2231,10 @@ Provide ONLY the ${targetLanguage} translation. Do not include any markers, expl
     async translateFullDocument(request) {
         const { content, sourceLanguage, targetLanguage, glossary } = request;
         const glossarySection = glossary ? this.formatGlossary(glossary, targetLanguage) : '';
+        const languageConfig = (0, language_config_1.getLanguageConfig)(targetLanguage);
+        const additionalRules = languageConfig.additionalRules.length > 0
+            ? languageConfig.additionalRules.map((rule, i) => `${8 + i}. ${rule}`).join('\n')
+            : '';
         const prompt = `You are translating a complete technical lecture from ${sourceLanguage} to ${targetLanguage}.
 
 RULES:
@@ -2162,6 +2245,7 @@ RULES:
 5. DO NOT translate URLs, file paths, or technical identifiers
 6. Use the provided glossary for consistent terminology
 7. Maintain the exact same heading structure and anchors
+${additionalRules}
 
 ${glossarySection}
 

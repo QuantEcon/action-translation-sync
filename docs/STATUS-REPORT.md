@@ -1,18 +1,20 @@
 # Project Status Report
 
-**Version**: v0.4.10 (Production-Ready)  
-**Date**: October 24, 2025  
-**Status**: Ready for v1.0 API Stabilization ✅
+**Version**: v0.5.1 (Production-Ready)  
+**Date**: November 6, 2025  
+**Status**: Language-Extensible Architecture ✅
 
 ---
 
 ## Current Status
 
-**v0.4.10** is production-ready with unified recursive parser architecture. Critical fix eliminates parser duplication by making `parseDocumentComponents()` use the same recursive `parseSections()` logic, ensuring #### and deeper subsections are properly preserved in heading-maps.
+**v0.5.1** introduces language-specific configuration system based on comprehensive GPT5 evaluation of the GitHub test suite. All 21 test scenarios passed with only minor stylistic feedback about Chinese punctuation, now addressed with extensible language configuration.
 
 ### What's Complete ✅
 
 - **Core Translation**: Section-based translation with Claude Sonnet 4.5
+- **Language Configuration**: Extensible system for language-specific rules (v0.5.1)
+- **GPT5 Validation**: All 21 GitHub test scenarios passed (v0.5.1)
 - **Recursive Heading Support**: Full parsing and comparison of all heading levels (##-######) (v0.4.7)
 - **Exact Section Comparison**: Any content change detected at any depth (v0.4.7)
 - **Unique Branch Names**: No more collisions with concurrent PRs (v0.4.6)
@@ -20,41 +22,39 @@
 - **Heading Maps**: Language-independent section matching with recursive structure
 - **Diff Detection**: Multi-strategy change detection with recursive comparison
 - **Root-Level Support**: Works with `docs-folder: '.'` for root-level files
-- **GitHub Testing**: 16 automated test scenarios with PR validation
-- **Test Suite**: 131 tests covering all components including nested subsections
-- **Documentation**: 12 comprehensive documentation files
+- **GitHub Testing**: 21 automated test scenarios with PR validation
+- **Test Suite**: 147 tests covering all components including language configuration
+- **Documentation**: 12+ comprehensive documentation files
 
 ### Key Metrics
 
-- **Code Size**: ~1,200 lines core logic
-- **Test Coverage**: 131 tests, 100% passing (125 original + 6 nested subsection tests)
-- **Bundle Size**: 1937kB
+- **Code Size**: ~1,300 lines core logic
+- **Test Coverage**: 147 tests, 100% passing (131 original + 9 integration + 7 language config)
+- **Modules**: 7 core modules
+- **Bundle Size**: 1951kB
 - **Glossary**: 355 terms (zh-cn)
-- **GitHub Tests**: 16 scenarios with automated reset script
+- **GitHub Tests**: 21 scenarios with automated reset script
+- **GPT5 Evaluation**: 100% pass rate on all test scenarios
 
 ---
 
-## v0.4.x Journey
+## v0.5.x - Language Extensibility
 
-The v0.4.x series focused on subsection handling and developer experience:
+The v0.5.x series focuses on multilingual support and validation:
 
-1. **v0.4.0** - Discovered heading-map missing subsections
-2. **v0.4.1** - Fixed subsection parsing from translated content
-3. **v0.4.2** - Fixed heading-map recursive processing  
-4. **v0.4.3** - Subsection duplication fixes
-5. **v0.4.4** - Complete developer experience overhaul
-6. **v0.4.5** - Issue #1 documentation (LLM improvements)
-7. **v0.4.6** - Critical bug fixes (exact comparison, branch naming) ✅
-8. **v0.4.7** - Full recursive heading support (##-######) ✅
-9. **v0.4.10** - Parser unification fix (parseDocumentComponents now uses recursive parser) ✅
+1. **v0.5.0** - Production release with full recursive support
+2. **v0.5.1** - Language configuration system + GPT5 validation ✅
 
-**Result**: 
-- **Full recursive structure** - arbitrary nesting depth supported
-- Subsections fully supported - parsed, tracked, and integrated into heading-maps
-- Root-level file support (`docs-folder: '.'`)
-- Improved PR titles and descriptions
-- 16 automated GitHub test scenarios
-- 131 comprehensive tests (+6 nested subsection tests)
+**Key Improvements**:
+- **GPT5 Evaluation**: Comprehensive review of 21 GitHub test scenarios
+  - Scope correctness: 100% pass
+  - Translation quality: 100% pass
+  - Minor finding: Occasional ASCII punctuation in Chinese text
+- **Language Configuration**: New `language-config.ts` module
+  - Extensible system for language-specific translation rules
+  - Chinese punctuation rules (full-width vs ASCII)
+  - Easy addition of new target languages
+- **7 New Tests**: Complete coverage of language configuration system
 
 ---
 
@@ -62,15 +62,16 @@ The v0.4.x series focused on subsection handling and developer experience:
 
 ### Architecture
 
-**6 Core Modules**:
+**7 Core Modules**:
 - `index.ts` - GitHub Action entry point (118 lines)
 - `file-processor.ts` - Translation orchestration (250 lines)
 - `parser.ts` - Recursive MyST parser (168 lines)
 - `diff-detector.ts` - Recursive change detection (180 lines)
 - `translator.ts` - Claude integration (257 lines)
 - `heading-map.ts` - Section matching (200 lines)
+- `language-config.ts` - Language-specific rules (66 lines)
 
-**Design Philosophy**: Simple, maintainable, section-based approach with full recursion
+**Design Philosophy**: Simple, maintainable, section-based approach with full recursion and language extensibility
 
 ### Key Features
 
