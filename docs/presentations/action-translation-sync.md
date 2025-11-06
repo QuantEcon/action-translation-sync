@@ -32,10 +32,12 @@ Monitor merged PRs → Detect changes → Translate → Create review PR
 ## Key Capabilities
 
 ✓ **Smart Diff Translation** – Only translates modified sections
-✓ **Section-Based Matching** – Tracks content across languages  
+✓ **Recursive Subsections** – Full support for nested headings (##-######)
+✓ **Language Configuration** – Extensible system for language-specific rules
 ✓ **MyST Markdown Aware** – Preserves code, math, directives
-✓ **Consistent Terminology** – Built-in glossaries (342+ terms)
+✓ **Consistent Terminology** – Built-in glossaries (355+ terms for zh-cn)
 ✓ **Review Workflow** – All translations go through PR review
+✓ **GPT5 Validated** – 100% pass rate on comprehensive test suite
 
 ---
 
@@ -107,16 +109,18 @@ _(new sections)_
 
 ## Current Status
 
-📦 **v0.4.6** – Production-Ready
-🎯 **v1.0** – API Stabilization
-✅ 125 tests passing
+📦 **v0.5.1** – Production-Ready
+✨ **Language-Extensible Architecture**
+✅ 147 tests passing (100%)
+🧪 24 GitHub test scenarios
 
 ## Use Cases
 
-- Multi-language docs
-- Educational content
+- Multi-language documentation
+- Educational content (QuantEcon lectures)
 - Technical documentation
 - OSS localization
+- Academic papers
 
 </div>
 <div>
@@ -127,7 +131,11 @@ _(new sections)_
 quantecon/action-translation-sync
 
 **Docs**  
-Comprehensive guides in `docs/`
+10 comprehensive guides in `docs/`
+
+**Tools**
+- Bulk translator for initial setup
+- GitHub testing framework
 
 **License**  
 MIT
