@@ -1385,6 +1385,21 @@ async function run() {
                         sha: baseSha,
                     });
                     core.info(`Created branch: ${branchName}`);
+                    // Fetch source PR details if available
+                    let sourcePrTitle = '';
+                    if (prNumber) {
+                        try {
+                            const { data: sourcePr } = await octokit.rest.pulls.get({
+                                owner: github.context.repo.owner,
+                                repo: github.context.repo.repo,
+                                pull_number: prNumber,
+                            });
+                            sourcePrTitle = sourcePr.title;
+                        }
+                        catch (error) {
+                            core.warning(`Could not fetch source PR title: ${error}`);
+                        }
+                    }
                     // Commit each translated file
                     for (const file of translatedFiles) {
                         await octokit.rest.repos.createOrUpdateFileContents({
@@ -1411,15 +1426,33 @@ async function run() {
                         core.info(`Deleted: ${file.path}`);
                     }
                     // Create pull request
+                    // Build file change list with operation indicators
+                    const newFiles = translatedFiles.filter(f => !f.sha);
+                    const updatedFiles = translatedFiles.filter(f => f.sha);
+                    let filesChangedSection = '';
+                    if (newFiles.length > 0) {
+                        filesChangedSection += '### Files Added\n' + newFiles.map(f => `- ✅ \`${f.path}\``).join('\n');
+                    }
+                    if (updatedFiles.length > 0) {
+                        if (filesChangedSection)
+                            filesChangedSection += '\n\n';
+                        filesChangedSection += '### Files Updated\n' + updatedFiles.map(f => `- ✏️ \`${f.path}\``).join('\n');
+                    }
+                    if (filesToDelete.length > 0) {
+                        if (filesChangedSection)
+                            filesChangedSection += '\n\n';
+                        filesChangedSection += '### Files Deleted\n' + filesToDelete.map(f => `- ❌ \`${f.path}\``).join('\n');
+                    }
                     const prBody = `## Automated Translation Sync
 
 This PR contains automated translations from [${github.context.repo.owner}/${github.context.repo.repo}](https://github.com/${github.context.repo.owner}/${github.context.repo.repo}).
 
-### Changes
-${translatedFiles.map(f => `- \`${f.path}\``).join('\n')}${filesToDelete.length > 0 ? '\n\n### Deletions\n' + filesToDelete.map(f => `- \`${f.path}\``).join('\n') : ''}
+### Source PR
+${prNumber ? `**[#${prNumber}${sourcePrTitle ? ` - ${sourcePrTitle}` : ''}](https://github.com/${github.context.repo.owner}/${github.context.repo.repo}/pull/${prNumber})**` : '**Manual workflow dispatch**'}
 
-### Source
-${prNumber ? `- **PR**: [#${prNumber}](https://github.com/${github.context.repo.owner}/${github.context.repo.repo}/pull/${prNumber})` : '- **Trigger**: Manual workflow dispatch'}
+${filesChangedSection}
+
+### Details
 - **Source Language**: ${inputs.sourceLanguage}
 - **Target Language**: ${inputs.targetLanguage}
 - **Model**: ${inputs.claudeModel}
@@ -1428,15 +1461,20 @@ ${prNumber ? `- **PR**: [#${prNumber}](https://github.com/${github.context.repo.
 *This PR was created automatically by the [translation-sync action](https://github.com/quantecon/action-translation-sync).*`;
                     // Create a concise title with actual filenames
                     const allFiles = [...translatedFiles.map(f => f.path), ...filesToDelete.map(f => f.path)];
-                    const fileList = allFiles.length === 1
-                        ? allFiles[0]
-                        : allFiles.length <= 3
-                            ? allFiles.join(', ')
-                            : `${allFiles.length} files`;
+                    let titleFileList;
+                    if (allFiles.length === 1) {
+                        titleFileList = allFiles[0];
+                    }
+                    else if (allFiles.length === 2) {
+                        titleFileList = `${allFiles[0]} + 1 more`;
+                    }
+                    else {
+                        titleFileList = `${allFiles.length} files`;
+                    }
                     const { data: pr } = await octokit.rest.pulls.create({
                         owner: targetOwner,
                         repo: targetRepoName,
-                        title: `🌐 Translation sync: ${fileList}`,
+                        title: `🌐 [translation-sync] ${titleFileList}`,
                         body: prBody,
                         head: branchName,
                         base: defaultBranch,
