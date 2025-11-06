@@ -2,7 +2,7 @@
 
 A GitHub Action that automatically synchronizes translations across repositories using Claude Sonnet 4.5.
 
-**Version**: v0.5.1 | **Status**: Production-Ready ✅
+**Version**: v0.5.1 | **Status**: Testing & Development ✅
 
 ## Overview
 
