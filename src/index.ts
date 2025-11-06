@@ -55,7 +55,7 @@ async function run(): Promise<void> {
       files = commit.files || [];
     }
 
-    // Filter for markdown files in docs folder
+    // Filter for files to sync: markdown files and TOC files
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const changedMarkdownFiles = files.filter(
       (file: any) =>
@@ -64,12 +64,43 @@ async function run(): Promise<void> {
         file.status !== 'removed'
     );
 
-    if (changedMarkdownFiles.length === 0) {
-      core.info('No markdown files changed in docs folder. Exiting.');
+    // Filter for TOC files to sync (status: added or modified, not removed)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const changedTocFiles = files.filter(
+      (file: any) =>
+        file.filename.startsWith(inputs.docsFolder) &&
+        file.filename.endsWith('_toc.yml') &&
+        file.status !== 'removed'
+    );
+
+    // Filter for removed markdown files (for deletion)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const removedMarkdownFiles = files.filter(
+      (file: any) =>
+        file.filename.startsWith(inputs.docsFolder) &&
+        file.filename.endsWith('.md') &&
+        file.status === 'removed'
+    );
+
+    // Filter for removed TOC files (for deletion)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const removedTocFiles = files.filter(
+      (file: any) =>
+        file.filename.startsWith(inputs.docsFolder) &&
+        file.filename.endsWith('_toc.yml') &&
+        file.status === 'removed'
+    );
+
+    if (changedMarkdownFiles.length === 0 && changedTocFiles.length === 0 && 
+        removedMarkdownFiles.length === 0 && removedTocFiles.length === 0) {
+      core.info('No markdown or TOC files changed in docs folder. Exiting.');
       return;
     }
 
     core.info(`Found ${changedMarkdownFiles.length} changed markdown files`);
+    core.info(`Found ${changedTocFiles.length} changed TOC files`);
+    core.info(`Found ${removedMarkdownFiles.length} removed markdown files`);
+    core.info(`Found ${removedTocFiles.length} removed TOC files`);
 
     // Load glossary - uses built-in glossary by default
     let glossary: Glossary | undefined;
@@ -109,6 +140,7 @@ async function run(): Promise<void> {
     // Process each changed file
     const processedFiles: string[] = [];
     const translatedFiles: Array<{ path: string; content: string; sha?: string }> = [];
+    const filesToDelete: Array<{ path: string; sha: string }> = [];
     const errors: string[] = [];
 
     for (const file of changedMarkdownFiles) {
@@ -215,6 +247,94 @@ async function run(): Promise<void> {
       }
     }
 
+    // Process TOC files (copy directly without translation)
+    for (const file of changedTocFiles) {
+      try {
+        core.info(`Processing TOC file ${file.filename}...`);
+
+        // Get file content from PR
+        const { data: fileData } = await octokit.rest.repos.getContent({
+          owner: github.context.repo.owner,
+          repo: github.context.repo.repo,
+          path: file.filename,
+          ref: github.context.sha,
+        });
+
+        if (!('content' in fileData)) {
+          throw new Error(`Could not get content for ${file.filename}`);
+        }
+
+        const newContent = Buffer.from(fileData.content, 'base64').toString('utf-8');
+
+        // Check if file exists in target repo
+        const [targetOwner, targetRepo] = inputs.targetRepo.split('/');
+        let existingFileSha: string | undefined;
+
+        try {
+          const { data: targetFileData } = await octokit.rest.repos.getContent({
+            owner: targetOwner,
+            repo: targetRepo,
+            path: file.filename,
+          });
+
+          if ('content' in targetFileData) {
+            existingFileSha = targetFileData.sha;
+          }
+        } catch (error) {
+          core.info(`${file.filename} does not exist in target repo - will create it`);
+        }
+
+        core.info(`Successfully processed ${file.filename}`);
+        processedFiles.push(file.filename);
+
+        // Store content for PR creation
+        translatedFiles.push({
+          path: file.filename,
+          content: newContent,
+          sha: existingFileSha,
+        });
+
+      } catch (error) {
+        const errorMessage = `Error processing ${file.filename}: ${error}`;
+        core.error(errorMessage);
+        errors.push(errorMessage);
+      }
+    }
+
+    // Process removed files (prepare for deletion in target repo)
+    const [targetOwner, targetRepo] = inputs.targetRepo.split('/');
+    for (const file of [...removedMarkdownFiles, ...removedTocFiles]) {
+      try {
+        core.info(`Processing removal of ${file.filename}...`);
+
+        // Check if file exists in target repo
+        try {
+          const { data: targetFileData } = await octokit.rest.repos.getContent({
+            owner: targetOwner,
+            repo: targetRepo,
+            path: file.filename,
+          });
+
+          if ('content' in targetFileData) {
+            // File exists in target, mark for deletion
+            filesToDelete.push({
+              path: file.filename,
+              sha: targetFileData.sha,
+            });
+            core.info(`Marked ${file.filename} for deletion`);
+            processedFiles.push(file.filename);
+          }
+        } catch (error) {
+          core.info(`${file.filename} does not exist in target repo - skipping deletion`);
+        }
+
+      } catch (error) {
+        const errorMessage = `Error processing removal of ${file.filename}: ${error}`;
+        core.error(errorMessage);
+        errors.push(errorMessage);
+      }
+    }
+
     // Report results
     if (errors.length > 0) {
       core.setFailed(`Translation completed with ${errors.length} errors`);
@@ -222,7 +342,7 @@ async function run(): Promise<void> {
       core.info(`Successfully processed ${processedFiles.length} files`);
       
       // Create PR in target repo with translated content
-      if (translatedFiles.length > 0) {
+      if (translatedFiles.length > 0 || filesToDelete.length > 0) {
         try {
           core.info('Creating PR in target repository...');
           
@@ -268,6 +388,19 @@ async function run(): Promise<void> {
             });
             core.info(`Committed: ${file.path}`);
           }
+
+          // Delete removed files
+          for (const file of filesToDelete) {
+            await octokit.rest.repos.deleteFile({
+              owner: targetOwner,
+              repo: targetRepoName,
+              path: file.path,
+              message: `Delete removed file: ${file.path}`,
+              branch: branchName,
+              sha: file.sha,
+            });
+            core.info(`Deleted: ${file.path}`);
+          }
           
           // Create pull request
           const prBody = `## Automated Translation Sync
@@ -275,7 +408,7 @@ async function run(): Promise<void> {
 This PR contains automated translations from [${github.context.repo.owner}/${github.context.repo.repo}](https://github.com/${github.context.repo.owner}/${github.context.repo.repo}).
 
 ### Changes
-${translatedFiles.map(f => `- \`${f.path}\``).join('\n')}
+${translatedFiles.map(f => `- \`${f.path}\``).join('\n')}${filesToDelete.length > 0 ? '\n\n### Deletions\n' + filesToDelete.map(f => `- \`${f.path}\``).join('\n') : ''}
 
 ### Source
 ${prNumber ? `- **PR**: [#${prNumber}](https://github.com/${github.context.repo.owner}/${github.context.repo.repo}/pull/${prNumber})` : '- **Trigger**: Manual workflow dispatch'}
@@ -287,11 +420,12 @@ ${prNumber ? `- **PR**: [#${prNumber}](https://github.com/${github.context.repo.
 *This PR was created automatically by the [translation-sync action](https://github.com/quantecon/action-translation-sync).*`;
 
           // Create a concise title with actual filenames
-          const fileList = translatedFiles.length === 1 
-            ? translatedFiles[0].path 
-            : translatedFiles.length <= 3
-              ? translatedFiles.map(f => f.path).join(', ')
-              : `${translatedFiles.length} files`;
+          const allFiles = [...translatedFiles.map(f => f.path), ...filesToDelete.map(f => f.path)];
+          const fileList = allFiles.length === 1 
+            ? allFiles[0] 
+            : allFiles.length <= 3
+              ? allFiles.join(', ')
+              : `${allFiles.length} files`;
           
           const { data: pr } = await octokit.rest.pulls.create({
             owner: targetOwner,
