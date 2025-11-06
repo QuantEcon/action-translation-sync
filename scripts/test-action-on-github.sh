@@ -150,9 +150,10 @@ else
 
     # Reset to base state
     echo "Resetting to base state..."
-    rm -rf *.md lectures/
+    rm -rf *.md *.yml lectures/
     cp "$DATA_DIR/base-minimal.md" "$TEST_FILE_MINIMAL"
     cp "$DATA_DIR/base-lecture.md" "$TEST_FILE_LECTURE"
+    cp "$DATA_DIR/base-toc.yml" "_toc.yml"
 
     # Ensure workflow exists
     mkdir -p .github/workflows
@@ -196,9 +197,10 @@ else
 
     # Reset to base state
     echo "Resetting to base state..."
-    rm -rf *.md lectures/
+    rm -rf *.md *.yml lectures/
     cp "$DATA_DIR/base-minimal-zh-cn.md" "$TEST_FILE_MINIMAL"
     cp "$DATA_DIR/base-lecture-zh-cn.md" "$TEST_FILE_LECTURE"
+    cp "$DATA_DIR/base-toc-zh-cn.yml" "_toc.yml"
 
     # Force push to main
     git add -A
@@ -309,6 +311,14 @@ declare -a scenarios=(
     "14-delete-subsection-lecture:Subsection deleted (Matrix Operations):lecture"
     "15-delete-subsubsection-lecture:Sub-subsection deleted (Closure Property):lecture"
     "16-pure-section-reorder-minimal:Pure section reorder (no content change):minimal"
+    "17-new-document-toc:New document added (game-theory.md + TOC):toc"
+    "18-delete-document-toc:Document deleted (lecture.md + TOC):toc"
+    "19-multi-file:Multiple files changed (minimal + lecture):multi"
+    "20-rename-document-toc:Document renamed (lecture.md → linear-algebra.md + TOC):rename"
+    "21-preamble-only-minimal:Preamble only changed (frontmatter):minimal"
+    "22-deep-nesting-lecture:Deep nesting (##### and ######):lecture"
+    "24-special-chars-lecture:Special characters in headings:lecture"
+    "25-empty-sections-minimal:Empty sections (heading only):minimal"
 )
 
 # Note: Tests 01-08 modify lecture-minimal.md, tests 09-15 modify lecture.md, test 16 tests pure reordering
@@ -321,20 +331,25 @@ for scenario in "${scenarios[@]}"; do
     # Extract test number from file_prefix (e.g., "01" from "01-intro-change-minimal")
     test_number=$(echo "$file_prefix" | grep -o '^[0-9]\+')
     
-    # Determine which file to modify based on target_file
+    # Determine which files to modify based on target_file type
     if [ "$target_file" = "minimal" ]; then
         TEST_FILE="$TEST_FILE_MINIMAL"
         pr_title="TEST: ${description} (${test_number} - minimal)"
-    else
+    elif [ "$target_file" = "lecture" ]; then
         TEST_FILE="$TEST_FILE_LECTURE"
         pr_title="TEST: ${description} (${test_number} - lecture)"
+    elif [ "$target_file" = "toc" ]; then
+        pr_title="TEST: ${description} (${test_number} - toc)"
+    elif [ "$target_file" = "multi" ]; then
+        pr_title="TEST: ${description} (${test_number} - multi)"
+    elif [ "$target_file" = "rename" ]; then
+        pr_title="TEST: ${description} (${test_number} - rename)"
     fi
     
     if [ "$DRY_RUN" = true ]; then
         echo -e "${CYAN}[DRY RUN] Would create PR: ${pr_title}${NC}"
         echo -e "${CYAN}  Branch: ${branch_name}${NC}"
-        echo -e "${CYAN}  Source: ${file_prefix}.md${NC}"
-        echo -e "${CYAN}  Target: ${TEST_FILE}${NC}"
+        echo -e "${CYAN}  Type: ${target_file}${NC}"
         echo -e "${CYAN}  Label: test-translation${NC}"
         echo ""
     else
@@ -343,11 +358,40 @@ for scenario in "${scenarios[@]}"; do
         # Create branch
         git checkout -b "$branch_name" main
         
-        # Copy test file to the appropriate target
-        cp "$DATA_DIR/${file_prefix}.md" "$TEST_FILE"
+        # Handle different test types
+        if [ "$target_file" = "toc" ]; then
+            # TOC tests - update _toc.yml and potentially add/remove files
+            cp "$DATA_DIR/${file_prefix}.yml" "_toc.yml"
+            
+            # Special handling for test 17 (new document)
+            if [ "$file_prefix" = "17-new-document-toc" ]; then
+                cp "$DATA_DIR/game-theory.md" "game-theory.md"
+                git add "game-theory.md"
+            fi
+            
+            # Special handling for test 18 (delete document)
+            if [ "$file_prefix" = "18-delete-document-toc" ]; then
+                git rm "$TEST_FILE_LECTURE"
+            fi
+            
+            git add "_toc.yml"
+        elif [ "$target_file" = "multi" ]; then
+            # Multi-file test - update both files
+            cp "$DATA_DIR/${file_prefix}-minimal.md" "$TEST_FILE_MINIMAL"
+            cp "$DATA_DIR/${file_prefix}-lecture.md" "$TEST_FILE_LECTURE"
+            git add "$TEST_FILE_MINIMAL" "$TEST_FILE_LECTURE"
+        elif [ "$target_file" = "rename" ]; then
+            # Rename test - rename lecture.md to linear-algebra.md and update TOC
+            git mv "$TEST_FILE_LECTURE" "linear-algebra.md"
+            cp "$DATA_DIR/${file_prefix}.yml" "_toc.yml"
+            git add "_toc.yml"
+        else
+            # Standard single-file tests
+            cp "$DATA_DIR/${file_prefix}.md" "$TEST_FILE"
+            git add "$TEST_FILE"
+        fi
         
         # Commit changes
-        git add "$TEST_FILE"
         git commit -m "Test: ${description}"
         
         # Push branch (force push to overwrite if exists)
@@ -401,9 +445,9 @@ echo ""
 if [ "$DRY_RUN" = true ]; then
     echo -e "${CYAN}Summary of what would be done:${NC}"
     echo ""
-    echo "1. Reset both repositories to base state"
-    echo "2. Close all open PRs on source repo"
-    echo "3. Create 16 new test PRs:"
+    echo "1. Reset both repositories to base state (with _toc.yml)"
+    echo "2. Close all open PRs on source and target repos"
+    echo "3. Create 24 new test PRs:"
     echo "   Basic Tests (01-08):"
     echo "     - 01: Intro text updated"
     echo "     - 02: Title changed"
@@ -413,7 +457,7 @@ if [ "$DRY_RUN" = true ]; then
     echo "     - 06: Section removed"
     echo "     - 07: Subsection content updated"
     echo "     - 08: Multiple elements changed"
-    echo "   Scientific Content Tests (09-15):"
+    echo "   Scientific Content Tests (09-16):"
     echo "     - 09: Real-world lecture with code & math"
     echo "     - 10: Sub-subsection added (####)"
     echo "     - 11: Sub-subsection content changed"
@@ -421,20 +465,29 @@ if [ "$DRY_RUN" = true ]; then
     echo "     - 13: Display math equations changed"
     echo "     - 14: Subsection deleted"
     echo "     - 15: Sub-subsection deleted"
-    echo "   Position-Based Tests (16):"
     echo "     - 16: Pure section reorder (no content change)"
+    echo "   Document Lifecycle Tests (17-20):"
+    echo "     - 17: NEW document added (game-theory.md + TOC)"
+    echo "     - 18: Document DELETED (lecture.md + TOC)"
+    echo "     - 19: Multiple files changed (minimal + lecture)"
+    echo "     - 20: Document RENAMED (lecture → linear-algebra + TOC)"
+    echo "   Edge Cases (21-25):"
+    echo "     - 21: Preamble only changed (frontmatter)"
+    echo "     - 22: Deep nesting (##### and ######)"
+    echo "     - 24: Special characters in headings"
+    echo "     - 25: Empty sections (heading only)"
     echo "4. Add 'test-translation' label to each PR"
     echo ""
     echo -e "${YELLOW}To actually run these changes, execute without --dry-run:${NC}"
     echo "  ./scripts/test-action-on-github.sh"
 else
-    echo -e "${GREEN}Created 16 test PRs in ${SOURCE_REPO}${NC}"
+    echo -e "${GREEN}Created 24 test PRs in ${SOURCE_REPO}${NC}"
     echo ""
     echo "Test Coverage:"
     echo "  - Basic structure changes (8 tests)"
-    echo "  - Scientific content (code cells, math) (7 tests)"
-    echo "  - Subsection & sub-subsection handling (5 tests)"
-    echo "  - Position-based matching (1 test)"
+    echo "  - Scientific content (code cells, math) (8 tests)"
+    echo "  - Document lifecycle (CRUD operations) (4 tests)"
+    echo "  - Edge cases (preamble, nesting, special chars, empty) (4 tests)"
     echo ""
     echo "Next steps:"
     echo "1. Each PR has the 'test-translation' label"

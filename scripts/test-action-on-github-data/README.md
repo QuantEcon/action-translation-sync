@@ -8,17 +8,42 @@ This directory contains test scenarios for validating the translation action aga
 - **Base documents**: Starting point for all tests (identical between EN and ZH repos)
   - `base-minimal.md` / `base-minimal-zh-cn.md` - Simple 2-section document
   - `base-lecture.md` / `base-lecture-zh-cn.md` - Realistic lecture example
+  - `base-toc.yml` / `base-toc-zh-cn.yml` - Table of contents with 2 files
+  - `game-theory.md` - New document for testing NEW document mode
+  - `linear-algebra.md` - Copy of base-lecture for rename testing
 
-- **Test scenarios**: Modified versions for testing specific changes
-  - `01-intro-change-minimal.md` - Intro text modified
-  - `02-title-change-minimal.md` - Title modified
-  - `03-section-content-minimal.md` - Section content modified
-  - `04-section-reorder-minimal.md` - Sections reordered
-  - `05-add-section-minimal.md` - New section added
-  - `06-delete-section-minimal.md` - Section removed
-  - `07-subsection-change-minimal.md` - Subsection modified
-  - `08-multi-element-minimal.md` - Multiple changes
-  - `09-real-world-lecture.md` - Realistic lecture update (uses lecture base)
+- **Test scenarios**: Modified versions for testing specific changes (24 total)
+  - **Basic Tests (01-08)**:
+    - `01-intro-change-minimal.md` - Intro text modified
+    - `02-title-change-minimal.md` - Title modified
+    - `03-section-content-minimal.md` - Section content modified
+    - `04-section-reorder-minimal.md` - Sections reordered
+    - `05-add-section-minimal.md` - New section added
+    - `06-delete-section-minimal.md` - Section removed
+    - `07-subsection-change-minimal.md` - Subsection modified
+    - `08-multi-element-minimal.md` - Multiple changes
+  
+  - **Scientific Content Tests (09-16)**:
+    - `09-real-world-lecture.md` - Realistic lecture update
+    - `10-add-subsubsection-lecture.md` - #### subsection added
+    - `11-change-subsubsection-lecture.md` - #### content changed
+    - `12-change-code-cell-lecture.md` - Code cell modified
+    - `13-change-display-math-lecture.md` - Math equations changed
+    - `14-delete-subsection-lecture.md` - ### deleted
+    - `15-delete-subsubsection-lecture.md` - #### deleted
+    - `16-pure-section-reorder-minimal.md` - Pure reorder test
+  
+  - **Document Lifecycle Tests (17-20)**:
+    - `17-new-document-toc.yml` - NEW document added + TOC updated
+    - `18-delete-document-toc.yml` - Document deleted + TOC updated
+    - `19-multi-file-minimal.md` + `19-multi-file-lecture.md` - Multiple files
+    - `20-rename-document-toc.yml` - Document renamed + TOC updated
+  
+  - **Edge Cases (21-25)**:
+    - `21-preamble-only-minimal.md` - Only frontmatter changed
+    - `22-deep-nesting-lecture.md` - ##### and ###### nesting
+    - `24-special-chars-lecture.md` - Special characters in headings
+    - `25-empty-sections-minimal.md` - Sections with no content
 
 ## File Structure
 
@@ -36,19 +61,17 @@ Run the test setup script from the repository root:
 ```
 
 This will:
-1. Create empty repositories on GitHub
-2. Initialize local repos with base documents and workflow
-3. Push initial state to GitHub
-4. Create 9 test PRs with different scenarios
-5. Add `test-translation` label to each PR
-6. Print summary of created PRs
+1. Reset repositories to base state (with _toc.yml)
+2. Close all open PRs on both repos
+3. Create 24 test PRs with different scenarios
+4. Add `test-translation` label to each PR
+5. Print summary of created PRs
 
 Then observe the GitHub Actions running and creating translation PRs on `test-translation-sync.zh-cn`.
 
 ## Test Scenarios
 
-Each scenario tests a specific document element change:
-
+### Phase 1: Basic Structure (Tests 01-08)
 1. **Intro Change** - Only introduction paragraph modified
 2. **Title Change** - Only document title modified  
 3. **Section Content** - Content within one section modified
@@ -57,7 +80,28 @@ Each scenario tests a specific document element change:
 6. **Delete Section** - Existing section removed
 7. **Subsection Change** - Content within subsection modified
 8. **Multi-Element** - Complex change (title + intro + section + new section)
+
+### Phase 2: Scientific Content (Tests 09-16)
 9. **Real World** - Realistic lecture update with real content
+10. **Add ####** - Sub-subsection added
+11. **Change ####** - Sub-subsection content modified
+12. **Code Cells** - Code cell comments/titles changed
+13. **Math** - Display math equations changed
+14. **Delete ###** - Subsection removed
+15. **Delete ####** - Sub-subsection removed
+16. **Pure Reorder** - Sections reordered without content changes
+
+### Phase 3: Document Lifecycle (Tests 17-20) - NEW!
+17. **NEW Document** - Add new document (game-theory.md) + update _toc.yml
+18. **DELETE Document** - Remove lecture.md + update _toc.yml
+19. **Multiple Files** - Modify both lecture-minimal.md and lecture.md in single PR
+20. **RENAME Document** - Rename lecture.md → linear-algebra.md + update _toc.yml
+
+### Phase 4: Edge Cases (Tests 21-25) - NEW!
+21. **Preamble Only** - Only YAML frontmatter changed, no content
+22. **Deep Nesting** - ##### and ###### level subsections
+24. **Special Characters** - Headings with `code`, **bold**, [links], $math$
+25. **Empty Sections** - Sections with headings but no content
 
 ## Notes
 

@@ -1,0 +1,34 @@
+---
+jupytext:
+  text_representation:
+    extension: .md
+    format_name: myst
+kernelspec:
+  display_name: Python 3
+  language: python
+  name: python3
+---
+
+# Introduction to Economics
+
+This document provides a comprehensive introduction to economic principles. We will explore fundamental concepts that form the foundation of modern economic analysis and decision-making.
+
+## Supply and Demand
+
+Supply and demand are the most fundamental concepts in economics. The supply curve shows how much producers are willing to sell at different prices, while the demand curve shows how much consumers are willing to buy.
+
+When markets are in equilibrium, the quantity supplied equals the quantity demanded. This equilibrium price balances the interests of buyers and sellers, creating market efficiency.
+
+### Market Dynamics
+
+Market forces continuously adjust prices toward equilibrium. When prices are too high, surplus inventory builds up. When prices are too low, shortages occur. These imbalances create pressure for price adjustments.
+
+## Economic Models
+
+Economic models are simplified representations of economic processes. They help economists understand complex systems by focusing on the most important relationships and interactions.
+
+Models make assumptions to simplify reality. While no model is perfect, good models provide valuable insights into how the economy works and help predict future outcomes.
+
+## Policy Implications
+
+Understanding these fundamental concepts is crucial for designing effective economic policies. Policymakers must consider market mechanisms when implementing regulations or interventions.
