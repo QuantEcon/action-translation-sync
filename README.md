@@ -19,14 +19,15 @@ This action monitors a source repository for merged pull requests and automatica
 ## Features
 
 - 🌍 **Language Configuration** (v0.5.1): Extensible system for language-specific rules (punctuation, typography)
-- 🗺️ **Heading-Map System** (v0.4.0): Robust cross-language section matching that survives reordering
+- 🗺️ **Heading-Map System**: Robust cross-language section matching that survives reordering
 - 🔄 **Intelligent Diff Translation**: Only translates changed sections, preserving existing translations
 - 📄 **Full File Translation**: Handles new files with complete translation
 - ✍️ **MyST Markdown Support**: Preserves code blocks, math equations, and MyST directives
-- 📚 **Glossary Support**: Built-in glossaries for consistent technical terminology (355 terms)
+- 📚 **Glossary Support**: Built-in glossaries for consistent technical terminology (355 terms for zh-cn)
 - 📑 **Automatic TOC Updates**: Updates `_toc.yml` when new files are added
 - 🔍 **PR-Based Workflow**: All translations go through pull request review
 - ♻️ **Recursive Subsections**: Full support for nested headings at any depth (##-######)
+- ✅ **Extensively Tested**: 147 unit tests passing, 24 GitHub integration test scenarios
 
 ## Usage
 
@@ -186,6 +187,48 @@ For comprehensive documentation, see the [`docs/`](docs/) directory:
 - **[TODO](docs/TODO.md)** - Development roadmap and tasks
 - **[Documentation Index](docs/INDEX.md)** - Complete documentation navigation
 
+## Companion Tools
+
+This project includes two standalone tools for different stages of the translation workflow:
+
+### 1. Bulk Translator Tool
+
+**Purpose**: One-time bulk translation for **initial repository setup**
+
+📦 **[tool-bulk-translator/](tool-bulk-translator/)** - Standalone CLI tool
+
+**Features**:
+- Translates entire lecture series in one operation
+- One-lecture-at-a-time approach for optimal quality and context
+- Preserves complete Jupyter Book structure
+- Auto-generates heading-maps for all sections
+- Dry-run mode to preview before translating (no API costs)
+
+**Use case**: Creating a new `lecture-python.zh-cn` from existing `lecture-python`
+
+**After bulk translation**, use the main action for incremental updates.
+
+### 2. GitHub Action Test Tool
+
+**Purpose**: Testing and validation of the translation sync action
+
+🧪 **[tool-test-action-on-github/](tool-test-action-on-github/)** - Automated testing framework
+
+**Features**:
+- 24 comprehensive test scenarios
+- Real GitHub PR workflow testing
+- Dry-run mode for validation without API costs
+- GPT5 evaluation reports
+
+**Test coverage**:
+- Basic changes (intro, title, content, reordering)
+- Structural changes (add/delete sections, subsections)
+- Scientific content (code cells, math equations)
+- Document lifecycle (create, delete, rename, multi-file)
+- Edge cases (preamble-only, deep nesting, special chars, empty sections)
+
+**Use case**: Validating changes to the action before deployment
+
 ## Development
 
 ### Prerequisites
@@ -216,19 +259,31 @@ npm run format
 
 ```
 .
-├── docs/                  # Documentation
-├── src/                   # Source code
-│   ├── index.ts           # Main entry point
-│   ├── types.ts           # Type definitions
-│   ├── inputs.ts          # Input handling
-│   ├── parser.ts          # MyST parser
-│   ├── diff-detector.ts   # Change detection
-│   ├── translator.ts      # Translation service
-│   └── file-processor.ts  # File processing orchestration
-├── examples/              # Example configurations
-├── action.yml             # Action metadata
-├── package.json
-└── tsconfig.json
+├── src/                          # Main action source code
+│   ├── index.ts                  # GitHub Actions entry point
+│   ├── parser.ts                 # MyST Markdown parser (section-based)
+│   ├── diff-detector.ts          # Change detection (ADD/MODIFY/DELETE)
+│   ├── translator.ts             # Claude API integration
+│   ├── file-processor.ts         # Translation orchestration
+│   ├── heading-map.ts            # Heading-map system
+│   ├── language-config.ts        # Language-specific rules (v0.5.1)
+│   ├── types.ts                  # TypeScript type definitions
+│   └── inputs.ts                 # GitHub Actions input handling
+├── docs/                         # Comprehensive documentation
+├── glossary/                     # Built-in translation glossaries
+│   ├── zh-cn.json                # Simplified Chinese (355 terms)
+│   └── README.md                 # Glossary format and contribution guide
+├── tool-bulk-translator/         # Standalone CLI for bulk translation
+│   ├── src/bulk-translate.ts     # Main CLI implementation
+│   ├── examples/                 # Usage examples
+│   └── README.md                 # Tool documentation
+├── tool-test-action-on-github/   # GitHub integration testing
+│   ├── test-action-on-github.sh  # Test script (24 scenarios)
+│   ├── test-action-on-github-data/  # Test fixtures
+│   └── reports/                  # GPT5 evaluation reports
+├── examples/                     # Example workflow configurations
+├── action.yml                    # GitHub Action metadata
+└── package.json                  # Dependencies and scripts
 ```
 
 ## License

@@ -211,26 +211,61 @@ if (docsFolder === '') {
 
 ### 2. GitHub Repository Tests
 **Purpose**: Real-world validation with actual PRs and GitHub Actions
-**Script**: `scripts/test-action-on-github.sh`
+**Script**: `tool-test-action-on-github/test-action-on-github.sh`
 **Repositories**: `quantecon-test/lectures` → `quantecon-test/lectures-zh-cn`
 **Features**:
-- 9 automated test scenarios
+- 24 automated test scenarios
 - Automated setup and reset
 - TEST mode (no API calls)
 - Cross-repo PR creation validation
 
-**Test Scenarios**:
-1. New file (full translation)
-2. Single section update
-3. Multiple section updates
-4. Section added
-5. Section deleted
-6. Preamble update
-7. Subsection content update
-8. Heading-map integration
-9. Root-level file support
+**Test Scenarios** (24 total):
+- New sections, modified sections, deleted sections
+- Subsections at all nesting levels (##, ###, ####, #####, ######)
+- Code cells, display math, special characters
+- Preamble-only changes, section reordering
+- Multi-file operations, TOC updates
+- Document creation, deletion, renaming
+- Deep nesting, empty sections
 
-**See**: `docs/TEST-REPOSITORIES.md` for detailed GitHub testing guide
+**See**: `docs/TEST-REPOSITORIES.md` and `tool-test-action-on-github/README.md` for complete list
+
+## Companion Tools
+
+The project includes two independent tools at the root level:
+
+### 1. Bulk Translator (`tool-bulk-translator/`)
+
+**Purpose**: One-time bulk translation of entire lecture series to bootstrap new language repositories
+
+**Use Case**: Creating initial translation (e.g., `lecture-python.zh-cn` from `lecture-python`)
+
+**Key Features**:
+- One-lecture-at-a-time translation for quality
+- Auto-generates heading-maps
+- Preserves complete Jupyter Book structure
+- Progress tracking and resume capability
+
+**Location**: `tool-bulk-translator/` (standalone npm package)
+**Documentation**: `tool-bulk-translator/README.md`
+
+**When to Use**: Initial repository setup only. After bulk translation, use `action-translation-sync` for incremental updates.
+
+### 2. GitHub Action Test Tool (`tool-test-action-on-github/`)
+
+**Purpose**: Real-world validation of action with actual GitHub repositories and PRs
+
+**Location**: `tool-test-action-on-github/`
+**Script**: `tool-test-action-on-github/test-action-on-github.sh`
+**Documentation**: `tool-test-action-on-github/README.md`
+
+**Features**:
+- 24 automated test scenarios
+- Real PR workflow testing
+- TEST mode (no API costs)
+- GPT5 evaluation reports in `tool-test-action-on-github/reports/`
+
+**When to Use**: Pre-release validation and regression testing
 
 ## Common Tasks
 
@@ -355,7 +390,7 @@ Now we can match!
 - `npm test -- --coverage` - Generate coverage report
 
 **GitHub Testing**:
-- `./scripts/test-action-on-github.sh` - Run all 9 GitHub test scenarios
+- `./tool-test-action-on-github/test-action-on-github.sh` - Run all GitHub test scenarios
 - Uses TEST mode (no Claude API calls)
 - Automatically resets test repositories
 - See `docs/TEST-REPOSITORIES.md` for details

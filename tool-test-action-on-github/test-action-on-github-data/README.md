@@ -54,20 +54,11 @@ Test files use **flat structure** (no `lectures/` folder):
 
 ## Usage
 
-Run the test setup script from the repository root:
+The test script (`test-action-on-github.sh`) uses these files to:
 
 ```bash
-./scripts/test-action-on-github.sh
+./tool-test-action-on-github/test-action-on-github.sh
 ```
-
-This will:
-1. Reset repositories to base state (with _toc.yml)
-2. Close all open PRs on both repos
-3. Create 24 test PRs with different scenarios
-4. Add `test-translation` label to each PR
-5. Print summary of created PRs
-
-Then observe the GitHub Actions running and creating translation PRs on `test-translation-sync.zh-cn`.
 
 ## Test Scenarios
 

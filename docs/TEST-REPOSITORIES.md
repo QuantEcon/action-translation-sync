@@ -20,7 +20,7 @@ Beyond unit tests (`npm test`), we validate the action in a real GitHub environm
 
 ```bash
 # From repository root
-./scripts/test-action-on-github.sh
+./tool-test-action-on-github/test-action-on-github.sh
 ```
 
 This script automatically:
@@ -89,7 +89,7 @@ vim src/translator.ts
 npm run build && npm run package
 
 # Test again (auto-resets everything)
-./scripts/test-action-on-github.sh
+./tool-test-action-on-github/test-action-on-github.sh
 
 # Check results
 gh run list --repo quantecon/test-translation-sync
@@ -105,7 +105,7 @@ For complete information on:
 - Script internals
 - File structure and workflow
 
-**See: [scripts/README.md](../scripts/README.md)**
+**See: [tool-test-action-on-github/README.md](../tool-test-action-on-github/README.md)**
 
 ---
 
@@ -138,6 +138,6 @@ gh repo delete quantecon/test-translation-sync.zh-cn --yes
 
 ---
 
-**Ready?** Run `./scripts/test-action-on-github.sh` to start testing! 🚀
+**Ready?** Run `./tool-test-action-on-github/test-action-on-github.sh` to start testing! 🚀
 
-For detailed documentation, see [scripts/README.md](../scripts/README.md).
+For detailed documentation, see [tool-test-action-on-github/README.md](../tool-test-action-on-github/README.md).

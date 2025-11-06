@@ -5,7 +5,7 @@
 # This script resets and sets up the test-translation-sync repositories for 
 # comprehensive end-to-end testing of the translation action.
 #
-# Usage: ./scripts/test-action-on-github.sh [--dry-run]
+# Usage: ./tool-test-action-on-github/test-action-on-github.sh [--dry-run]
 #
 # Options:
 #   --dry-run    Show what would be done without making any changes
@@ -317,8 +317,8 @@ declare -a scenarios=(
     "20-rename-document-toc:Document renamed (lecture.md → linear-algebra.md + TOC):rename"
     "21-preamble-only-minimal:Preamble only changed (frontmatter):minimal"
     "22-deep-nesting-lecture:Deep nesting (##### and ######):lecture"
-    "24-special-chars-lecture:Special characters in headings:lecture"
-    "25-empty-sections-minimal:Empty sections (heading only):minimal"
+    "23-special-chars-lecture:Special characters in headings:lecture"
+    "24-empty-sections-minimal:Empty sections (heading only):minimal"
 )
 
 # Note: Tests 01-08 modify lecture-minimal.md, tests 09-15 modify lecture.md, test 16 tests pure reordering
@@ -471,15 +471,15 @@ if [ "$DRY_RUN" = true ]; then
     echo "     - 18: Document DELETED (lecture.md + TOC)"
     echo "     - 19: Multiple files changed (minimal + lecture)"
     echo "     - 20: Document RENAMED (lecture → linear-algebra + TOC)"
-    echo "   Edge Cases (21-25):"
+    echo "   Edge Cases (21-24):"
     echo "     - 21: Preamble only changed (frontmatter)"
     echo "     - 22: Deep nesting (##### and ######)"
-    echo "     - 24: Special characters in headings"
-    echo "     - 25: Empty sections (heading only)"
+    echo "     - 23: Special characters in headings"
+    echo "     - 24: Empty sections (heading only)"
     echo "4. Add 'test-translation' label to each PR"
     echo ""
     echo -e "${YELLOW}To actually run these changes, execute without --dry-run:${NC}"
-    echo "  ./scripts/test-action-on-github.sh"
+    echo "  ./tool-test-action-on-github/test-action-on-github.sh"
 else
     echo -e "${GREEN}Created 24 test PRs in ${SOURCE_REPO}${NC}"
     echo ""
