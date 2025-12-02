@@ -11,9 +11,41 @@
  */
 
 import Anthropic from '@anthropic-ai/sdk';
+import { 
+  APIError, 
+  AuthenticationError, 
+  RateLimitError, 
+  APIConnectionError,
+  BadRequestError 
+} from '@anthropic-ai/sdk';
 import { Glossary, SectionTranslationRequest, SectionTranslationResult, FullDocumentTranslationRequest } from './types';
 import * as core from '@actions/core';
 import { getLanguageConfig } from './language-config';
+
+/**
+ * Format API error for user-friendly output
+ */
+function formatApiError(error: unknown): string {
+  if (error instanceof AuthenticationError) {
+    return 'Authentication failed: Invalid or expired API key. Check your anthropic-api-key secret.';
+  }
+  if (error instanceof RateLimitError) {
+    return 'Rate limit exceeded: Too many requests. The action will retry automatically, or try again later.';
+  }
+  if (error instanceof APIConnectionError) {
+    return 'Connection error: Unable to reach Anthropic API. Check network connectivity.';
+  }
+  if (error instanceof BadRequestError) {
+    return `Bad request: ${error.message}. This may indicate an issue with the prompt or content.`;
+  }
+  if (error instanceof APIError) {
+    return `API error (${error.status}): ${error.message}`;
+  }
+  if (error instanceof Error) {
+    return error.message;
+  }
+  return 'Unknown translation error';
+}
 
 export class TranslationService {
   private client: Anthropic;
@@ -45,7 +77,7 @@ export class TranslationService {
     } catch (error) {
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown translation error',
+        error: formatApiError(error),
       };
     }
   }

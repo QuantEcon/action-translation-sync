@@ -1588,6 +1588,30 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.getInputs = getInputs;
 exports.validatePREvent = validatePREvent;
 const core = __importStar(__nccwpck_require__(7484));
+const language_config_1 = __nccwpck_require__(2142);
+/**
+ * Known Claude model patterns for validation
+ * These are the model patterns that are valid for the Anthropic API
+ */
+const VALID_MODEL_PATTERNS = [
+    /^claude-3-5-sonnet-\d{8}$/, // claude-3-5-sonnet-20241022
+    /^claude-sonnet-4-5-\d{8}$/, // claude-sonnet-4-5-20250929
+    /^claude-3-5-haiku-\d{8}$/, // claude-3-5-haiku-20241022
+    /^claude-3-opus-\d{8}$/, // claude-3-opus-20240229
+    /^claude-3-sonnet-\d{8}$/, // claude-3-sonnet-20240229
+    /^claude-3-haiku-\d{8}$/, // claude-3-haiku-20240307
+];
+/**
+ * Validate Claude model name
+ */
+function validateClaudeModel(model) {
+    const isValid = VALID_MODEL_PATTERNS.some(pattern => pattern.test(model));
+    if (!isValid) {
+        core.warning(`Unrecognized Claude model: '${model}'. ` +
+            `Expected patterns like 'claude-sonnet-4-5-YYYYMMDD' or 'claude-3-5-sonnet-YYYYMMDD'. ` +
+            `The model will still be used, but verify it's correct.`);
+    }
+}
 /**
  * Get and validate action inputs
  */
@@ -1616,6 +1640,10 @@ function getInputs() {
     if (!targetRepo.includes('/')) {
         throw new Error(`Invalid target-repo format: ${targetRepo}. Expected format: owner/repo`);
     }
+    // Validate target language is supported
+    (0, language_config_1.validateLanguageCode)(targetLanguage);
+    // Validate Claude model (warning only, doesn't throw)
+    validateClaudeModel(claudeModel);
     // Ensure docs folder ends with / (unless it's empty string for root level)
     const normalizedDocsFolder = docsFolder === '' ? '' : (docsFolder.endsWith('/') ? docsFolder : `${docsFolder}/`);
     return {
@@ -1689,12 +1717,21 @@ function validatePREvent(context, testMode) {
  * This allows for language-specific typography, punctuation, and stylistic rules.
  */
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.LANGUAGE_CONFIGS = void 0;
 exports.getLanguageConfig = getLanguageConfig;
 exports.formatAdditionalRules = formatAdditionalRules;
+exports.getSupportedLanguages = getSupportedLanguages;
+exports.isLanguageSupported = isLanguageSupported;
+exports.validateLanguageCode = validateLanguageCode;
 /**
  * Language-specific configurations
+ *
+ * To add a new language:
+ * 1. Add a new entry with the language code as the key
+ * 2. Include any language-specific typography or punctuation rules
+ * 3. The language will automatically be available for use
  */
-const LANGUAGE_CONFIGS = {
+exports.LANGUAGE_CONFIGS = {
     'zh-cn': {
         code: 'zh-cn',
         name: 'Chinese (Simplified)',
@@ -1724,7 +1761,7 @@ const LANGUAGE_CONFIGS = {
  */
 function getLanguageConfig(languageCode) {
     const normalized = languageCode.toLowerCase();
-    return LANGUAGE_CONFIGS[normalized] || {
+    return exports.LANGUAGE_CONFIGS[normalized] || {
         code: languageCode,
         name: languageCode,
         additionalRules: [],
@@ -1740,6 +1777,30 @@ function formatAdditionalRules(languageCode) {
         return '';
     }
     return config.additionalRules.map(rule => rule).join('\n');
+}
+/**
+ * Get list of supported language codes
+ */
+function getSupportedLanguages() {
+    return Object.keys(exports.LANGUAGE_CONFIGS);
+}
+/**
+ * Check if a language code is supported (has configuration)
+ */
+function isLanguageSupported(languageCode) {
+    const normalized = languageCode.toLowerCase();
+    return normalized in exports.LANGUAGE_CONFIGS;
+}
+/**
+ * Validate language code and throw descriptive error if not supported
+ */
+function validateLanguageCode(languageCode) {
+    if (!isLanguageSupported(languageCode)) {
+        const supported = getSupportedLanguages().join(', ');
+        throw new Error(`Unsupported target language: '${languageCode}'. ` +
+            `Supported languages: ${supported}. ` +
+            `To add a new language, update LANGUAGE_CONFIGS in src/language-config.ts`);
+    }
 }
 //# sourceMappingURL=language-config.js.map
 
@@ -2066,8 +2127,33 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.TranslationService = void 0;
 const sdk_1 = __importDefault(__nccwpck_require__(121));
+const sdk_2 = __nccwpck_require__(121);
 const core = __importStar(__nccwpck_require__(7484));
 const language_config_1 = __nccwpck_require__(2142);
+/**
+ * Format API error for user-friendly output
+ */
+function formatApiError(error) {
+    if (error instanceof sdk_2.AuthenticationError) {
+        return 'Authentication failed: Invalid or expired API key. Check your anthropic-api-key secret.';
+    }
+    if (error instanceof sdk_2.RateLimitError) {
+        return 'Rate limit exceeded: Too many requests. The action will retry automatically, or try again later.';
+    }
+    if (error instanceof sdk_2.APIConnectionError) {
+        return 'Connection error: Unable to reach Anthropic API. Check network connectivity.';
+    }
+    if (error instanceof sdk_2.BadRequestError) {
+        return `Bad request: ${error.message}. This may indicate an issue with the prompt or content.`;
+    }
+    if (error instanceof sdk_2.APIError) {
+        return `API error (${error.status}): ${error.message}`;
+    }
+    if (error instanceof Error) {
+        return error.message;
+    }
+    return 'Unknown translation error';
+}
 class TranslationService {
     constructor(apiKey, model = 'claude-sonnet-4-5-20250929', debug = false) {
         this.client = new sdk_1.default({ apiKey });
@@ -2094,7 +2180,7 @@ class TranslationService {
         catch (error) {
             return {
                 success: false,
-                error: error instanceof Error ? error.message : 'Unknown translation error',
+                error: formatApiError(error),
             };
         }
     }

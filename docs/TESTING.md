@@ -1,6 +1,6 @@
 # Testing Guide
 
-**Current Test Status**: ✅ 147 tests passing | 0 failing | ~3s execution time
+**Current Test Status**: ✅ 155 tests passing | 0 failing | ~3s execution time
 
 ---
 
@@ -43,7 +43,7 @@ src/__tests__/
 - Diff Detector: 24 tests (including v0.4.6 section comparison tests)
 - File Processor: 54 tests (including subsection duplication regression test)
 - Heading-Map: 28 tests (including v0.4.3 subsection regression tests)
-- Language Config: 7 tests (v0.5.1)
+- Language Config: 15 tests (v0.5.1, including validation)
 - Integration: 9 tests
 - E2E Fixtures: 1 test
 - Component Reconstruction: 4 tests

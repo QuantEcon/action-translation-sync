@@ -49,8 +49,33 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.TranslationService = void 0;
 const sdk_1 = __importDefault(require("@anthropic-ai/sdk"));
+const sdk_2 = require("@anthropic-ai/sdk");
 const core = __importStar(require("@actions/core"));
 const language_config_1 = require("./language-config");
+/**
+ * Format API error for user-friendly output
+ */
+function formatApiError(error) {
+    if (error instanceof sdk_2.AuthenticationError) {
+        return 'Authentication failed: Invalid or expired API key. Check your anthropic-api-key secret.';
+    }
+    if (error instanceof sdk_2.RateLimitError) {
+        return 'Rate limit exceeded: Too many requests. The action will retry automatically, or try again later.';
+    }
+    if (error instanceof sdk_2.APIConnectionError) {
+        return 'Connection error: Unable to reach Anthropic API. Check network connectivity.';
+    }
+    if (error instanceof sdk_2.BadRequestError) {
+        return `Bad request: ${error.message}. This may indicate an issue with the prompt or content.`;
+    }
+    if (error instanceof sdk_2.APIError) {
+        return `API error (${error.status}): ${error.message}`;
+    }
+    if (error instanceof Error) {
+        return error.message;
+    }
+    return 'Unknown translation error';
+}
 class TranslationService {
     constructor(apiKey, model = 'claude-sonnet-4-5-20250929', debug = false) {
         this.client = new sdk_1.default({ apiKey });
@@ -77,7 +102,7 @@ class TranslationService {
         catch (error) {
             return {
                 success: false,
-                error: error instanceof Error ? error.message : 'Unknown translation error',
+                error: formatApiError(error),
             };
         }
     }

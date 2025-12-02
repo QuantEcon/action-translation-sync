@@ -6,12 +6,21 @@
  * This allows for language-specific typography, punctuation, and stylistic rules.
  */
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.LANGUAGE_CONFIGS = void 0;
 exports.getLanguageConfig = getLanguageConfig;
 exports.formatAdditionalRules = formatAdditionalRules;
+exports.getSupportedLanguages = getSupportedLanguages;
+exports.isLanguageSupported = isLanguageSupported;
+exports.validateLanguageCode = validateLanguageCode;
 /**
  * Language-specific configurations
+ *
+ * To add a new language:
+ * 1. Add a new entry with the language code as the key
+ * 2. Include any language-specific typography or punctuation rules
+ * 3. The language will automatically be available for use
  */
-const LANGUAGE_CONFIGS = {
+exports.LANGUAGE_CONFIGS = {
     'zh-cn': {
         code: 'zh-cn',
         name: 'Chinese (Simplified)',
@@ -41,7 +50,7 @@ const LANGUAGE_CONFIGS = {
  */
 function getLanguageConfig(languageCode) {
     const normalized = languageCode.toLowerCase();
-    return LANGUAGE_CONFIGS[normalized] || {
+    return exports.LANGUAGE_CONFIGS[normalized] || {
         code: languageCode,
         name: languageCode,
         additionalRules: [],
@@ -57,5 +66,29 @@ function formatAdditionalRules(languageCode) {
         return '';
     }
     return config.additionalRules.map(rule => rule).join('\n');
+}
+/**
+ * Get list of supported language codes
+ */
+function getSupportedLanguages() {
+    return Object.keys(exports.LANGUAGE_CONFIGS);
+}
+/**
+ * Check if a language code is supported (has configuration)
+ */
+function isLanguageSupported(languageCode) {
+    const normalized = languageCode.toLowerCase();
+    return normalized in exports.LANGUAGE_CONFIGS;
+}
+/**
+ * Validate language code and throw descriptive error if not supported
+ */
+function validateLanguageCode(languageCode) {
+    if (!isLanguageSupported(languageCode)) {
+        const supported = getSupportedLanguages().join(', ');
+        throw new Error(`Unsupported target language: '${languageCode}'. ` +
+            `Supported languages: ${supported}. ` +
+            `To add a new language, update LANGUAGE_CONFIGS in src/language-config.ts`);
+    }
 }
 //# sourceMappingURL=language-config.js.map

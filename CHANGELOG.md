@@ -7,11 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Input Validation**: Language code validation against configured languages in `LANGUAGE_CONFIGS`
+  - New functions: `getSupportedLanguages()`, `isLanguageSupported()`, `validateLanguageCode()`
+  - Clear error messages with list of supported languages
+  - Guidance to add new languages via `LANGUAGE_CONFIGS`
+- **Model Validation**: Claude model name validation with warning for unrecognized patterns
+  - Validates against known Claude model patterns (sonnet, opus, haiku variants)
+  - Warning only (doesn't block) to allow new models
+- **Improved API Error Handling**: Specific error messages for Anthropic API failures
+  - Authentication errors: Guides to check API key secret
+  - Rate limit errors: Informs about automatic retry
+  - Connection errors: Suggests checking network
+  - Bad request errors: Indicates prompt/content issues
+- **8 New Tests**: Validation function test coverage
+
 ### Changed
 - **Dependencies**: Removed 10 unused AST-related packages (unified, remark-*, mdast-*, diff)
   - Reduced total packages from 527 to 439
   - Removed ~700KB of unnecessary dependencies
   - Packages removed: `unified`, `remark-parse`, `remark-stringify`, `remark-directive`, `remark-math`, `remark-gfm`, `mdast-util-to-string`, `unist-util-visit`, `diff`, `@types/diff`
+- **LANGUAGE_CONFIGS**: Now exported for external access and validation
 
 ### Fixed
 - **translator.ts**: Fixed Claude model default mismatch

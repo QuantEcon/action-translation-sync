@@ -77,7 +77,8 @@ Create PR (Chinese)
 ### 6. Language Config (language-config.ts)
 - Language-specific translation rules
 - Extensible for multiple languages
-- **68 lines**
+- Input validation (language codes)
+- **102 lines**
 
 ### 7. Index (index.ts)
 - GitHub Actions entry point

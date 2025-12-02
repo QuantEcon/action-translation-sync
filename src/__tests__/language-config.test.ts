@@ -2,7 +2,13 @@
  * Tests for language-specific configuration
  */
 
-import { getLanguageConfig, formatAdditionalRules } from '../language-config';
+import { 
+  getLanguageConfig, 
+  formatAdditionalRules, 
+  getSupportedLanguages,
+  isLanguageSupported,
+  validateLanguageCode 
+} from '../language-config';
 
 describe('Language Configuration', () => {
   describe('getLanguageConfig', () => {
@@ -50,6 +56,52 @@ describe('Language Configuration', () => {
     it('should return empty string for unknown languages', () => {
       const rules = formatAdditionalRules('unknown-lang');
       expect(rules).toBe('');
+    });
+  });
+
+  describe('getSupportedLanguages', () => {
+    it('should return array of supported language codes', () => {
+      const languages = getSupportedLanguages();
+      expect(Array.isArray(languages)).toBe(true);
+      expect(languages).toContain('zh-cn');
+    });
+
+    it('should not be empty', () => {
+      const languages = getSupportedLanguages();
+      expect(languages.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('isLanguageSupported', () => {
+    it('should return true for configured languages', () => {
+      expect(isLanguageSupported('zh-cn')).toBe(true);
+      expect(isLanguageSupported('ZH-CN')).toBe(true);
+    });
+
+    it('should return false for unconfigured languages', () => {
+      expect(isLanguageSupported('ja')).toBe(false);
+      expect(isLanguageSupported('es')).toBe(false);
+      expect(isLanguageSupported('unknown')).toBe(false);
+    });
+  });
+
+  describe('validateLanguageCode', () => {
+    it('should not throw for supported languages', () => {
+      expect(() => validateLanguageCode('zh-cn')).not.toThrow();
+      expect(() => validateLanguageCode('ZH-CN')).not.toThrow();
+    });
+
+    it('should throw for unsupported languages', () => {
+      expect(() => validateLanguageCode('ja')).toThrow(/Unsupported target language/);
+      expect(() => validateLanguageCode('unknown')).toThrow(/Unsupported target language/);
+    });
+
+    it('should include supported languages in error message', () => {
+      expect(() => validateLanguageCode('ja')).toThrow(/zh-cn/);
+    });
+
+    it('should suggest updating LANGUAGE_CONFIGS in error', () => {
+      expect(() => validateLanguageCode('es')).toThrow(/LANGUAGE_CONFIGS/);
     });
   });
 });

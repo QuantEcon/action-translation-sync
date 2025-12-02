@@ -16,8 +16,13 @@ export interface LanguageConfig {
 
 /**
  * Language-specific configurations
+ * 
+ * To add a new language:
+ * 1. Add a new entry with the language code as the key
+ * 2. Include any language-specific typography or punctuation rules
+ * 3. The language will automatically be available for use
  */
-const LANGUAGE_CONFIGS: Record<string, LanguageConfig> = {
+export const LANGUAGE_CONFIGS: Record<string, LanguageConfig> = {
   'zh-cn': {
     code: 'zh-cn',
     name: 'Chinese (Simplified)',
@@ -65,4 +70,33 @@ export function formatAdditionalRules(languageCode: string): string {
     return '';
   }
   return config.additionalRules.map(rule => rule).join('\n');
+}
+
+/**
+ * Get list of supported language codes
+ */
+export function getSupportedLanguages(): string[] {
+  return Object.keys(LANGUAGE_CONFIGS);
+}
+
+/**
+ * Check if a language code is supported (has configuration)
+ */
+export function isLanguageSupported(languageCode: string): boolean {
+  const normalized = languageCode.toLowerCase();
+  return normalized in LANGUAGE_CONFIGS;
+}
+
+/**
+ * Validate language code and throw descriptive error if not supported
+ */
+export function validateLanguageCode(languageCode: string): void {
+  if (!isLanguageSupported(languageCode)) {
+    const supported = getSupportedLanguages().join(', ');
+    throw new Error(
+      `Unsupported target language: '${languageCode}'. ` +
+      `Supported languages: ${supported}. ` +
+      `To add a new language, update LANGUAGE_CONFIGS in src/language-config.ts`
+    );
+  }
 }

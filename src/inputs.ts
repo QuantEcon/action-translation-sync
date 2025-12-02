@@ -1,5 +1,33 @@
 import * as core from '@actions/core';
 import { ActionInputs } from './types';
+import { validateLanguageCode, getSupportedLanguages } from './language-config';
+
+/**
+ * Known Claude model patterns for validation
+ * These are the model patterns that are valid for the Anthropic API
+ */
+const VALID_MODEL_PATTERNS = [
+  /^claude-3-5-sonnet-\d{8}$/,      // claude-3-5-sonnet-20241022
+  /^claude-sonnet-4-5-\d{8}$/,      // claude-sonnet-4-5-20250929
+  /^claude-3-5-haiku-\d{8}$/,       // claude-3-5-haiku-20241022
+  /^claude-3-opus-\d{8}$/,          // claude-3-opus-20240229
+  /^claude-3-sonnet-\d{8}$/,        // claude-3-sonnet-20240229
+  /^claude-3-haiku-\d{8}$/,         // claude-3-haiku-20240307
+];
+
+/**
+ * Validate Claude model name
+ */
+function validateClaudeModel(model: string): void {
+  const isValid = VALID_MODEL_PATTERNS.some(pattern => pattern.test(model));
+  if (!isValid) {
+    core.warning(
+      `Unrecognized Claude model: '${model}'. ` +
+      `Expected patterns like 'claude-sonnet-4-5-YYYYMMDD' or 'claude-3-5-sonnet-YYYYMMDD'. ` +
+      `The model will still be used, but verify it's correct.`
+    );
+  }
+}
 
 /**
  * Get and validate action inputs
@@ -34,6 +62,12 @@ export function getInputs(): ActionInputs {
   if (!targetRepo.includes('/')) {
     throw new Error(`Invalid target-repo format: ${targetRepo}. Expected format: owner/repo`);
   }
+
+  // Validate target language is supported
+  validateLanguageCode(targetLanguage);
+
+  // Validate Claude model (warning only, doesn't throw)
+  validateClaudeModel(claudeModel);
 
   // Ensure docs folder ends with / (unless it's empty string for root level)
   const normalizedDocsFolder = docsFolder === '' ? '' : (docsFolder.endsWith('/') ? docsFolder : `${docsFolder}/`);
