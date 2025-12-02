@@ -2,7 +2,7 @@
 
 A GitHub Action that automatically synchronizes translations across repositories using Claude Sonnet 4.5.
 
-**Version**: v0.5.1 | **Status**: Testing & Development ✅
+**Version**: v0.6.0 | **Status**: Testing & Development ✅
 
 ## Overview
 
@@ -19,6 +19,7 @@ This action monitors a source repository for merged pull requests and automatica
 ## Features
 
 - 🌍 **Language Configuration** (v0.5.1): Extensible system for language-specific rules (punctuation, typography)
+- ✅ **Input Validation** (v0.6.0): Validates language codes and Claude model names with helpful error messages
 - 🗺️ **Heading-Map System**: Robust cross-language section matching that survives reordering
 - 🔄 **Intelligent Diff Translation**: Only translates changed sections, preserving existing translations
 - 📄 **Full File Translation**: Handles new files with complete translation
@@ -27,7 +28,7 @@ This action monitors a source repository for merged pull requests and automatica
 - 📑 **Automatic TOC Updates**: Updates `_toc.yml` when new files are added
 - 🔍 **PR-Based Workflow**: All translations go through pull request review
 - ♻️ **Recursive Subsections**: Full support for nested headings at any depth (##-######)
-- ✅ **Extensively Tested**: 147 unit tests passing, 24 GitHub integration test scenarios
+- ✅ **Extensively Tested**: 155 unit tests passing, 24 GitHub integration test scenarios
 
 ## Usage
 
@@ -184,7 +185,6 @@ For comprehensive documentation, see the [`docs/`](docs/) directory:
 - **[Architecture](docs/ARCHITECTURE.md)** - System diagrams and data flow
 - **[Implementation](docs/IMPLEMENTATION.md)** - What's been built and how it works
 - **[Status Report](docs/STATUS-REPORT.md)** - Current project status and metrics
-- **[TODO](docs/TODO.md)** - Development roadmap and tasks
 - **[Documentation Index](docs/INDEX.md)** - Complete documentation navigation
 
 ## Companion Tools
