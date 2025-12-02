@@ -20,7 +20,7 @@ export class TranslationService {
   private model: string;
   private debug: boolean;
 
-  constructor(apiKey: string, model: string = 'claude-sonnet-4.5-20241022', debug: boolean = false) {
+  constructor(apiKey: string, model: string = 'claude-sonnet-4-5-20250929', debug: boolean = false) {
     this.client = new Anthropic({ apiKey });
     this.model = model;
     this.debug = debug;

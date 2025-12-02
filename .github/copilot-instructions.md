@@ -5,9 +5,9 @@
 **action-translation-sync** is a GitHub Action that automatically translates MyST Markdown documents from English to Chinese using Claude AI (Anthropic). It uses a **section-based approach** for robust, maintainable translation.
 
 **Core Architecture**: Section-based translation with full recursive heading support
-**Current Version**: v0.5.0 (Production-Ready)
+**Current Version**: v0.5.1 (Production-Ready)
 **Test Coverage**: 147 tests, all passing
-**Code Size**: ~1,200 lines core logic across 7 modules
+**Code Size**: ~2,600 lines core logic across 7 modules
 
 ## Key Design Principles
 
@@ -87,15 +87,15 @@ heading-map:
 
 ```
 src/
-├── index.ts             # GitHub Actions entry point (118 lines)
-├── parser.ts            # MyST Markdown parser (172 lines)
-├── diff-detector.ts     # Change detection (178 lines)
-├── translator.ts        # Claude API integration (257 lines)
-├── file-processor.ts    # Translation orchestration (244 lines)
-├── heading-map.ts       # Heading-map system (200 lines)
-├── language-config.ts   # Language-specific translation rules (66 lines)
-├── inputs.ts            # Action inputs
-└── types.ts             # TypeScript types
+├── index.ts             # GitHub Actions entry point (543 lines)
+├── parser.ts            # MyST Markdown parser (282 lines)
+├── diff-detector.ts     # Change detection (195 lines)
+├── translator.ts        # Claude API integration (273 lines)
+├── file-processor.ts    # Translation orchestration (739 lines)
+├── heading-map.ts       # Heading-map system (246 lines)
+├── language-config.ts   # Language-specific translation rules (68 lines)
+├── inputs.ts            # Action inputs (104 lines)
+└── types.ts             # TypeScript types (182 lines)
 ```
 
 ### Module Responsibilities
@@ -190,17 +190,18 @@ if (docsFolder === '') {
 **Purpose**: Fast, comprehensive testing of core logic
 **Location**: `src/__tests__/*.test.ts`
 **Run**: `npm test`
-**Coverage**: 131 tests across 8 files
+**Coverage**: 147 tests across 9 files
 
 **Test Files**:
 - `parser.test.ts` - MyST parsing, frontmatter (15 tests)
+- `parser-components.test.ts` - Document component parsing (5 tests)
 - `diff-detector.test.ts` - Change detection (24 tests, includes 6 nested subsection tests)
 - `file-processor.test.ts` - Section reconstruction (54 tests)
 - `heading-map.test.ts` - Map updates (28 tests)
+- `language-config.test.ts` - Language-specific config (7 tests)
 - `integration.test.ts` - End-to-end (9 tests)
-- `component-reconstruction.test.ts` - Component assembly
-- `parser-components.test.ts` - Component parsing
 - `e2e-fixtures.test.ts` - End-to-end fixtures (1 test)
+- `component-reconstruction.test.ts` - Component assembly (4 tests)
 
 **Key Regression Tests** (v0.4.7):
 - Nested subsection change detection (####, #####)

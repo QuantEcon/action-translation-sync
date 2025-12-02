@@ -1,6 +1,6 @@
 # Testing Guide
 
-**Current Test Status**: ✅ 125 tests passing | 0 failing | ~3s execution time
+**Current Test Status**: ✅ 147 tests passing | 0 failing | ~3s execution time
 
 ---
 
@@ -27,19 +27,26 @@ npm test -- --watch
 ```
 src/__tests__/
 ├── parser.test.ts              # MyST parsing & frontmatter
+├── parser-components.test.ts   # Document component parsing
 ├── diff-detector.test.ts       # Change detection
 ├── file-processor.test.ts      # Section matching & reconstruction
 ├── heading-map.test.ts         # Heading-map system
-└── integration.test.ts         # End-to-end workflows
+├── language-config.test.ts     # Language-specific configuration
+├── integration.test.ts         # End-to-end workflows
+├── e2e-fixtures.test.ts        # End-to-end fixture tests
+└── component-reconstruction.test.ts  # Component assembly
 ```
 
 **Test Breakdown**:
 - Parser: 15 tests
-- Diff Detector: 18 tests (including v0.4.6 section comparison tests)
+- Parser Components: 5 tests
+- Diff Detector: 24 tests (including v0.4.6 section comparison tests)
 - File Processor: 54 tests (including subsection duplication regression test)
 - Heading-Map: 28 tests (including v0.4.3 subsection regression tests)
+- Language Config: 7 tests (v0.5.1)
 - Integration: 9 tests
-- Component tests: 1 test
+- E2E Fixtures: 1 test
+- Component Reconstruction: 4 tests
 
 ---
 

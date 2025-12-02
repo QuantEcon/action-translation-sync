@@ -146,21 +146,19 @@ The v0.5.x series focuses on multilingual support and validation:
 - **Documentation**: See [INDEX.md](INDEX.md) for complete docs
 - **Repository**: https://github.com/quantecon/action-translation-sync
 - **Issues**: https://github.com/quantecon/action-translation-sync/issues
-- **Roadmap**: See [TODO.md](TODO.md) for detailed plans
+- **Roadmap**: See GitHub Issues for planned features
 
 ---
 
 ## Contributing
 
 Want to help?
-- Review [TODO.md](TODO.md) for planned features
+- Check GitHub Issues for planned features
 - Check GitHub issues tagged `good-first-issue`
 - Improve documentation
 - Add test coverage
 
 ---
 
----
-
-**Last Updated**: October 24, 2025
+**Last Updated**: December 3, 2025
 ```

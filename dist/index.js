@@ -2069,7 +2069,7 @@ const sdk_1 = __importDefault(__nccwpck_require__(121));
 const core = __importStar(__nccwpck_require__(7484));
 const language_config_1 = __nccwpck_require__(2142);
 class TranslationService {
-    constructor(apiKey, model = 'claude-sonnet-4.5-20241022', debug = false) {
+    constructor(apiKey, model = 'claude-sonnet-4-5-20250929', debug = false) {
         this.client = new sdk_1.default({ apiKey });
         this.model = model;
         this.debug = debug;

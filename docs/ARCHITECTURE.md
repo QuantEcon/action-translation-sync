@@ -49,25 +49,40 @@ Create PR (Chinese)
 ## Components
 
 ### 1. Parser (parser.ts)
-- Line-by-line section parser
-- Splits on ## headings
-- Preserves exact content
-- **172 lines** (was 390)
+- Stack-based recursive section parser
+- Handles all heading levels (##-######)
+- Preserves exact content with subsections
+- **282 lines**
 
 ### 2. Diff Detector (diff-detector.ts)
-- Position-based matching
+- Position-based matching with recursive comparison
 - Detects: added, modified, deleted sections
-- **178 lines** (was 538)
+- **195 lines**
 
 ### 3. Translator (translator.ts)
 - Two modes: UPDATE and NEW
-- Uses Claude Sonnet 4.5
-- **257 lines** (was 233)
+- Uses Claude Sonnet 4.5 with language-specific rules
+- **273 lines**
 
 ### 4. File Processor (file-processor.ts)
-- Orchestrates translation
-- Simple section operations
-- **244 lines** (was 425)
+- Orchestrates translation workflow
+- Complex section operations with heading-map integration
+- **739 lines**
+
+### 5. Heading-Map (heading-map.ts)
+- Language-independent section matching
+- Recursive subsection support
+- **246 lines**
+
+### 6. Language Config (language-config.ts)
+- Language-specific translation rules
+- Extensible for multiple languages
+- **68 lines**
+
+### 7. Index (index.ts)
+- GitHub Actions entry point
+- PR and file processing
+- **543 lines**
 
 ## Data Structures
 
