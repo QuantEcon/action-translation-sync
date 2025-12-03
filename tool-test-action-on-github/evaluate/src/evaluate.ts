@@ -15,6 +15,7 @@
  *   npm run evaluate -- --pr 123         # Evaluate specific source PR
  *   npm run evaluate -- --dry-run        # Preview without posting reviews
  *   npm run evaluate -- --output report.md # Save report to file
+ *   npm run evaluate -- --max-suggestions 10 # Allow up to 10 suggestions
  */
 
 import { program } from 'commander';
@@ -248,6 +249,7 @@ async function main() {
     .option('--output <file>', 'Output report to file (default: reports/evaluation-<date>.md)')
     .option('--dry-run', 'Preview without posting reviews or saving', false)
     .option('--list-only', 'Only list matched PR pairs without evaluation (no API key needed)', false)
+    .option('--max-suggestions <number>', 'Maximum suggestions per evaluation (default: 5)', '5')
     .parse(process.argv);
 
   const opts = program.opts();
@@ -306,11 +308,12 @@ async function main() {
     prNumber: opts.pr ? parseInt(opts.pr, 10) : undefined,
     postReviews: opts.postReviews,
     outputFile: opts.output,
+    maxSuggestions: parseInt(opts.maxSuggestions, 10),
   };
 
   // Initialize services
   const github = new GitHubService(githubToken);
-  const evaluator = new TranslationEvaluator(anthropicApiKey);
+  const evaluator = new TranslationEvaluator(anthropicApiKey, options.maxSuggestions);
   const repoInfo = github.getRepoInfo();
 
   console.log(chalk.blue('═'.repeat(50)));
@@ -319,6 +322,7 @@ async function main() {
   console.log(chalk.gray(`Source: ${repoInfo.sourceRepo}`));
   console.log(chalk.gray(`Target: ${repoInfo.targetRepo}`));
   console.log(chalk.gray(`Model: ${EVALUATOR_MODEL}`));
+  console.log(chalk.gray(`Max suggestions: ${options.maxSuggestions}`));
   if (options.dryRun) {
     console.log(chalk.yellow('DRY RUN MODE - No reviews will be posted'));
   }

@@ -17,8 +17,8 @@ HumphreyYang reviewed all 24 translation PRs and the corresponding Opus 4.5 eval
 |----------|---------|
 | ✅ **Strengths** | Assessments generally accurate, summaries helpful, glossary compliance well-checked |
 | ✅ **Fixed** | Suggestions now focus on changed sections only (implemented Dec 4, 2025) |
+| ✅ **Fixed** | Configurable max suggestions with improved prompt (default: 5, was ~2) |
 | ℹ️ **Expected** | Same suggestions repeated across multiple PRs (test suite uses similar documents) |
-| ⚠️ **Issue** | Limited number of suggestions may miss important issues |
 | ❌ **Bug Found** | PR #381 - "Changed Sections" list included non-existent sections (now fixed) |
 | ❌ **Bug Found** | PR #380 - Translator bug: file rename not handled correctly (adds new file instead of renaming) |
 | ❌ **Bug Found** | PR #381 - Translator bug: markdown syntax error (`####` without space) not caught |
@@ -212,13 +212,14 @@ The evaluator now:
 - Explicitly instructs Claude to focus suggestions ONLY on changed content
 - Logs which sections changed for each PR evaluation
 
-### 2. Increase or Remove Suggestion Limit
-**Priority: MEDIUM**
+### ~~2. Increase or Remove Suggestion Limit~~ ✅ IMPLEMENTED
+**Status: COMPLETE (Dec 4, 2025)**
 
-The evaluator appears limited to ~2 suggestions, which misses important issues. Options:
-- Increase limit to 4-5 suggestions
-- Make limit configurable
-- Prioritize suggestions by severity
+The evaluator now:
+- Allows 0-5 suggestions by default (increased from implicit ~2)
+- Configurable via `--max-suggestions` CLI flag
+- Prompt explicitly allows empty array for excellent translations
+- Emphasizes quality over quantity - no invented issues
 
 ### ~~3. Avoid Repeated Suggestions Across PRs~~ (Expected Behavior)
 **Priority: N/A**
@@ -275,9 +276,9 @@ Based on PR #379, consider adding:
 ## Next Steps
 
 1. ~~**Immediate**: Implement focus on changed content in evaluator~~ ✅ DONE
-2. **Short-term**: Add markdown syntax validation
-3. **Short-term**: Investigate file rename bug in translator
-4. **Medium-term**: Increase/configure suggestion limit
+2. ~~**Medium-term**: Increase/configure suggestion limit~~ ✅ DONE
+3. **Short-term**: Add markdown syntax validation
+4. **Short-term**: Investigate file rename bug in translator
 5. **Long-term**: Consider document-level vs PR-level review modes
 
 ---

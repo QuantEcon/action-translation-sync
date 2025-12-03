@@ -93,4 +93,5 @@ export interface EvaluationOptions {
   prNumber?: number; // Specific source PR to evaluate, or all open if undefined
   postReviews: boolean; // Post review comments to PRs
   outputFile?: string; // Path for report output
+  maxSuggestions: number; // Maximum number of suggestions per evaluation (default: 5)
 }

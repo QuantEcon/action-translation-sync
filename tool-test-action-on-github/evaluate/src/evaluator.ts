@@ -242,13 +242,18 @@ export function identifyChangedSections(
   return changedSections;
 }
 
+// Default configuration
+const DEFAULT_MAX_SUGGESTIONS = 5;
+
 export class TranslationEvaluator {
   private client: Anthropic;
   private glossarySection: string;
+  private maxSuggestions: number;
 
-  constructor(apiKey: string) {
+  constructor(apiKey: string, maxSuggestions: number = DEFAULT_MAX_SUGGESTIONS) {
     this.client = new Anthropic({ apiKey });
     this.glossarySection = loadGlossary();
+    this.maxSuggestions = maxSuggestions;
   }
 
   /**
@@ -347,10 +352,18 @@ Respond with ONLY valid JSON in this exact format:
   "fluency": <number 1-10>,
   "terminology": <number 1-10>,
   "formatting": <number 1-10>,
-  "issues": ["suggestion about CHANGED content only", "another suggestion about CHANGED content"],
+  "issues": [],
   "strengths": ["strength 1", "strength 2"],
   "summary": "Brief overall assessment"
 }
+
+## Suggestions Guidelines
+- The "issues" array can contain **0 to ${this.maxSuggestions} suggestions**
+- Only include actual issues found - an empty array [] is perfectly valid for excellent translations
+- Each suggestion should be specific and actionable
+- Prioritize by importance: accuracy issues first, then fluency, terminology, formatting
+- Include the specific text/term and your recommended improvement
+- Do NOT invent issues just to fill the array - quality over quantity
 
 **CRITICAL**: The "issues" array MUST contain suggestions that relate ONLY to the sections that were changed in this PR. Do not suggest improvements for unchanged parts of the document.`;
 
