@@ -12,7 +12,8 @@ import { fileURLToPath } from 'url';
 import type { 
   TranslationQualityResult, 
   DiffQualityResult,
-  FileDiff 
+  FileDiff,
+  ChangedSection 
 } from './types.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -53,6 +54,194 @@ ${termList}\n`;
   }
 }
 
+/**
+ * Extract preamble (content before first heading) from a markdown document
+ */
+function extractPreamble(content: string): string {
+  const lines = content.split('\n');
+  const preambleLines: string[] = [];
+  
+  for (const line of lines) {
+    if (line.match(/^#{1,6}\s+/)) {
+      break;
+    }
+    preambleLines.push(line);
+  }
+  
+  return preambleLines.join('\n').trim();
+}
+
+/**
+ * Extract sections from a markdown document
+ * Returns an array of {heading, content} in document order
+ */
+function extractSections(content: string): Array<{ heading: string; content: string }> {
+  const sections: Array<{ heading: string; content: string }> = [];
+  const lines = content.split('\n');
+  
+  let currentHeading = '';
+  let currentContent: string[] = [];
+  let inSection = false;
+  
+  for (const line of lines) {
+    const headingMatch = line.match(/^(#{2,6})\s+(.+)$/);
+    if (headingMatch) {
+      // Save previous section
+      if (inSection && currentHeading) {
+        sections.push({
+          heading: currentHeading,
+          content: currentContent.join('\n').trim(),
+        });
+      }
+      currentHeading = line;
+      currentContent = [];
+      inSection = true;
+    } else if (inSection) {
+      currentContent.push(line);
+    }
+  }
+  
+  // Save last section
+  if (inSection && currentHeading) {
+    sections.push({
+      heading: currentHeading,
+      content: currentContent.join('\n').trim(),
+    });
+  }
+  
+  return sections;
+}
+
+/**
+ * Generate a simple ID from heading text for matching
+ */
+function headingToId(heading: string): string {
+  // Remove ## prefix, lowercase, replace spaces with dashes
+  return heading
+    .replace(/^#{2,6}\s+/, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9\u4e00-\u9fff]+/g, '-')
+    .replace(/^-|-$/g, '');
+}
+
+/**
+ * Identify changed sections by comparing before and after content
+ * Handles: preamble changes, section additions, modifications, deletions, reordering
+ */
+export function identifyChangedSections(
+  sourceBefore: string,
+  sourceAfter: string,
+  targetBefore: string,
+  targetAfter: string
+): ChangedSection[] {
+  const changedSections: ChangedSection[] = [];
+  
+  // Handle empty documents (new or deleted files)
+  if (!sourceAfter && !targetAfter) {
+    // Both deleted - nothing to evaluate
+    return [{ heading: '(document deleted)', changeType: 'deleted' }];
+  }
+  
+  if (!sourceBefore && !targetBefore) {
+    // New document - mark all sections as added
+    const sections = extractSections(sourceAfter);
+    if (sections.length === 0) {
+      return [{ heading: '(new document)', changeType: 'added', englishContent: sourceAfter }];
+    }
+    return sections.map(s => ({
+      heading: s.heading,
+      changeType: 'added' as const,
+      englishContent: s.content,
+    }));
+  }
+  
+  // Check preamble changes (frontmatter, etc.)
+  const sourcePreambleBefore = extractPreamble(sourceBefore);
+  const sourcePreambleAfter = extractPreamble(sourceAfter);
+  const targetPreambleBefore = extractPreamble(targetBefore);
+  const targetPreambleAfter = extractPreamble(targetAfter);
+  
+  if (sourcePreambleBefore !== sourcePreambleAfter || targetPreambleBefore !== targetPreambleAfter) {
+    changedSections.push({
+      heading: '(preamble/frontmatter)',
+      changeType: 'modified',
+      englishContent: sourcePreambleAfter,
+      chineseContent: targetPreambleAfter,
+    });
+  }
+  
+  // Extract sections
+  const sourceBeforeSections = extractSections(sourceBefore);
+  const sourceAfterSections = extractSections(sourceAfter);
+  const targetAfterSections = extractSections(targetAfter);
+  
+  // Build maps for quick lookup by ID
+  const beforeById = new Map(sourceBeforeSections.map(s => [headingToId(s.heading), s]));
+  const afterById = new Map(sourceAfterSections.map(s => [headingToId(s.heading), s]));
+  
+  // Check for added and modified sections
+  for (let i = 0; i < sourceAfterSections.length; i++) {
+    const section = sourceAfterSections[i];
+    const id = headingToId(section.heading);
+    const beforeSection = beforeById.get(id);
+    
+    // Find corresponding Chinese section by position
+    const targetSection = targetAfterSections[i];
+    
+    if (!beforeSection) {
+      // New section added
+      changedSections.push({
+        heading: section.heading,
+        changeType: 'added',
+        englishContent: section.content,
+        chineseContent: targetSection?.content,
+      });
+    } else if (beforeSection.content !== section.content || beforeSection.heading !== section.heading) {
+      // Section modified (content or heading changed)
+      changedSections.push({
+        heading: section.heading,
+        changeType: 'modified',
+        englishContent: section.content,
+        chineseContent: targetSection?.content,
+      });
+    }
+  }
+  
+  // Check for deleted sections
+  for (const section of sourceBeforeSections) {
+    const id = headingToId(section.heading);
+    if (!afterById.has(id)) {
+      changedSections.push({
+        heading: section.heading,
+        changeType: 'deleted',
+      });
+    }
+  }
+  
+  // If no section changes detected, check if target-only changes occurred
+  // This handles cases where only the translation was updated without English changes
+  if (changedSections.length === 0) {
+    const targetBeforeSections = extractSections(targetBefore);
+    
+    for (let i = 0; i < targetAfterSections.length; i++) {
+      const targetSection = targetAfterSections[i];
+      const targetBefore = targetBeforeSections[i];
+      const sourceSection = sourceAfterSections[i];
+      
+      if (!targetBefore || targetBefore.content !== targetSection.content) {
+        changedSections.push({
+          heading: sourceSection?.heading || targetSection.heading,
+          changeType: targetBefore ? 'modified' : 'added',
+          englishContent: sourceSection?.content,
+          chineseContent: targetSection.content,
+        });
+      }
+    }
+  }
+  
+  return changedSections;
+}
+
 export class TranslationEvaluator {
   private client: Anthropic;
   private glossarySection: string;
@@ -63,17 +252,45 @@ export class TranslationEvaluator {
   }
 
   /**
+   * Format changed sections for the prompt
+   */
+  private formatChangedSections(changedSections: ChangedSection[]): string {
+    if (changedSections.length === 0) {
+      return '';
+    }
+
+    const sectionsList = changedSections.map(s => {
+      if (s.changeType === 'deleted') {
+        return `- **DELETED**: ${s.heading}`;
+      }
+      return `- **${s.changeType.toUpperCase()}**: ${s.heading}`;
+    }).join('\n');
+
+    return `\n## IMPORTANT: Changed Sections in This PR
+
+The following sections were actually modified in this PR. **Your suggestions MUST focus ONLY on these changed sections**. Do NOT suggest improvements for unchanged parts of the document.
+
+${sectionsList}
+
+**Rule**: Any suggestions you make must be about the translation quality of the changed sections listed above. Ignore any issues in other parts of the document - those can be addressed in a separate comprehensive review.
+`;
+  }
+
+  /**
    * Evaluate translation quality
    */
   async evaluateTranslation(
     sourceEnglish: string,
-    targetChinese: string
+    targetChinese: string,
+    changedSections: ChangedSection[] = []
   ): Promise<TranslationQualityResult> {
+    const changedSectionsPrompt = this.formatChangedSections(changedSections);
+    
     const prompt = `You are a professional translator and quality evaluator specializing in technical/academic content translation from English to Simplified Chinese.
 
 ## Task
 Evaluate the quality of the Chinese translation compared to the English source.
-
+${changedSectionsPrompt}
 ## English Source Document
 \`\`\`markdown
 ${sourceEnglish}
@@ -130,10 +347,12 @@ Respond with ONLY valid JSON in this exact format:
   "fluency": <number 1-10>,
   "terminology": <number 1-10>,
   "formatting": <number 1-10>,
-  "issues": ["issue 1", "issue 2"],
+  "issues": ["suggestion about CHANGED content only", "another suggestion about CHANGED content"],
   "strengths": ["strength 1", "strength 2"],
   "summary": "Brief overall assessment"
-}`;
+}
+
+**CRITICAL**: The "issues" array MUST contain suggestions that relate ONLY to the sections that were changed in this PR. Do not suggest improvements for unchanged parts of the document.`;
 
     const response = await this.client.messages.create({
       model: EVALUATOR_MODEL,

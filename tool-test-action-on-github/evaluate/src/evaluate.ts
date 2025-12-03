@@ -23,7 +23,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
 import { GitHubService } from './github.js';
-import { TranslationEvaluator } from './evaluator.js';
+import { TranslationEvaluator, identifyChangedSections } from './evaluator.js';
 import type { 
   EvaluationOptions, 
   EvaluationResult, 
@@ -61,11 +61,21 @@ async function evaluatePRPair(
   const sourceBefore = sourceDiff.beforeContent.get(sourceFile) || '';
   const targetBefore = targetDiff.beforeContent.get(sourceFile) || '';
 
-  // Evaluate translation quality
+  // Identify which sections were actually changed
+  const changedSections = identifyChangedSections(
+    sourceBefore,
+    sourceAfter,
+    targetBefore,
+    targetAfter
+  );
+  console.log(chalk.gray(`  Changed sections: ${changedSections.length > 0 ? changedSections.map(s => s.heading).join(', ') : 'preamble only'}`));
+
+  // Evaluate translation quality (focused on changed sections)
   console.log(chalk.gray('  Evaluating translation quality...'));
   const translationResult = await evaluator.evaluateTranslation(
     sourceAfter,
-    targetAfter
+    targetAfter,
+    changedSections
   );
 
   // Evaluate diff quality

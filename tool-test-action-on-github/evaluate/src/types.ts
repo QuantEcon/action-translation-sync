@@ -28,6 +28,13 @@ export interface TranslationContext {
   targetChinese: string;
 }
 
+export interface ChangedSection {
+  heading: string;          // The section heading (e.g., "## Introduction")
+  changeType: 'added' | 'modified' | 'deleted';
+  englishContent?: string;  // For added/modified sections
+  chineseContent?: string;  // For added/modified sections
+}
+
 export interface TranslationQualityResult {
   score: number; // 1-10
   accuracy: number; // 1-10: Does it accurately convey the English meaning?
