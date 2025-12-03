@@ -26,7 +26,6 @@ export interface FileDiff {
 export interface TranslationContext {
   sourceEnglish: string;
   targetChinese: string;
-  changedSections: string[];
 }
 
 export interface TranslationQualityResult {

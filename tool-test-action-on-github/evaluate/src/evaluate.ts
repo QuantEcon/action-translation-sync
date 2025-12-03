@@ -52,18 +52,6 @@ async function evaluatePRPair(
   // Get target diff (Chinese before/after)
   const targetDiff = await github.getTargetDiff(pair.targetNumber);
 
-  // Find changed sections from source files
-  const changedSections: string[] = [];
-  for (const file of sourceDiff.files) {
-    if (file.filename.endsWith('.md') && file.patch) {
-      // Extract section headings from patch
-      const headingMatches = file.patch.match(/^\+##+ .+$/gm);
-      if (headingMatches) {
-        changedSections.push(...headingMatches.map(h => h.replace(/^\+/, '').trim()));
-      }
-    }
-  }
-
   // Get primary file content for evaluation
   const primaryFile = sourceDiff.files.find(f => f.filename.endsWith('.md'));
   const sourceFile = primaryFile?.filename || 'lecture-minimal.md';
@@ -77,8 +65,7 @@ async function evaluatePRPair(
   console.log(chalk.gray('  Evaluating translation quality...'));
   const translationResult = await evaluator.evaluateTranslation(
     sourceAfter,
-    targetAfter,
-    changedSections
+    targetAfter
   );
 
   // Evaluate diff quality

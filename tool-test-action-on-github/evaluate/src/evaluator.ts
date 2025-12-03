@@ -67,13 +67,12 @@ export class TranslationEvaluator {
    */
   async evaluateTranslation(
     sourceEnglish: string,
-    targetChinese: string,
-    changedSections: string[]
+    targetChinese: string
   ): Promise<TranslationQualityResult> {
     const prompt = `You are a professional translator and quality evaluator specializing in technical/academic content translation from English to Simplified Chinese.
 
 ## Task
-Evaluate the quality of the Chinese translation compared to the English source. Focus on the sections that were recently translated/updated.
+Evaluate the quality of the Chinese translation compared to the English source.
 
 ## English Source Document
 \`\`\`markdown
@@ -84,10 +83,6 @@ ${sourceEnglish}
 \`\`\`markdown
 ${targetChinese}
 \`\`\`
-
-## Changed Sections
-These are the sections that were recently translated/updated:
-${changedSections.map(s => `- ${s}`).join('\n')}
 ${this.glossarySection}
 ## IMPORTANT: About the Heading-Map
 
@@ -100,6 +95,8 @@ heading-map:
 \`\`\`
 
 This is a feature of the translation sync system that maps English heading IDs to Chinese headings for section matching across languages. Do NOT flag this as an issue or formatting problem - it is intentional and does not affect Jupyter Book compilation.
+
+**Note on double-colon notation**: The heading-map may use \`section::subsection\` notation (e.g., \`supply-and-demand::market-dynamics\`) to represent hierarchical headings. This double-colon \`::\` syntax is intentional and valid - it represents the relationship between a section and its nested subsection. This is safe in YAML because YAML only treats \`:\` as a key-value separator when followed by a space.
 
 ## Evaluation Criteria
 Rate each criterion from 1-10:
@@ -216,6 +213,7 @@ The \`heading-map\` in the frontmatter is a CRITICAL feature of this translation
 - When a section is added/modified, its heading-map entry should be added/updated
 - When a section is deleted, its heading-map entry may be removed
 - The heading-map should always contain entries for ALL sections in the document
+- Hierarchical headings use double-colon \`::\` notation: \`section::subsection\` (e.g., \`supply-and-demand::market-dynamics\`). This is valid YAML syntax.
 
 This is CORRECT and EXPECTED - do NOT flag heading-map changes as issues unless they are actually wrong (e.g., wrong mapping, missing entries for existing sections).
 
