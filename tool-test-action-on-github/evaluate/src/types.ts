@@ -41,6 +41,7 @@ export interface TranslationQualityResult {
   fluency: number; // 1-10: Does it read naturally in Chinese?
   terminology: number; // 1-10: Is technical terminology consistent?
   formatting: number; // 1-10: Is MyST/math/code preserved?
+  syntaxErrors: string[]; // Markdown/MyST syntax errors found
   issues: string[];
   strengths: string[];
   summary: string;

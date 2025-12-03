@@ -345,6 +345,13 @@ Rate each criterion from 1-10:
    - Headings, lists, and structure maintained
    - Links and references correct
 
+5. **Syntax** (check for errors): Check for markdown/MyST syntax errors in the translation:
+   - Headings MUST have a space after # (e.g., "## Title" not "##Title")
+   - Code blocks must have matching \`\`\` delimiters
+   - Math blocks must have matching $$ delimiters
+   - MyST directives must use correct syntax: \`\`\`{directive}
+   - Report any syntax errors found - these are CRITICAL issues that must be fixed
+
 ## Response Format
 Respond with ONLY valid JSON in this exact format:
 {
@@ -352,10 +359,13 @@ Respond with ONLY valid JSON in this exact format:
   "fluency": <number 1-10>,
   "terminology": <number 1-10>,
   "formatting": <number 1-10>,
+  "syntaxErrors": ["error 1 with line/location if possible", "error 2"],
   "issues": [],
   "strengths": ["strength 1", "strength 2"],
   "summary": "Brief overall assessment"
 }
+
+Note: "syntaxErrors" should be an empty array [] if no markdown syntax errors are found. Syntax errors are CRITICAL and should always be reported even if the array would otherwise be empty.
 
 ## Suggestions Guidelines
 - The "issues" array can contain **0 to ${this.maxSuggestions} suggestions**
@@ -402,6 +412,7 @@ Respond with ONLY valid JSON in this exact format:
         fluency: result.fluency,
         terminology: result.terminology,
         formatting: result.formatting,
+        syntaxErrors: result.syntaxErrors || [],
         issues: result.issues || [],
         strengths: result.strengths || [],
         summary: result.summary || '',
@@ -577,6 +588,15 @@ Respond with ONLY valid JSON:
 
     if (translationResult.strengths.length > 0) {
       comment += ` ${translationResult.strengths.join(' ')}`;
+    }
+
+    // Syntax errors are CRITICAL - show them prominently
+    if (translationResult.syntaxErrors && translationResult.syntaxErrors.length > 0) {
+      comment += `
+
+### ⚠️ Markdown Syntax Errors (CRITICAL)
+The following syntax errors were detected and should be fixed:
+${translationResult.syntaxErrors.map(e => `- 🔴 ${e}`).join('\n')}`;
     }
 
     if (translationResult.issues.length > 0) {
