@@ -46,6 +46,7 @@ interface BulkOptions {
   anthropicApiKey: string;
   githubToken: string;
   glossaryPath?: string;
+  model: string;
   batchDelay: number;
   resumeFrom?: string;
   dryRun?: boolean;
@@ -81,7 +82,7 @@ class BulkTranslator {
     this.options = options;
     // For dry-run with public repos, token is optional
     this.octokit = new Octokit(options.githubToken ? { auth: options.githubToken } : {});
-    this.translator = new TranslationService(options.anthropicApiKey, 'claude-sonnet-4.5-20241022', true);
+    this.translator = new TranslationService(options.anthropicApiKey, options.model, true);
     this.parser = new MystParser();
     this.stats = {
       totalLectures: 0,
@@ -109,7 +110,8 @@ class BulkTranslator {
     
     console.log(chalk.gray(`Source: ${this.options.sourceRepo}`));
     console.log(chalk.gray(`Target: ${this.options.targetFolder}`));
-    console.log(chalk.gray(`Language: ${this.options.sourceLanguage} → ${this.options.targetLanguage}\n`));
+    console.log(chalk.gray(`Language: ${this.options.sourceLanguage} → ${this.options.targetLanguage}`));
+    console.log(chalk.gray(`Model: ${this.options.model}\n`));
 
     try {
       // Phase 1: Load glossary
@@ -587,6 +589,7 @@ async function main() {
     .option('--source-language <lang>', 'Source language code', 'en')
     .option('--docs-folder <folder>', 'Documentation folder in repo', 'lectures/')
     .option('--glossary-path <path>', 'Custom glossary file path')
+    .option('--model <model>', 'AI model for translation (e.g., claude-sonnet-4-5-20250929)', 'claude-sonnet-4-5-20250929')
     .option('--batch-delay <ms>', 'Delay between lectures in milliseconds', '1000')
     .option('--resume-from <file>', 'Resume from specific lecture file')
     .option('--dry-run', 'Show what would be done without making API calls or creating files')
