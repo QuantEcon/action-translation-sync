@@ -22,7 +22,7 @@ HumphreyYang reviewed all 24 translation PRs and the corresponding Opus 4.5 eval
 | ✅ **Fixed** | File rename handling - transfers translation, deletes old file (commit 403fd63) |
 | ✅ **Fixed** | PR #381 - "Changed Sections" list bug (commit ffa2b02) |
 | ℹ️ **Expected** | Same suggestions repeated across multiple PRs (test suite uses similar documents) |
-| ⚠️ **Pending** | Glossary additions for game theory terms ✅ ADDED |
+| ✅ **Fixed** | Glossary additions for game theory terms (commit c451963) |
 
 ---
 

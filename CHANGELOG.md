@@ -30,6 +30,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Uses GitHub's `previous_filename` field for rename detection
   - Preserves heading-map and existing translations when files are renamed
 
+### Changed
+- **Glossary**: Added 2 game theory terms (357 total, was 355)
+  - "folk theorem" → "无名氏定理"
+  - "grim trigger strategy" → "冷酷策略"
+
 ### Documentation
 - Created myst-lint project proposal: QuantEcon/meta#268
 
