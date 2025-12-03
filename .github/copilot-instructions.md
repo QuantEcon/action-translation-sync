@@ -5,7 +5,7 @@
 **action-translation-sync** is a GitHub Action that automatically translates MyST Markdown documents from English to Chinese using Claude AI (Anthropic). It uses a **section-based approach** for robust, maintainable translation.
 
 **Core Architecture**: Section-based translation with full recursive heading support
-**Current Version**: v0.6.0 (Production-Ready)
+**Current Version**: v0.6.0 (Testing & Development)
 **Test Coverage**: 155 tests, all passing
 **Code Size**: ~2,700 lines core logic across 7 modules
 
@@ -310,8 +310,6 @@ docs/
 ├── PROJECT-DESIGN.md     # Design decisions
 ├── TESTING.md            # Testing guide
 ├── HEADING-MAPS.md       # Heading-map system
-├── TODO.md               # Roadmap
-├── STATUS-REPORT.md      # Project status
 ├── TEST-REPOSITORIES.md  # GitHub test setup guide
 └── releases/             # Release notes
     ├── v0.4.3.md
@@ -320,14 +318,12 @@ docs/
 
 **Always Update**:
 - Test counts when adding tests
-- Release notes for new features/fixes
-- Status report for major changes
+- CHANGELOG.md for new features/fixes
 - README.md for user-facing changes
 
 **IMPORTANT - Documentation Guidelines**:
 ❌ **Never create standalone SUMMARY.md files for individual changes**
-✅ **Always update existing documentation in place** (STATUS-REPORT.md, TODO.md, release notes)
-✅ **CHANGELOG.md is OK** - Can be built from `docs/releases/` content
+✅ **Always update CHANGELOG.md for version changes**
 ✅ **Update README.md for user-facing changes**
 ✅ **Clean up backup files** - Remove any `.backup` or `-old` files before committing
 

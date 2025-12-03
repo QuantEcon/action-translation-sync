@@ -2,8 +2,8 @@
 
 Complete documentation for the Translation Sync GitHub Action.
 
-**Current Version**: v0.5.1 (Production-Ready)  
-**Status**: Language-Extensible Architecture
+**Current Version**: v0.6.0 (Testing & Development)  
+**Status**: Input Validation & Error Handling
 
 ---
 
@@ -42,9 +42,9 @@ Complete documentation for the Translation Sync GitHub Action.
 
 **For contributors and testers:**
 
-1. **[Testing Guide](TESTING.md)** - Test suite design and how to write tests (147 tests)
+1. **[Testing Guide](TESTING.md)** - Test suite design and how to write tests (155 tests)
 2. **[Test Repositories](TEST-REPOSITORIES.md)** - GitHub integration testing setup (24 scenarios)
-3. **[Status Report](STATUS-REPORT.md)** - Current project status and metrics
+3. **[CHANGELOG](../CHANGELOG.md)** - Version history and release notes
 
 ---
 
@@ -61,7 +61,8 @@ Complete documentation for the Translation Sync GitHub Action.
 
 **Version history:**
 
-- **[v0.5.1](releases/v0.5.1.md)** - Language configuration system + GPT5 validation ✅
+- **[v0.6.0](../CHANGELOG.md#060---2025-12-03)** - Input validation, error handling, dependency cleanup ✅
+- **[v0.5.1](releases/v0.5.1.md)** - Language configuration system + GPT5 validation
 - **[v0.5.0](releases/v0.5.0.md)** - TOC files, file deletions, enhanced test coverage
 - **[v0.4.10](releases/v0.4.10.md)** - Bug fixes and improvements
 - **[v0.4.7](releases/v0.4.7.md)** - Full recursive heading support (##-######)
@@ -91,7 +92,7 @@ Complete documentation for the Translation Sync GitHub Action.
 | Choose a Claude model | [CLAUDE-MODELS.md](CLAUDE-MODELS.md) |
 | Add glossary terms | [../glossary/README.md](../glossary/README.md) |
 | Configure language rules | [Language Config](IMPLEMENTATION.md#language-configuration) |
-| Check project status | [STATUS-REPORT.md](STATUS-REPORT.md) |
+| Check version history | [CHANGELOG.md](../CHANGELOG.md) |
 | Bulk translate initial setup | [../tool-bulk-translator/README.md](../tool-bulk-translator/README.md) |
 | Test with GitHub PRs | [../tool-test-action-on-github/README.md](../tool-test-action-on-github/README.md) |
 
@@ -108,14 +109,13 @@ docs/
 ├── IMPLEMENTATION.md        # Comprehensive technical guide
 ├── HEADING-MAPS.md          # Cross-language matching system
 ├── CLAUDE-MODELS.md         # Model selection and configuration
-├── TESTING.md               # Test suite guide (147 tests)
+├── TESTING.md               # Test suite guide (155 tests)
 ├── TEST-REPOSITORIES.md     # GitHub integration testing setup
-├── STATUS-REPORT.md         # Project status and metrics
 └── releases/                # Version release notes
     ├── v0.1.0.md ... v0.5.1.md
 ```
 
-**Total**: 10 focused documentation files
+**Total**: 9 focused documentation files
 
 ---
 
@@ -131,11 +131,11 @@ docs/
 
 ## 📊 Project Metrics
 
-- **Core Code**: ~2,600 lines across 7 modules
-- **Test Coverage**: 147 tests (100% passing)
+- **Core Code**: ~2,700 lines across 7 modules
+- **Test Coverage**: 155 tests (100% passing)
 - **GitHub Tests**: 24 automated scenarios
 - **Glossary Terms**: 355 (Chinese)
-- **Bundle Size**: ~1,250kB (reduced from 1,951kB after removing unused deps)
+- **Bundle Size**: ~1.9MB
 - **Languages Supported**: English, Simplified Chinese (more planned)
 
 ---
@@ -154,4 +154,4 @@ See [PROJECT-DESIGN.md](PROJECT-DESIGN.md) for detailed explanations.
 
 ---
 
-**Last Updated**: December 3, 2025 (v0.5.1)
+**Last Updated**: December 3, 2025 (v0.6.0)
