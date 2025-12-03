@@ -523,6 +523,11 @@
       "context": "economics"
     },
     {
+      "en": "Folk theorem",
+      "zh-cn": "无名氏定理",
+      "context": "game theory"
+    },
+    {
       "en": "Forcing variable",
       "zh-cn": "强制变量",
       "context": "difference equations"
@@ -631,6 +636,11 @@
       "en": "Growth facts",
       "zh-cn": "增长事实",
       "context": "growth theory"
+    },
+    {
+      "en": "Grim trigger strategy",
+      "zh-cn": "冷酷策略",
+      "context": "game theory"
     },
     {
       "en": "Heavy-tailed distribution",

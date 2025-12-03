@@ -14,14 +14,15 @@ HumphreyYang reviewed all 24 translation PRs and the corresponding Opus 4.5 eval
 ### Key Findings
 
 | Category | Finding |
-|----------|---------|
+|----------|---------||
 | ✅ **Strengths** | Assessments generally accurate, summaries helpful, glossary compliance well-checked |
-| ✅ **Fixed** | Suggestions now focus on changed sections only (implemented Dec 4, 2025) |
-| ✅ **Fixed** | Configurable max suggestions with improved prompt (default: 5, was ~2) |
+| ✅ **Fixed** | Suggestions now focus on changed sections only (commit 05a2e23) |
+| ✅ **Fixed** | Configurable max suggestions with improved prompt (commit 0a3ca1f) |
+| ✅ **Fixed** | Markdown syntax validation in prompts (commit 7710457) |
+| ✅ **Fixed** | File rename handling - transfers translation, deletes old file (commit 403fd63) |
+| ✅ **Fixed** | PR #381 - "Changed Sections" list bug (commit ffa2b02) |
 | ℹ️ **Expected** | Same suggestions repeated across multiple PRs (test suite uses similar documents) |
-| ❌ **Bug Found** | PR #381 - "Changed Sections" list included non-existent sections (now fixed) |
-| ❌ **Bug Found** | PR #380 - Translator bug: file rename not handled correctly (adds new file instead of renaming) |
-| ❌ **Bug Found** | PR #381 - Translator bug: markdown syntax error (`####` without space) not caught |
+| ⚠️ **Pending** | Glossary additions for game theory terms ✅ ADDED |
 
 ---
 
@@ -226,29 +227,34 @@ The evaluator now:
 
 Same suggestions appear in multiple PRs (e.g., #362, #364, #374 all have same suggestion). This is **expected** because the test suite intentionally uses similar document structures across test scenarios. In real-world usage with diverse documents, this would not occur.
 
-### 4. Better Markdown/Syntax Validation
-**Priority: HIGH**
+### ~~4. Better Markdown/Syntax Validation~~ ✅ IMPLEMENTED
+**Status: COMPLETE (commit 7710457)**
 
-PR #381 and #384 had markdown syntax errors not caught:
-- Missing space after `####`
-- Incorrect code block syntax
-- Math block with wrong closing
+LLM-based syntax checking added to:
+- **Translator prompts**: Explicit rules for heading space, code/math delimiters
+- **Evaluator prompts**: "Syntax" as 5th criterion with `syntaxErrors` array
+- **PR comments**: Syntax errors shown prominently with 🔴 markers
 
-Consider adding syntax validation step before evaluation.
+Deterministic linting tool proposed: [QuantEcon/meta#268](https://github.com/QuantEcon/meta/issues/268) (myst-lint)
 
-### 5. File Rename Detection
-**Priority: HIGH**
+### ~~5. File Rename Detection~~ ✅ IMPLEMENTED
+**Status: COMPLETE (commit 403fd63)**
 
-PR #380 shows the translator doesn't handle file renames correctly - it adds a new file instead of renaming. This is a translator bug, but the evaluator should also flag when:
-- Unexpected files are added
-- Expected file operations don't match PR description
+PR #380 showed the translator did not handle file renames correctly. **Now fixed:**
+- Detects `status: 'renamed'` files separately from added/modified
+- Uses GitHub's `previous_filename` field to identify old file
+- Transfers existing translation to new filename (preserves heading-map)
+- Marks old file for deletion in target repo
+- If no existing translation exists, does full translation
 
-### 6. Glossary Additions
-**Priority: LOW**
+### ~~6. Glossary Additions~~ ✅ IMPLEMENTED
+**Status: COMPLETE**
 
-Based on PR #379, consider adding:
-- "grim trigger strategy" → "冷酷策略"
+Based on PR #379, added game theory terms:
 - "folk theorem" → "无名氏定理"
+- "grim trigger strategy" → "冷酷策略"
+
+Glossary now has 357 terms (was 355).
 
 ---
 
@@ -275,11 +281,13 @@ Based on PR #379, consider adding:
 
 ## Next Steps
 
-1. ~~**Immediate**: Implement focus on changed content in evaluator~~ ✅ DONE
-2. ~~**Medium-term**: Increase/configure suggestion limit~~ ✅ DONE
-3. **Short-term**: Add markdown syntax validation
-4. **Short-term**: Investigate file rename bug in translator
-5. **Long-term**: Consider document-level vs PR-level review modes
+1. ~~**Immediate**: Implement focus on changed content in evaluator~~ ✅ DONE (05a2e23)
+2. ~~**Medium-term**: Increase/configure suggestion limit~~ ✅ DONE (0a3ca1f)
+3. ~~**Short-term**: Add markdown syntax validation~~ ✅ DONE (7710457)
+4. ~~**Short-term**: Fix file rename bug in translator~~ ✅ DONE (403fd63)
+5. ~~**Low**: Add glossary terms for game theory~~ ✅ DONE
+6. **Low**: Build myst-lint deterministic linting tool (QuantEcon/meta#268)
+7. **Future**: Consider document-level vs PR-level review modes
 
 ---
 
