@@ -9,8 +9,8 @@
 Beyond unit tests (`npm test`), we validate the action in a real GitHub environment with actual PRs, cross-repo operations, and GitHub Actions workflows.
 
 **Test Repositories**:
-- **Source**: `quantecon/test-translation-sync` (English)
-- **Target**: `quantecon/test-translation-sync.zh-cn` (Chinese translations)
+- **Source**: `QuantEcon/test-translation-sync` (English)
+- **Target**: `QuantEcon/test-translation-sync.zh-cn` (Chinese translations)
 
 ---
 
@@ -26,7 +26,7 @@ Beyond unit tests (`npm test`), we validate the action in a real GitHub environm
 This script automatically:
 1. Resets test repositories to clean state
 2. Closes all old PRs
-3. Creates 9 test PRs covering different scenarios
+3. Creates 24 test PRs covering different scenarios
 4. Triggers GitHub Actions on each PR
 5. Validates translations in target repo
 
@@ -40,11 +40,11 @@ Only needed once:
 
 ```bash
 # 1. Create test repositories
-gh repo create quantecon/test-translation-sync --public
-gh repo create quantecon/test-translation-sync.zh-cn --public
+gh repo create QuantEcon/test-translation-sync --public
+gh repo create QuantEcon/test-translation-sync.zh-cn --public
 
 # 2. Add Claude API key
-gh secret set ANTHROPIC_API_KEY --repo quantecon/test-translation-sync
+gh secret set ANTHROPIC_API_KEY --repo QuantEcon/test-translation-sync
 ```
 
 Then run the test script above.
@@ -67,13 +67,13 @@ Then run the test script above.
 
 ```bash
 # View test PRs in source repo
-gh pr list --repo quantecon/test-translation-sync --label test-translation
+gh pr list --repo QuantEcon/test-translation-sync --label test-translation
 
 # View translation PRs in target repo
-gh pr list --repo quantecon/test-translation-sync.zh-cn
+gh pr list --repo QuantEcon/test-translation-sync.zh-cn
 
 # Check GitHub Actions logs
-gh run list --repo quantecon/test-translation-sync
+gh run list --repo QuantEcon/test-translation-sync
 gh run view <run-id> --log
 ```
 
@@ -92,7 +92,7 @@ npm run build && npm run package
 ./tool-test-action-on-github/test-action-on-github.sh
 
 # Check results
-gh run list --repo quantecon/test-translation-sync
+gh run list --repo QuantEcon/test-translation-sync
 ```
 
 ---
@@ -128,12 +128,12 @@ The script auto-cleans between runs. When completely done:
 
 ```bash
 # Archive (read-only)
-gh repo archive quantecon/test-translation-sync
-gh repo archive quantecon/test-translation-sync.zh-cn
+gh repo archive QuantEcon/test-translation-sync
+gh repo archive QuantEcon/test-translation-sync.zh-cn
 
 # Or delete
-gh repo delete quantecon/test-translation-sync --yes
-gh repo delete quantecon/test-translation-sync.zh-cn --yes
+gh repo delete QuantEcon/test-translation-sync --yes
+gh repo delete QuantEcon/test-translation-sync.zh-cn --yes
 ```
 
 ---

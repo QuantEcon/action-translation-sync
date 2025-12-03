@@ -6,11 +6,16 @@ This tool provides automated testing of the `action-translation-sync` GitHub Act
 
 The test script creates and manages test PRs in source and target repositories to validate that the translation sync workflow functions correctly across various scenarios.
 
+**Two-phase workflow:**
+1. **Test Phase** (`test-action-on-github.sh`): Run test scenarios, create PRs
+2. **Evaluation Phase** (`evaluate/`): Review translation quality with Opus 4.5
+
 ## Prerequisites
 
 - GitHub CLI (`gh`) installed and authenticated
 - Push access to test repositories
 - Action configured in source repository
+- For evaluation: `ANTHROPIC_API_KEY` and `GITHUB_TOKEN` environment variables
 
 ## Test Repositories
 
@@ -18,6 +23,8 @@ The test script creates and manages test PRs in source and target repositories t
 - **Target**: `QuantEcon/test-translation-sync.zh-cn`
 
 ## Usage
+
+### Phase 1: Run Test Scenarios
 
 ```bash
 cd /path/to/action-translation-sync/tool-test-action-on-github
@@ -27,9 +34,28 @@ cd /path/to/action-translation-sync/tool-test-action-on-github
 The script will:
 1. Reset test repositories to clean state
 2. Run 24 automated test scenarios
-3. Create PRs in source repository
-4. Wait for translation PRs in target repository
+3. Create PRs in source repository with `test-translation` label
+4. Label triggers action → creates translation PRs in target repository
 5. Report results
+
+Both source and target PRs remain **open** for evaluation.
+
+### Phase 2: Evaluate Translation Quality
+
+```bash
+cd evaluate
+npm install
+npm run evaluate              # Evaluate all open PR pairs
+npm run evaluate -- --pr 123  # Evaluate specific source PR
+npm run evaluate:dry-run      # Preview without posting reviews
+npm run evaluate:post         # Post reviews to target PRs
+```
+
+Evaluation uses **Claude Opus 4.5** to assess:
+- **Translation quality**: Accuracy, fluency, terminology, formatting
+- **Diff quality**: Scope, position, structure, heading-map correctness
+
+Reports are saved to `reports/evaluation-<date>.md`.
 
 ## Test Scenarios
 
@@ -54,14 +80,28 @@ The tool tests various translation scenarios:
 17. **Special characters** - Edge cases in headings
 18. **Empty sections** - Placeholder headings
 
-## Test Data
+## Directory Structure
 
-All test scenarios and their corresponding MyST Markdown content are stored in `test-action-on-github-data/`:
-
-- `base-minimal.md` / `base-minimal-zh-cn.md` - Minimal test documents
-- `base-lecture.md` / `base-lecture-zh-cn.md` - Realistic lecture documents
-- `01-intro-change-minimal.md` through `24-empty-sections-minimal.md` - Test scenarios
-- `base-toc.yml` / `base-toc-zh-cn.yml` - Table of contents files
+```
+tool-test-action-on-github/
+├── test-action-on-github.sh     # Main test script
+├── test-action-on-github-data/  # Test scenario files
+│   ├── base-minimal.md          # Base English doc
+│   ├── base-minimal-zh-cn.md    # Base Chinese doc
+│   ├── 01-intro-change-*.md     # Test scenarios
+│   └── ...
+├── evaluate/                     # Quality evaluation tool
+│   ├── src/
+│   │   ├── evaluate.ts          # CLI entry point
+│   │   ├── evaluator.ts         # Opus 4.5 evaluation
+│   │   ├── github.ts            # PR fetching
+│   │   └── types.ts             # TypeScript types
+│   ├── package.json
+│   └── tsconfig.json
+├── reports/                      # Evaluation reports
+│   └── evaluation-*.md
+└── README.md
+```
 
 ## Test Mode
 
@@ -69,14 +109,55 @@ The script uses **TEST mode** which:
 - Uses PR head commit (not merge commit)
 - Skips actual translation (returns placeholder text)
 - Validates workflow mechanics without API costs
-- Triggered by PR label `test-translation`
+- **Triggered by adding the `test-translation` label** to source PRs
+
+### Label-Triggered Workflow
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│  1. test-action-on-github.sh creates source PRs                     │
+│     PRs are open with `test-translation` label                      │
+└───────────────────────────┬─────────────────────────────────────────┘
+                            ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│  2. Label triggers GitHub Action (no merge required)                │
+│     Action creates translation PRs in target repo                   │
+└───────────────────────────┬─────────────────────────────────────────┘
+                            ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│  3. Both source & target PRs remain OPEN for evaluation             │
+│     Run `npm run evaluate` to assess translation quality            │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+This allows evaluation of PR pairs **before merging** anything.
+
+## Evaluation Details
+
+The evaluation tool (`evaluate/`) uses Claude Opus 4.5 to assess:
+
+### Translation Quality (weighted 35/25/25/15)
+- **Accuracy**: Does it convey the English meaning correctly?
+- **Fluency**: Does it read naturally in Chinese?
+- **Terminology**: Is technical vocabulary consistent?
+- **Formatting**: Is MyST/LaTeX/code preserved?
+
+### Diff Quality (binary checks)
+- **Scope Correct**: Only intended files modified?
+- **Position Correct**: Changes in same document locations?
+- **Structure Preserved**: Document hierarchy maintained?
+- **Heading-map Correct**: Frontmatter updated properly?
+
+### Verdicts
+- **PASS** (✅): Overall ≥8, Diff ≥8
+- **WARN** (⚠️): Overall ≥6, Diff ≥6
+- **FAIL** (❌): Below thresholds
 
 ## Reports
 
-Test results and evaluations are stored in `reports/`:
-- GPT5 evaluation reports
-- Analysis of all test scenarios
-- Translation quality assessments
+Evaluation reports are saved to `reports/`:
+- `evaluation-YYYY-MM-DD.md` - Daily evaluation reports
+- `evaluation-github-tests-*.md` - Historical assessments
 
 ## Troubleshooting
 
@@ -91,6 +172,11 @@ Test results and evaluations are stored in `reports/`:
 **Translation PRs not appearing:**
 - Check GitHub Actions logs in source repository
 - Verify target repository exists and is accessible
+
+**Evaluation fails:**
+- Check `ANTHROPIC_API_KEY` is set
+- Check `GITHUB_TOKEN` has repo access
+- Verify PRs have `test-translation` label
 
 ## See Also
 

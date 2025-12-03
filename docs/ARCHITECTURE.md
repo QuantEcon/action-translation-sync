@@ -62,7 +62,7 @@ Create PR (Chinese)
 ### 3. Translator (translator.ts)
 - Two modes: UPDATE and NEW
 - Uses Claude Sonnet 4.5 with language-specific rules
-- **273 lines**
+- **305 lines**
 
 ### 4. File Processor (file-processor.ts)
 - Orchestrates translation workflow

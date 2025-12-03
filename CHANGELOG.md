@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.6.0] - 2025-12-03
 
 ### Added
+- **Opus 4.5 Evaluation Tool**: Quality assessment framework for translations
+  - Located in `tool-test-action-on-github/evaluate/`
+  - Uses Claude Opus 4.5 for translation quality evaluation
+  - Evaluates: Translation quality, diff accuracy, glossary compliance, heading-map handling
+  - Posts review comments on GitHub PRs with structured feedback
+  - Includes all 355 glossary terms for validation
+  - Supports `--list-only` flag for dry-run mode
 - **Input Validation**: Language code validation against configured languages in `LANGUAGE_CONFIGS`
   - New functions: `getSupportedLanguages()`, `isLanguageSupported()`, `validateLanguageCode()`
   - Clear error messages with list of supported languages

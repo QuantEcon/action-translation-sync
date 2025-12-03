@@ -2,14 +2,14 @@
 
 This document explains how the Translation Sync Action works internally. For architecture overview, see [ARCHITECTURE.md](ARCHITECTURE.md). For design decisions, see [PROJECT-DESIGN.md](PROJECT-DESIGN.md).
 
-**Version**: v0.5.1  
-**Status**: Production-Ready
+**Version**: v0.6.0  
+**Status**: Testing & Development
 
 ---
 
 ## Overview
 
-The implementation is **simple by design** - ~1,300 lines of core code across 7 modules, no complex AST parsing, and straightforward position-based matching.
+The implementation is **simple by design** - ~2,700 lines of core code across 7 modules, no complex AST parsing, and straightforward position-based matching.
 
 **Core Philosophy**: Keep it simple, maintainable, and easy to understand.
 

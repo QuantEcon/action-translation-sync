@@ -1,0 +1,24 @@
+{
+  "name": "evaluate-translation",
+  "version": "1.0.0",
+  "description": "Evaluate translation quality from test-action-on-github using Claude Opus 4.5",
+  "type": "module",
+  "main": "dist/evaluate.js",
+  "scripts": {
+    "build": "tsc",
+    "evaluate": "tsx src/evaluate.ts",
+    "evaluate:dry-run": "tsx src/evaluate.ts --dry-run",
+    "evaluate:post": "tsx src/evaluate.ts --post-reviews"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
+    "@octokit/rest": "^21.0.0",
+    "chalk": "^5.3.0",
+    "commander": "^12.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.0"
+  }
+}

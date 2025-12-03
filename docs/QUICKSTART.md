@@ -52,7 +52,7 @@ action-translation-sync/
 │   └── inputs.ts          # Input validation
 ├── dist/                   # Built JavaScript (committed)
 ├── glossary/               # Built-in glossaries
-│   ├── zh-cn.json         # Simplified Chinese (342 terms)
+│   ├── zh-cn.json         # Simplified Chinese (355 terms)
 │   └── README.md          # Glossary documentation
 ├── docs/                   # Documentation
 └── examples/               # Example files

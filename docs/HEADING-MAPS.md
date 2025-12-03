@@ -1,6 +1,6 @@
 # Heading Maps Guide
 
-**Version:** 0.4.3  
+**Version:** 0.6.0  
 **Feature:** Language-independent section matching using heading maps
 
 ## Overview

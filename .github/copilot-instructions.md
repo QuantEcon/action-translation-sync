@@ -213,7 +213,7 @@ if (docsFolder === '') {
 ### 2. GitHub Repository Tests
 **Purpose**: Real-world validation with actual PRs and GitHub Actions
 **Script**: `tool-test-action-on-github/test-action-on-github.sh`
-**Repositories**: `quantecon-test/lectures` → `quantecon-test/lectures-zh-cn`
+**Repositories**: `QuantEcon/test-translation-sync` → `QuantEcon/test-translation-sync.zh-cn`
 **Features**:
 - 24 automated test scenarios
 - Automated setup and reset
@@ -264,7 +264,12 @@ The project includes two independent tools at the root level:
 - 24 automated test scenarios
 - Real PR workflow testing
 - TEST mode (no API costs)
-- GPT5 evaluation reports in `tool-test-action-on-github/reports/`
+- **Evaluation submodule** (`evaluate/`): Quality assessment with Opus 4.5
+
+**Workflow**:
+1. Run `./test-action-on-github.sh` to create test PRs
+2. Run `cd evaluate && npm run evaluate` to assess quality
+3. Reports saved to `reports/evaluation-<date>.md`
 
 **When to Use**: Pre-release validation and regression testing
 

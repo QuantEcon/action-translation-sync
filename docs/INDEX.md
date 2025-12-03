@@ -53,7 +53,7 @@ Complete documentation for the Translation Sync GitHub Action.
 **Standalone tools for different workflows:**
 
 1. **[Bulk Translator](../tool-bulk-translator/README.md)** - One-time bulk translation for initial setup
-2. **[GitHub Test Tool](../tool-test-action-on-github/README.md)** - Automated GitHub integration testing
+2. **[GitHub Test Tool](../tool-test-action-on-github/README.md)** - Automated GitHub testing + quality evaluation
 
 ---
 
@@ -61,7 +61,7 @@ Complete documentation for the Translation Sync GitHub Action.
 
 **Version history:**
 
-- **[v0.6.0](../CHANGELOG.md#060---2025-12-03)** - Input validation, error handling, dependency cleanup ✅
+- **[v0.6.0](../CHANGELOG.md#060---2025-12-03)** - Opus 4.5 evaluation tool, input validation, error handling ✅
 - **[v0.5.1](releases/v0.5.1.md)** - Language configuration system + GPT5 validation
 - **[v0.5.0](releases/v0.5.0.md)** - TOC files, file deletions, enhanced test coverage
 - **[v0.4.10](releases/v0.4.10.md)** - Bug fixes and improvements

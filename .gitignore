@@ -6,8 +6,7 @@ dist/licenses.txt
 
 # Tool build outputs (standalone tools don't need committed builds)
 tool-bulk-translator/dist/
-tool-test-action-on-github/reports/*.md
-!tool-test-action-on-github/reports/evaluation-github-tests-gpt5-2025-11-06.md
+tool-test-action-on-github/evaluate/dist/
 
 *.log
 .env

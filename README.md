@@ -14,7 +14,7 @@ This action monitors a source repository for merged pull requests and automatica
 - 🔄 **Intelligent Diff Translation**: Only translates changed sections
 - ✍️ **MyST Markdown Support**: Preserves code blocks, math equations, and directives
 - 📚 **Glossary Support**: Built-in glossaries for consistent terminology
-- ✅ **GPT5 Validated**: 100% pass rate on 21 comprehensive test scenarios
+- ✅ **Opus 4.5 Validated**: 100% pass rate on 24 comprehensive test scenarios
 
 ## Features
 
@@ -218,7 +218,13 @@ This project includes two standalone tools for different stages of the translati
 - 24 comprehensive test scenarios
 - Real GitHub PR workflow testing
 - Dry-run mode for validation without API costs
-- GPT5 evaluation reports
+- **Opus 4.5 evaluation**: Automated quality assessment of translations
+
+**Evaluation submodule** (`evaluate/`):
+- Evaluates translation quality (accuracy, fluency, terminology, formatting)
+- Evaluates diff quality (scope, position, structure, heading-map)
+- Posts review comments directly to PRs
+- Generates detailed markdown reports
 
 **Test coverage**:
 - Basic changes (intro, title, content, reordering)
@@ -280,7 +286,7 @@ npm run format
 ├── tool-test-action-on-github/   # GitHub integration testing
 │   ├── test-action-on-github.sh  # Test script (24 scenarios)
 │   ├── test-action-on-github-data/  # Test fixtures
-│   └── reports/                  # GPT5 evaluation reports
+│   └── reports/                  # Opus 4.5 evaluation reports
 ├── examples/                     # Example workflow configurations
 ├── action.yml                    # GitHub Action metadata
 └── package.json                  # Dependencies and scripts
