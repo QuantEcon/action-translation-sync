@@ -166,6 +166,7 @@ export interface FileChange {
   additions: number;
   deletions: number;
   patch?: string;
+  previous_filename?: string; // For renamed files
 }
 
 export interface SyncResult {

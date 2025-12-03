@@ -1126,16 +1126,23 @@ async function run() {
             });
             files = commit.files || [];
         }
-        // Filter for files to sync: markdown files and TOC files
+        // Filter for renamed markdown files (need special handling)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const renamedMarkdownFiles = files.filter((file) => file.filename.startsWith(inputs.docsFolder) &&
+            file.filename.endsWith('.md') &&
+            file.status === 'renamed');
+        // Filter for files to sync: markdown files and TOC files (excluding renamed, handled separately)
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const changedMarkdownFiles = files.filter((file) => file.filename.startsWith(inputs.docsFolder) &&
             file.filename.endsWith('.md') &&
-            file.status !== 'removed');
-        // Filter for TOC files to sync (status: added or modified, not removed)
+            file.status !== 'removed' &&
+            file.status !== 'renamed');
+        // Filter for TOC files to sync (status: added or modified, not removed or renamed)
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const changedTocFiles = files.filter((file) => file.filename.startsWith(inputs.docsFolder) &&
             file.filename.endsWith('_toc.yml') &&
-            file.status !== 'removed');
+            file.status !== 'removed' &&
+            file.status !== 'renamed');
         // Filter for removed markdown files (for deletion)
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const removedMarkdownFiles = files.filter((file) => file.filename.startsWith(inputs.docsFolder) &&
@@ -1147,11 +1154,13 @@ async function run() {
             file.filename.endsWith('_toc.yml') &&
             file.status === 'removed');
         if (changedMarkdownFiles.length === 0 && changedTocFiles.length === 0 &&
-            removedMarkdownFiles.length === 0 && removedTocFiles.length === 0) {
+            removedMarkdownFiles.length === 0 && removedTocFiles.length === 0 &&
+            renamedMarkdownFiles.length === 0) {
             core.info('No markdown or TOC files changed in docs folder. Exiting.');
             return;
         }
         core.info(`Found ${changedMarkdownFiles.length} changed markdown files`);
+        core.info(`Found ${renamedMarkdownFiles.length} renamed markdown files`);
         core.info(`Found ${changedTocFiles.length} changed TOC files`);
         core.info(`Found ${removedMarkdownFiles.length} removed markdown files`);
         core.info(`Found ${removedTocFiles.length} removed TOC files`);
@@ -1269,6 +1278,99 @@ async function run() {
             }
             catch (error) {
                 const errorMessage = `Error processing ${file.filename}: ${error}`;
+                core.error(errorMessage);
+                errors.push(errorMessage);
+            }
+        }
+        // Process renamed markdown files (special handling: preserve translation, delete old file)
+        for (const file of renamedMarkdownFiles) {
+            try {
+                const previousFilename = file.previous_filename;
+                core.info(`Processing renamed file: ${previousFilename} → ${file.filename}...`);
+                // Get the new file content from the source repo
+                const { data: fileData } = await octokit.rest.repos.getContent({
+                    owner: github.context.repo.owner,
+                    repo: github.context.repo.repo,
+                    path: file.filename,
+                    ref: github.context.sha,
+                });
+                if (!('content' in fileData)) {
+                    throw new Error(`Could not get content for ${file.filename}`);
+                }
+                const newContent = Buffer.from(fileData.content, 'base64').toString('utf-8');
+                // Get the old content (before rename) using previous_filename
+                let oldContent = '';
+                if (previousFilename) {
+                    try {
+                        const { data: oldFileData } = await octokit.rest.repos.getContent({
+                            owner: github.context.repo.owner,
+                            repo: github.context.repo.repo,
+                            path: previousFilename,
+                            ref: `${github.context.sha}^`, // Parent commit
+                        });
+                        if ('content' in oldFileData) {
+                            oldContent = Buffer.from(oldFileData.content, 'base64').toString('utf-8');
+                        }
+                    }
+                    catch (error) {
+                        core.info(`Could not get old content from ${previousFilename}`);
+                    }
+                }
+                // Check if old file exists in target repo (to get existing translation)
+                const [targetOwner, targetRepo] = inputs.targetRepo.split('/');
+                let targetContent = '';
+                let oldFileSha;
+                if (previousFilename) {
+                    try {
+                        const { data: targetFileData } = await octokit.rest.repos.getContent({
+                            owner: targetOwner,
+                            repo: targetRepo,
+                            path: previousFilename,
+                        });
+                        if ('content' in targetFileData) {
+                            targetContent = Buffer.from(targetFileData.content, 'base64').toString('utf-8');
+                            oldFileSha = targetFileData.sha;
+                            core.info(`Found existing translation at ${previousFilename} - will transfer to ${file.filename}`);
+                        }
+                    }
+                    catch (error) {
+                        core.info(`${previousFilename} does not exist in target repo`);
+                    }
+                }
+                // Process the file
+                let translatedContent;
+                if (targetContent) {
+                    // We have an existing translation - use section-based processing to update it
+                    translatedContent = await processor.processSectionBased(oldContent, newContent, targetContent, file.filename, inputs.sourceLanguage, inputs.targetLanguage, glossary);
+                }
+                else {
+                    // No existing translation - do full translation
+                    translatedContent = await processor.processFull(newContent, file.filename, inputs.sourceLanguage, inputs.targetLanguage, glossary);
+                }
+                // Validate the translated content
+                const validation = await processor.validateMyST(translatedContent, file.filename);
+                if (!validation.valid) {
+                    throw new Error(`Validation failed: ${validation.error}`);
+                }
+                core.info(`Successfully processed renamed file ${file.filename}`);
+                processedFiles.push(file.filename);
+                // Store translated content at NEW path
+                translatedFiles.push({
+                    path: file.filename,
+                    content: translatedContent,
+                    // Note: no sha because this is a new file (renamed)
+                });
+                // Mark the OLD file for deletion if it existed in target repo
+                if (oldFileSha && previousFilename) {
+                    filesToDelete.push({
+                        path: previousFilename,
+                        sha: oldFileSha,
+                    });
+                    core.info(`Marked ${previousFilename} for deletion (renamed to ${file.filename})`);
+                }
+            }
+            catch (error) {
+                const errorMessage = `Error processing renamed file ${file.filename}: ${error}`;
                 core.error(errorMessage);
                 errors.push(errorMessage);
             }

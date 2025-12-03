@@ -5,6 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.1] - 2025-12-04
+
+### Added
+- **Markdown Syntax Validation in Prompts**: LLM-based syntax checking
+  - Translator prompts (UPDATE, NEW, FULL DOCUMENT) now include explicit syntax rules
+  - Evaluator includes "Syntax" as 5th evaluation criterion
+  - `syntaxErrors` array in evaluation response for critical markdown errors
+  - Syntax errors displayed prominently in PR comments with 🔴 markers
+  - Rules: space after `#` in headings, matching code/math delimiters
+- **Configurable Max Suggestions**: Evaluator now supports `--max-suggestions` flag
+  - Default increased from ~2 to 5 suggestions
+  - Prompt explicitly allows 0 suggestions for excellent translations
+- **Changed Sections Detection**: Evaluator focuses suggestions on modified content only
+  - Computes changed sections by comparing before/after content
+  - Supports preamble changes, additions, modifications, deletions
+  - Deep nesting support (######), empty sections, special characters
+
+### Fixed  
+- **Evaluator**: Changed sections list no longer includes non-existent sections
+- **File Rename Handling**: Renamed files now properly handled in translation sync
+  - Previously: renamed files were added as new files, leaving orphaned translations
+  - Now: existing translation is transferred to new filename, old file is deleted
+  - Uses GitHub's `previous_filename` field for rename detection
+  - Preserves heading-map and existing translations when files are renamed
+
+### Documentation
+- Created myst-lint project proposal: QuantEcon/meta#268
+
 ## [0.6.0] - 2025-12-03
 
 ### Added

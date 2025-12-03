@@ -128,6 +128,7 @@ export interface FileChange {
     additions: number;
     deletions: number;
     patch?: string;
+    previous_filename?: string;
 }
 export interface SyncResult {
     success: boolean;
