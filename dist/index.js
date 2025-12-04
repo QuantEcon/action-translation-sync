@@ -1596,16 +1596,15 @@ ${filesChangedSection}
                     });
                     core.info(`Created PR: ${pr.html_url}`);
                     // Prepare labels:
-                    // - 'automated' and 'action-translation-sync' are always added
-                    // - Copy labels from source PR (excluding 'test-translation' which is source-repo specific)
-                    // - Add any additional labels from inputs
-                    const labelsToAdd = new Set(['automated', 'action-translation-sync']);
-                    // Add source PR labels
-                    for (const label of sourcePrLabels) {
+                    // - Start with labels from pr-labels input (default: 'action-translation-sync,automated')
+                    // - Add labels from source PR (excluding source-specific labels like 'test-translation')
+                    const labelsToAdd = new Set();
+                    // Add input labels first
+                    for (const label of inputs.prLabels) {
                         labelsToAdd.add(label);
                     }
-                    // Add input labels
-                    for (const label of inputs.prLabels) {
+                    // Add source PR labels
+                    for (const label of sourcePrLabels) {
                         labelsToAdd.add(label);
                     }
                     // Add labels to PR
@@ -1750,7 +1749,7 @@ function getInputs() {
     const anthropicApiKey = core.getInput('anthropic-api-key', { required: true });
     const claudeModel = core.getInput('claude-model', { required: false }) || 'claude-sonnet-4-5-20250929';
     const githubToken = core.getInput('github-token', { required: true });
-    const prLabelsRaw = core.getInput('pr-labels', { required: false }) || 'translation-sync,automated';
+    const prLabelsRaw = core.getInput('pr-labels', { required: false }) || 'action-translation-sync,automated';
     const prLabels = prLabelsRaw.split(',').map((l) => l.trim()).filter((l) => l.length > 0);
     const prReviewersRaw = core.getInput('pr-reviewers', { required: false }) || '';
     const prReviewers = prReviewersRaw.split(',').map((r) => r.trim()).filter((r) => r.length > 0);

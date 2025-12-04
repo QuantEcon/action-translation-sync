@@ -45,7 +45,7 @@ export function getInputs(): ActionInputs {
   const claudeModel = core.getInput('claude-model', { required: false }) || 'claude-sonnet-4-5-20250929';
   const githubToken = core.getInput('github-token', { required: true });
   
-  const prLabelsRaw = core.getInput('pr-labels', { required: false }) || 'translation-sync,automated';
+  const prLabelsRaw = core.getInput('pr-labels', { required: false }) || 'action-translation-sync,automated';
   const prLabels = prLabelsRaw.split(',').map((l: string) => l.trim()).filter((l: string) => l.length > 0);
   
   const prReviewersRaw = core.getInput('pr-reviewers', { required: false }) || '';

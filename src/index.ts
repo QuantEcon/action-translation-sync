@@ -618,18 +618,17 @@ ${filesChangedSection}
           core.info(`Created PR: ${pr.html_url}`);
           
           // Prepare labels:
-          // - 'automated' and 'action-translation-sync' are always added
-          // - Copy labels from source PR (excluding 'test-translation' which is source-repo specific)
-          // - Add any additional labels from inputs
-          const labelsToAdd = new Set<string>(['automated', 'action-translation-sync']);
+          // - Start with labels from pr-labels input (default: 'action-translation-sync,automated')
+          // - Add labels from source PR (excluding source-specific labels like 'test-translation')
+          const labelsToAdd = new Set<string>();
           
-          // Add source PR labels
-          for (const label of sourcePrLabels) {
+          // Add input labels first
+          for (const label of inputs.prLabels) {
             labelsToAdd.add(label);
           }
           
-          // Add input labels
-          for (const label of inputs.prLabels) {
+          // Add source PR labels
+          for (const label of sourcePrLabels) {
             labelsToAdd.add(label);
           }
           

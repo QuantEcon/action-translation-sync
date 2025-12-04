@@ -75,7 +75,7 @@ function getInputs() {
     const anthropicApiKey = core.getInput('anthropic-api-key', { required: true });
     const claudeModel = core.getInput('claude-model', { required: false }) || 'claude-sonnet-4-5-20250929';
     const githubToken = core.getInput('github-token', { required: true });
-    const prLabelsRaw = core.getInput('pr-labels', { required: false }) || 'translation-sync,automated';
+    const prLabelsRaw = core.getInput('pr-labels', { required: false }) || 'action-translation-sync,automated';
     const prLabels = prLabelsRaw.split(',').map((l) => l.trim()).filter((l) => l.length > 0);
     const prReviewersRaw = core.getInput('pr-reviewers', { required: false }) || '';
     const prReviewers = prReviewersRaw.split(',').map((r) => r.trim()).filter((r) => r.length > 0);

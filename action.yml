@@ -42,7 +42,7 @@ inputs:
   pr-labels:
     description: 'Comma-separated labels for created PRs'
     required: false
-    default: 'translation-sync,automated'
+    default: 'action-translation-sync,automated'
   pr-reviewers:
     description: 'Comma-separated list of GitHub usernames to request as reviewers (e.g., user1,user2). Leave empty for no reviewers.'
     required: false
