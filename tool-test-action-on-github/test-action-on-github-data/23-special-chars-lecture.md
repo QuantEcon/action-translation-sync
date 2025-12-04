@@ -96,7 +96,7 @@ The regression coefficient $\beta$ measures the relationship between variables:
 
 $$
 y = \alpha + \beta x + \epsilon
-```
+$$
 
 ### Computing $\mathbb{E}[X]$ (Expected Values)
 
