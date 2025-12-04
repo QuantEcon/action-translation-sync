@@ -134,10 +134,13 @@ CRITICAL RULES:
 4. Preserve all MyST Markdown formatting, code blocks, math equations, and directives
 5. DO NOT translate code, math, URLs, or technical identifiers
 6. Use the glossary for consistent terminology
-7. MARKDOWN SYNTAX: Ensure proper markdown syntax in your output:
+5. MARKDOWN SYNTAX: Ensure proper markdown syntax in your output:
    - Headings MUST have a space after # (e.g., "## Title" not "##Title")
    - Code blocks must have matching \`\`\` delimiters
    - Math blocks must have matching $$ delimiters
+   - CRITICAL: Do NOT mix fence markers - use $$...$$ for math OR \`\`\`{math}...\`\`\` for directive math, but NEVER $$...\`\`\` or \`\`\`...$$
+   - CRITICAL: Do NOT mix fence markers - use $$...$$ for math OR \`\`\`{math}...\`\`\` for directive math, but NEVER $$...\`\`\` or \`\`\`...$$
+   - CRITICAL: Do NOT mix fence markers - use $$...$$ for math OR \`\`\`{math}...\`\`\` for directive math, but NEVER $$...\`\`\` or \`\`\`...$$
 ${additionalRules}
 ${additionalRules ? '' : '8. '}Return ONLY the updated ${targetLanguage} section, no explanations
 

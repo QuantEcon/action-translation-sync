@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Enhanced Fence Marker Validation**: Translator now explicitly prevents mixing fence markers
+  - Prevents mixing `$$` with ` ``` ` in math blocks (e.g., `$$...````)
+  - Enforces consistency: use `$$...$$` OR ` ```{math}...``` `, never mixed
+  - Added to all translation modes (UPDATE, NEW, FULL DOCUMENT)
+  - Catches common syntax errors before they reach the evaluator
 - **Improved Target PR Metadata**: Translation PRs now have better titles and labels
   - Title format: `🌐 [translation-sync] <source PR title>` (mirrors source PR)
   - Automatic labels: `automated`, `action-translation-sync`
