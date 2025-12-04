@@ -15,7 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Makes translation PRs easier to identify and manage
 - **Evaluator Model Selection**: New `--model` flag to choose evaluation model
   - Default: `claude-opus-4-5-20251101` (highest quality, $0.30/PR)
-  - Alternative: `claude-sonnet-4-5-20241022` (faster, cheaper $0.06/PR)
+  - Alternative: `claude-sonnet-4-5-20250929` (faster, cheaper $0.06/PR)
   - Enables cost/quality comparison for evaluation tasks
 
 ### Fixed
