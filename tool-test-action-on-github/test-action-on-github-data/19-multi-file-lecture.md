@@ -57,7 +57,7 @@ Vector spaces satisfy several key properties:
 
 These properties ensure that vector spaces behave predictably under mathematical operations, forming the foundation for linear transformations.
 
-####Applications in Economics
+#### Applications in Economics
 
 Vector space properties are fundamental in economic modeling. The closure property ensures that combinations of feasible allocations remain feasible, while the existence of inverses allows us to model debts and obligations.
 
