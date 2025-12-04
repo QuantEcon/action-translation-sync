@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.3] - 2025-12-04
+
+### Fixed
+- **Test Data Syntax Errors**: Fixed 2 markdown syntax bugs in test fixtures
+  - `19-multi-file-lecture.md`: Fixed malformed heading `####Applications` → `#### Applications`
+  - `23-special-chars-lecture.md`: Fixed mixed fence markers `$$...``` ` → `$$...$$`
+  - These were the exact errors v0.6.2's validation was designed to prevent!
+
+### Changed
+- **PR Labels Default**: Simplified from `translation-sync,automated` to `action-translation-sync,automated`
+  - Removed redundant `translation-sync` label in favor of more specific `action-translation-sync`
+  - Cleaned up hardcoded label duplication in index.ts
+  - Labels now sourced solely from `pr-labels` input + source PR labels
+
 ## [0.6.2] - 2025-12-04
 
 ### Added

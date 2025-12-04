@@ -2,7 +2,7 @@
 
 A GitHub Action that automatically synchronizes translations across repositories using Claude Sonnet 4.5.
 
-**Version**: v0.6.2 | **Status**: Testing & Development ✅
+**Version**: v0.6.3 | **Status**: Testing & Development ✅
 
 ## Overview
 
@@ -79,7 +79,7 @@ jobs:
 | `anthropic-api-key` | Yes | - | Anthropic API key for Claude |
 | `claude-model` | No | `claude-sonnet-4-5-20250929` | Claude model to use for translation |
 | `github-token` | Yes | - | GitHub token for API access |
-| `pr-labels` | No | `translation-sync,automated` | Comma-separated PR labels |
+| `pr-labels` | No | `action-translation-sync,automated` | Comma-separated PR labels |
 | `pr-reviewers` | No | - | Comma-separated GitHub usernames (e.g., `user1,user2`) |
 | `pr-team-reviewers` | No | - | Comma-separated GitHub team slugs (e.g., `team1,team2`) |
 
@@ -97,7 +97,7 @@ The action includes **built-in glossaries** for consistent translation across al
 **Location**: `glossary/{language}.json`
 
 Current glossaries:
-- **`glossary/zh-cn.json`** - Simplified Chinese (355 terms) ✅
+- **`glossary/zh-cn.json`** - Simplified Chinese (357 terms) ✅
 - **`glossary/ja.json`** - Japanese (planned)
 - **`glossary/es.json`** - Spanish (planned)
 
