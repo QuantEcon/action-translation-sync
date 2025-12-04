@@ -273,27 +273,21 @@ class BulkTranslator {
     try {
       let tocContent: string;
       
-      if (this.options.dryRun) {
-        // In dry-run mode, fetch _toc.yml from GitHub
-        const tocPath = this.options.docsFolder 
-          ? `${this.options.docsFolder}/_toc.yml`
-          : '_toc.yml';
-        
-        const { data } = await this.octokit.repos.getContent({
-          owner: this.sourceOwner,
-          repo: this.sourceRepoName,
-          path: tocPath,
-        });
-        
-        if ('content' in data) {
-          tocContent = Buffer.from(data.content, 'base64').toString('utf-8');
-        } else {
-          throw new Error('_toc.yml not found in repository');
-        }
+      // Always fetch _toc.yml from GitHub (both dry-run and normal mode)
+      const tocPath = this.options.docsFolder 
+        ? `${this.options.docsFolder}/_toc.yml`
+        : '_toc.yml';
+      
+      const { data } = await this.octokit.repos.getContent({
+        owner: this.sourceOwner,
+        repo: this.sourceRepoName,
+        path: tocPath,
+      });
+      
+      if ('content' in data) {
+        tocContent = Buffer.from(data.content, 'base64').toString('utf-8');
       } else {
-        // Normal mode: read from target folder
-        const tocPath = path.join(this.options.targetFolder, '_toc.yml');
-        tocContent = await fs.readFile(tocPath, 'utf-8');
+        throw new Error('_toc.yml not found in repository');
       }
       
       const toc = yaml.load(tocContent) as any;
@@ -382,10 +376,12 @@ class BulkTranslator {
   }
 
   /**
-   * Translate a single lecture
+   * Translate a single lecture with retry logic
    */
   private async translateLecture(lectureFile: string): Promise<void> {
     const startTime = Date.now();
+    const maxRetries = 3;
+    const baseDelayMs = 2000;
 
     // Get source content from GitHub
     const { data: fileData } = await this.octokit.rest.repos.getContent({
@@ -400,45 +396,76 @@ class BulkTranslator {
 
     const sourceContent = Buffer.from(fileData.content, 'base64').toString('utf-8');
 
-    // Translate full document
-    const result = await this.translator.translateFullDocument({
-      content: sourceContent,
-      sourceLanguage: this.options.sourceLanguage,
-      targetLanguage: this.options.targetLanguage,
-      glossary: this.glossary,
-    });
+    // Translate full document with retry logic
+    let lastError: Error | undefined;
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const result = await this.translator.translateFullDocument({
+          content: sourceContent,
+          sourceLanguage: this.options.sourceLanguage,
+          targetLanguage: this.options.targetLanguage,
+          glossary: this.glossary,
+        });
 
-    if (!result.success || !result.translatedSection) {
-      throw new Error(result.error || 'Translation failed');
+        if (!result.success || !result.translatedSection) {
+          throw new Error(result.error || 'Translation failed');
+        }
+
+        const translatedContent = result.translatedSection;
+
+        // Parse translated content to generate heading-map
+        const headingMap = await this.generateHeadingMap(sourceContent, translatedContent);
+
+        // Inject heading-map into frontmatter
+        const finalContent = injectHeadingMap(translatedContent, headingMap);
+
+        // Write to target folder
+        const targetPath = path.join(this.options.targetFolder, lectureFile);
+        await fs.mkdir(path.dirname(targetPath), { recursive: true });
+        await fs.writeFile(targetPath, finalContent, 'utf-8');
+
+        // Update stats
+        const elapsedMs = Date.now() - startTime;
+        this.stats.totalTimeMs += elapsedMs;
+        this.stats.totalTokens += result.tokensUsed || 0;
+
+        console.log(chalk.green(`  ✓ Completed in ${(elapsedMs / 1000).toFixed(1)}s (${result.tokensUsed?.toLocaleString() || 0} tokens)\n`));
+        return; // Success, exit retry loop
+        
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error(String(error));
+        const errorMessage = lastError.message;
+        
+        // Don't retry if document is too large or truncated - these are permanent failures
+        const isPermanentFailure = errorMessage.includes('Document too large') || 
+                                   errorMessage.includes('exceeded token limits');
+        
+        if (isPermanentFailure) {
+          console.log(chalk.red(`  ❌ ${errorMessage}`));
+          throw lastError;
+        }
+        
+        if (attempt < maxRetries) {
+          const delayMs = baseDelayMs * Math.pow(2, attempt - 1); // Exponential backoff
+          console.log(chalk.yellow(`  ⚠ Attempt ${attempt}/${maxRetries} failed: ${errorMessage}`));
+          console.log(chalk.gray(`    Retrying in ${delayMs / 1000}s...`));
+          await new Promise(resolve => setTimeout(resolve, delayMs));
+        }
+      }
     }
-
-    const translatedContent = result.translatedSection;
-
-    // Parse translated content to generate heading-map
-    const headingMap = await this.generateHeadingMap(sourceContent, translatedContent);
-
-    // Inject heading-map into frontmatter
-    const finalContent = injectHeadingMap(translatedContent, headingMap);
-
-    // Write to target folder
-    const targetPath = path.join(this.options.targetFolder, lectureFile);
-    await fs.mkdir(path.dirname(targetPath), { recursive: true });
-    await fs.writeFile(targetPath, finalContent, 'utf-8');
-
-    // Update stats
-    const elapsedMs = Date.now() - startTime;
-    this.stats.totalTimeMs += elapsedMs;
-    this.stats.totalTokens += result.tokensUsed || 0;
-
-    console.log(chalk.green(`  ✓ Completed in ${(elapsedMs / 1000).toFixed(1)}s (${result.tokensUsed?.toLocaleString() || 0} tokens)\n`));
+    
+    // All retries exhausted
+    throw lastError || new Error('Translation failed after retries');
   }
 
   /**
    * Generate heading-map by parsing source and translated sections
+   * Uses parseSections which is more lenient than parseDocumentComponents
    */
   private async generateHeadingMap(sourceContent: string, translatedContent: string): Promise<Map<string, string>> {
-    const sourceParsed = await this.parser.parseDocumentComponents(sourceContent, 'temp.md');
-    const translatedParsed = await this.parser.parseDocumentComponents(translatedContent, 'temp.md');
+    // Use parseSections which doesn't require strict # title structure
+    const sourceParsed = await this.parser.parseSections(sourceContent, 'temp.md');
+    const translatedParsed = await this.parser.parseSections(translatedContent, 'temp.md');
 
     const headingMap = new Map<string, string>();
 
@@ -528,17 +555,34 @@ Generated by Bulk Translator Tool
   }
 
   /**
-   * Estimate cost based on tokens used
-   * Claude Sonnet 4.5 pricing (Nov 2025):
-   *   Input: $3 per 1M tokens
-   *   Output: $15 per 1M tokens
-   * Assuming 50/50 split for estimation
+   * Estimate cost based on tokens used and model
+   * Pricing (as of Dec 2025):
+   *   Sonnet 4.5: Input $3/MTok, Output $15/MTok
+   *   Opus 4.5:   Input $15/MTok, Output $75/MTok
+   *   Haiku 4.5:  Input $0.80/MTok, Output $4/MTok
+   * Assuming 30/70 input/output split for translation (output is usually larger)
    */
   private estimateCost(tokens: number): number {
-    const inputTokens = tokens * 0.5;
-    const outputTokens = tokens * 0.5;
-    const inputCost = (inputTokens / 1_000_000) * 3;
-    const outputCost = (outputTokens / 1_000_000) * 15;
+    const inputTokens = tokens * 0.3;
+    const outputTokens = tokens * 0.7;
+    
+    let inputRate: number;
+    let outputRate: number;
+    
+    if (this.options.model.includes('opus')) {
+      inputRate = 15;
+      outputRate = 75;
+    } else if (this.options.model.includes('haiku')) {
+      inputRate = 0.80;
+      outputRate = 4;
+    } else {
+      // Default to Sonnet pricing
+      inputRate = 3;
+      outputRate = 15;
+    }
+    
+    const inputCost = (inputTokens / 1_000_000) * inputRate;
+    const outputCost = (outputTokens / 1_000_000) * outputRate;
     return inputCost + outputCost;
   }
 
@@ -587,7 +631,7 @@ async function main() {
     .option('--anthropic-api-key <key>', 'Anthropic API key (not needed for --dry-run)')
     .option('--github-token <token>', 'GitHub personal access token (optional for public repos in --dry-run)')
     .option('--source-language <lang>', 'Source language code', 'en')
-    .option('--docs-folder <folder>', 'Documentation folder in repo', 'lectures/')
+    .option('--docs-folder <folder>', 'Documentation folder in repo', 'lectures')
     .option('--glossary-path <path>', 'Custom glossary file path')
     .option('--model <model>', 'AI model for translation (e.g., claude-sonnet-4-5-20250929)', 'claude-sonnet-4-5-20250929')
     .option('--batch-delay <ms>', 'Delay between lectures in milliseconds', '1000')
@@ -597,6 +641,25 @@ async function main() {
 
   const options = program.opts() as BulkOptions;
   options.batchDelay = parseInt(options.batchDelay as any);
+
+  // Normalize docs-folder (remove trailing slash if present)
+  if (options.docsFolder && options.docsFolder.endsWith('/')) {
+    options.docsFolder = options.docsFolder.slice(0, -1);
+  }
+
+  // Validate required options for non-dry-run mode
+  if (!options.dryRun) {
+    if (!options.anthropicApiKey) {
+      // Check environment variable as fallback
+      options.anthropicApiKey = process.env.ANTHROPIC_API_KEY || '';
+      if (!options.anthropicApiKey) {
+        console.error(chalk.red('\nError: --anthropic-api-key is required for translation.'));
+        console.error(chalk.gray('Set via --anthropic-api-key or ANTHROPIC_API_KEY environment variable.'));
+        console.error(chalk.gray('For preview mode without API calls, use --dry-run\n'));
+        process.exit(1);
+      }
+    }
+  }
 
   const translator = new BulkTranslator(options);
   await translator.run();

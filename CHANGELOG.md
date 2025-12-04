@@ -5,6 +5,44 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- **Persian (Farsi) Language Support**: Added full Persian language configuration
+  - Persian (`fa`) language config with RTL punctuation rules
+  - Language-specific prompt customization (formal/academic style)
+  - Optimized token expansion factor (1.8x) for verbose RTL translations
+- **Smart Token Management**: Hybrid pre-flight validation approach
+  - Pre-flight size checks before translation (fail fast for oversized docs)
+  - Always use API max tokens (32K) for translatable documents
+  - Language-aware output token estimation (Persian: 1.8x, CJK: 1.3x, default: 1.5x)
+  - Clear error messages for documents exceeding API limits
+- **Improved Retry Logic**: Skip retries for permanent failures
+  - Detects "document too large" and "truncated" errors
+  - No wasted API calls on documents that can't be fixed by retry
+  - Still retries transient errors (network, rate limits) with exponential backoff
+- **Incomplete Document Detection**: Validates translation completeness
+  - Marker-based detection of truncated translations
+  - Directive block balance validation in prompts
+
+### Changed
+- **Bulk Translator Improvements**:
+  - Always fetch `_toc.yml` from GitHub (consistent behavior in all modes)
+  - Use `parseSections()` for heading-map generation (more lenient than `parseDocumentComponents()`)
+  - Updated cost estimation to be model-aware (Sonnet/Opus/Haiku pricing)
+  - Improved README with accurate costs and troubleshooting
+  - Better token/cost reporting in translation summary
+- **Translation Prompt Enhancements**:
+  - Added directive block balancing rules (exercise-start/end, solution-start/end)
+  - More explicit instructions for complete document translation
+  - Language-specific expansion factors for better token estimates
+
+### Fixed
+- **Token Limit Issues**: Resolved truncation problems in bulk translation
+  - Increased max_tokens from 8K to 32K for full documents
+  - Pre-flight validation prevents wasted API calls on oversized docs
+  - Improved Persian token estimation (1.6x → 1.8x)
+
 ## [0.6.3] - 2025-12-04
 
 ### Fixed

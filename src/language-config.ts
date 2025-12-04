@@ -30,6 +30,15 @@ export const LANGUAGE_CONFIGS: Record<string, LanguageConfig> = {
       'Use proper full-width Chinese punctuation marks (，：。！？) not ASCII punctuation (,.!?) in prose text',
     ],
   },
+  'fa': {
+    code: 'fa',
+    name: 'Persian (Farsi)',
+    additionalRules: [
+      'Use proper Persian punctuation marks (، ؛ ؟) without any RTL directionality markup',
+      'Keep technical terms and code examples in English/Latin script',
+      'Use formal/academic Persian style appropriate for educational content',
+    ],
+  },
   // Future language configurations can be added here:
   // 'ja': {
   //   code: 'ja',

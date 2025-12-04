@@ -112,21 +112,35 @@ npm run translate -- \
 - ✅ Coherent narrative flow (intro → body → conclusion)
 
 **Practical Benefits**:
-- ✅ Stays within token limits for large lectures
+- ✅ Handles large lectures (up to ~700 lines / 32K tokens output)
 - ✅ Independent error recovery per lecture
 - ✅ Clear progress tracking (15/50 done)
 - ✅ Easy quality spot-checking
+- ✅ **Automatic retry** (3 attempts with exponential backoff)
+- ✅ **Incomplete detection** (validates directive blocks are balanced)
+
+## Supported Languages
+
+Languages with built-in configuration (glossary + typography rules):
+- `zh-cn` - Chinese (Simplified)
+- `fa` - Persian (Farsi)
+
+Other languages will work but without a glossary or language-specific rules. To add a new language:
+1. Create glossary file: `glossary/<lang-code>.json`
+2. Add config to `src/language-config.ts`
 
 ## Cost Estimation
 
 | Model | Input | Output | ~Cost per lecture |
 |-------|-------|--------|-------------------|
+| Haiku 4.5 | $0.80/MTok | $4/MTok | ~$0.06 |
 | Sonnet 4.5 | $3/MTok | $15/MTok | ~$0.18 |
-| Opus 4.5 | $5/MTok | $25/MTok | ~$0.30 |
+| Opus 4.5 | $15/MTok | $75/MTok | ~$0.90 |
 
-For 50 lectures:
-- **Sonnet 4.5**: ~$9
-- **Opus 4.5**: ~$15
+For 24 lectures (like lecture-python-programming):
+- **Haiku 4.5**: ~$1.50 (fastest, lower quality)
+- **Sonnet 4.5**: ~$4.30 (recommended balance)
+- **Opus 4.5**: ~$21.60 (highest quality)
 
 ## After Bulk Translation
 
@@ -169,6 +183,20 @@ git push -u origin main
 ```
 
 ## Troubleshooting
+
+### API key not found
+
+If you see "Error: --anthropic-api-key is required", either:
+1. Pass it via command line: `--anthropic-api-key YOUR_KEY`
+2. Set environment variable: `export ANTHROPIC_API_KEY=YOUR_KEY`
+3. Use `--dry-run` to preview without translation
+
+### GitHub rate limits
+
+If you hit GitHub API rate limits:
+1. Ensure `GITHUB_TOKEN` is set or pass `--github-token`
+2. Get a token from: https://github.com/settings/tokens
+3. Token only needs public repo read access
 
 ### Resume after failure
 

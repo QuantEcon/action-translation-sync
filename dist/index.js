@@ -1861,6 +1861,15 @@ exports.LANGUAGE_CONFIGS = {
             'Use proper full-width Chinese punctuation marks (，：。！？) not ASCII punctuation (,.!?) in prose text',
         ],
     },
+    'fa': {
+        code: 'fa',
+        name: 'Persian (Farsi)',
+        additionalRules: [
+            'Use proper Persian punctuation marks (، ؛ ؟) without any RTL directionality markup',
+            'Keep technical terms and code examples in English/Latin script',
+            'Use formal/academic Persian style appropriate for educational content',
+        ],
+    },
     // Future language configurations can be added here:
     // 'ja': {
     //   code: 'ja',
@@ -2253,6 +2262,48 @@ const sdk_2 = __nccwpck_require__(121);
 const core = __importStar(__nccwpck_require__(7484));
 const language_config_1 = __nccwpck_require__(2142);
 /**
+ * Constants
+ */
+const INCOMPLETE_DOCUMENT_MARKER = '-----> INCOMPLETE DOCUMENT <------';
+/**
+ * Estimate output tokens needed for translation
+ * Returns a conservative estimate based on source content length
+ */
+function estimateOutputTokens(sourceLength, targetLanguage) {
+    // Base estimation: ~4 chars per token for most languages
+    const baseTokens = Math.ceil(sourceLength / 4);
+    // Language-specific expansion factors
+    // Translation typically expands text, plus we preserve English code/math
+    let expansionFactor = 1.5; // Default: 50% expansion
+    // RTL languages (Arabic, Persian, Hebrew) need more margin due to verbose translations
+    if (['ar', 'fa', 'he'].includes(targetLanguage)) {
+        expansionFactor = 1.8;
+    }
+    // CJK languages (Chinese, Japanese, Korean) are more compact
+    if (['zh', 'zh-cn', 'zh-tw', 'ja', 'ko'].includes(targetLanguage)) {
+        expansionFactor = 1.3;
+    }
+    const estimatedTokens = Math.ceil(baseTokens * expansionFactor);
+    // Add buffer for prompts, formatting, etc.
+    const buffer = 2000;
+    return estimatedTokens + buffer;
+}
+/**
+ * Check if a document is likely to exceed API token limits.
+ * Returns null if document is translatable, otherwise returns an error message.
+ */
+function checkDocumentSize(sourceLength, targetLanguage) {
+    const estimated = estimateOutputTokens(sourceLength, targetLanguage);
+    const API_MAX_TOKENS = 32768;
+    if (estimated > API_MAX_TOKENS) {
+        return `Document too large: estimated ${estimated} tokens exceeds API maximum of ${API_MAX_TOKENS} tokens. ` +
+            `This document needs section-by-section translation rather than bulk translation.`;
+    }
+    // Log estimation for monitoring
+    console.log(`Pre-flight check: source=${sourceLength} chars, estimated output=${estimated} tokens, using max_tokens=${API_MAX_TOKENS}`);
+    return null;
+}
+/**
  * Format API error for user-friendly output
  */
 function formatApiError(error) {
@@ -2468,19 +2519,34 @@ RULES:
    - Code blocks must have matching \`\`\` delimiters  
    - Math blocks must have matching $$ delimiters
    - CRITICAL: Do NOT mix fence markers - use $$...$$ for math OR \`\`\`{math}...\`\`\` for directive math, but NEVER $$...\`\`\` or \`\`\`...$$
+9. DIRECTIVE BLOCKS: MyST directive blocks MUST be balanced:
+   - Every \`\`\`{exercise-start} MUST have matching \`\`\`{exercise-end}
+   - Every \`\`\`{solution-start} MUST have matching \`\`\`{solution-end}
+   - Every \`\`\`{code-cell} MUST have closing \`\`\`
 ${additionalRules}
 
 ${glossarySection}
+
+IMPORTANT: You MUST translate the ENTIRE document. Do not stop mid-sentence or mid-code.
+If you are approaching token limits and cannot complete the translation, print:
+"${INCOMPLETE_DOCUMENT_MARKER}"
 
 CONTENT:
 ${content}
 
 Provide the complete translated document maintaining exact MyST structure.`;
+        // Pre-flight check: verify document is within API limits
+        const sizeError = checkDocumentSize(content.length, targetLanguage);
+        if (sizeError) {
+            throw new Error(sizeError);
+        }
+        // Use maximum tokens for all translatable documents
+        const maxTokens = 32768;
         this.log(`Translating full document`);
-        this.log(`Content length: ${content.length}`);
+        this.log(`Content length: ${content.length} chars`);
         const response = await this.client.messages.create({
             model: this.model,
-            max_tokens: 8192,
+            max_tokens: maxTokens,
             messages: [{ role: 'user', content: prompt }],
         });
         const result = response.content[0];
@@ -2490,9 +2556,19 @@ Provide the complete translated document maintaining exact MyST structure.`;
                 error: 'Unexpected response format from Claude',
             };
         }
+        const translatedText = result.text.trim();
+        // Check for incomplete translation marker
+        if (translatedText.includes(INCOMPLETE_DOCUMENT_MARKER)) {
+            return {
+                success: false,
+                error: `Document exceeded token limits and was truncated. ` +
+                    `This document needs section-by-section translation rather than bulk translation.`,
+            };
+        }
+        this.log(`Translation complete: ${response.usage.input_tokens} input tokens, ${response.usage.output_tokens} output tokens`);
         return {
             success: true,
-            translatedSection: result.text.trim(),
+            translatedSection: translatedText,
             tokensUsed: response.usage.input_tokens + response.usage.output_tokens,
         };
     }
