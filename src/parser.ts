@@ -37,8 +37,7 @@ export class MystParser {
     }
     
     // Extract preamble (content before first ## heading, or all content if no ## sections)
-    // FAULT TOLERANCE: Use \s* to also match malformed headings like "##Title" (no space)
-    const firstSectionIndex = lines.slice(contentStartIndex).findIndex(line => line.match(/^##\s*/));
+    const firstSectionIndex = lines.slice(contentStartIndex).findIndex(line => line.match(/^##\s+/));
     if (firstSectionIndex !== -1) {
       // There are ## sections, extract content before them
       const preambleLines = lines.slice(contentStartIndex, contentStartIndex + firstSectionIndex);
@@ -67,25 +66,12 @@ export class MystParser {
       const lineNum = i + 1;
       
       // Check for any heading level (## through ######)
-      // FAULT TOLERANCE: Use \s* (zero or more spaces) instead of \s+ to handle malformed
-      // headings like "####Title" (missing space). This prevents content loss when source
-      // documents have syntax errors. The translator prompts instruct Claude to output
-      // correct syntax with spaces, so translations will be properly formatted.
-      // See: https://github.com/QuantEcon/action-translation-sync/issues/5
-      const headingMatch = line.match(/^(#{2,6})\s*(.+)$/);
+      const headingMatch = line.match(/^(#{2,6})\s+(.+)$/);
       
       if (headingMatch) {
         const level = headingMatch[1].length;
         const headingText = headingMatch[2];
         const id = this.generateHeadingId(headingText);
-        
-        // Warn if malformed heading detected (missing space after #)
-        // This helps identify source documents that need fixing
-        const hasProperSpace = line.match(/^#{2,6}\s+/);
-        if (!hasProperSpace) {
-          console.warn(`⚠️ Malformed heading at line ${lineNum}: "${line}"`);
-          console.warn(`   Missing space after ${headingMatch[1]}. Should be: "${headingMatch[1]} ${headingText}"`);
-        }
         
         // Create new section
         const newSection: Section = {
