@@ -353,14 +353,14 @@ Rate each criterion from 1-10:
    - Report any syntax errors found - these are CRITICAL issues that must be fixed
 
 ## Response Format
-Respond with ONLY valid JSON in this exact format:
+Respond with ONLY valid JSON in this exact format (no markdown code blocks):
 {
   "accuracy": <number 1-10>,
   "fluency": <number 1-10>,
   "terminology": <number 1-10>,
   "formatting": <number 1-10>,
   "syntaxErrors": ["error 1 with line/location if possible", "error 2"],
-  "issues": [],
+  "issues": ["Issue 1: description with location and suggestion", "Issue 2: description"],
   "strengths": ["strength 1", "strength 2"],
   "summary": "Brief overall assessment"
 }
@@ -368,11 +368,11 @@ Respond with ONLY valid JSON in this exact format:
 Note: "syntaxErrors" should be an empty array [] if no markdown syntax errors are found. Syntax errors are CRITICAL and should always be reported even if the array would otherwise be empty.
 
 ## Suggestions Guidelines
-- The "issues" array can contain **0 to ${this.maxSuggestions} suggestions**
+- The "issues" array can contain **0 to ${this.maxSuggestions} string suggestions**
+- Each issue should be a PLAIN STRING (not an object), formatted as: "Location: original text → suggestion"
 - Only include actual issues found - an empty array [] is perfectly valid for excellent translations
 - Each suggestion should be specific and actionable
 - Prioritize by importance: accuracy issues first, then fluency, terminology, formatting
-- Include the specific text/term and your recommended improvement
 - Do NOT invent issues just to fill the array - quality over quantity
 
 **CRITICAL**: The "issues" array MUST contain suggestions that relate ONLY to the sections that were changed in this PR. Do not suggest improvements for unchanged parts of the document.`;
@@ -406,6 +406,23 @@ Note: "syntaxErrors" should be an empty array [] if no markdown syntax errors ar
         result.formatting * 0.15
       );
 
+      // Normalize issues to strings (Claude sometimes returns objects)
+      const normalizeIssues = (issues: unknown[]): string[] => {
+        if (!Array.isArray(issues)) return [];
+        return issues.map(issue => {
+          if (typeof issue === 'string') return issue;
+          if (typeof issue === 'object' && issue !== null) {
+            // Convert object to readable string
+            const obj = issue as Record<string, unknown>;
+            const location = obj.location || '';
+            const original = obj.original || obj.current || obj.translated || '';
+            const suggestion = obj.suggestion || '';
+            return `${location}: "${original}" → ${suggestion}`;
+          }
+          return String(issue);
+        });
+      };
+
       return {
         score: Math.round(score * 10) / 10,
         accuracy: result.accuracy,
@@ -413,7 +430,7 @@ Note: "syntaxErrors" should be an empty array [] if no markdown syntax errors ar
         terminology: result.terminology,
         formatting: result.formatting,
         syntaxErrors: result.syntaxErrors || [],
-        issues: result.issues || [],
+        issues: normalizeIssues(result.issues || []),
         strengths: result.strengths || [],
         summary: result.summary || '',
       };
