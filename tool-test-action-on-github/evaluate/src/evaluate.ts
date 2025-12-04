@@ -244,8 +244,8 @@ async function main() {
   program
     .name('evaluate')
     .description('Evaluate translation PR quality using Claude Opus 4.5')
-    .option('--pr <number>', 'Specific source PR number to evaluate')
-    .option('--post-reviews', 'Post review comments to target PRs', false)
+    .option('--pr <numbers...>', 'PR numbers to evaluate (from either repo)')
+    .option('--post-reviews', 'Post review comments to translation PRs', false)
     .option('--output <file>', 'Output report to file (default: reports/evaluation-<date>.md)')
     .option('--dry-run', 'Preview without posting reviews or saving', false)
     .option('--list-only', 'Only list matched PR pairs without evaluation (no API key needed)', false)
@@ -274,7 +274,16 @@ async function main() {
     console.log(chalk.gray(`Target: ${repoInfo.targetRepo}`));
     
     console.log(chalk.blue('\nFetching PR pairs...'));
-    const pairs = await github.matchPRPairs();
+    let pairs = await github.matchPRPairs();
+
+    // Apply --pr filter if provided
+    if (opts.pr && opts.pr.length > 0) {
+      const prNumbers = opts.pr.map((p: string) => parseInt(p, 10));
+      pairs = pairs.filter(p => 
+        prNumbers.includes(p.sourceNumber) || 
+        prNumbers.includes(p.targetNumber)
+      );
+    }
     
     if (pairs.length === 0) {
       console.log(chalk.yellow('No matching PR pairs found'));
@@ -305,7 +314,7 @@ async function main() {
     anthropicApiKey,
     githubToken,
     dryRun: opts.dryRun,
-    prNumber: opts.pr ? parseInt(opts.pr, 10) : undefined,
+    prNumbers: opts.pr ? opts.pr.map((p: string) => parseInt(p, 10)) : undefined,
     postReviews: opts.postReviews,
     outputFile: opts.output,
     maxSuggestions: parseInt(opts.maxSuggestions, 10),
@@ -331,9 +340,12 @@ async function main() {
   console.log(chalk.blue('\nFetching PR pairs...'));
   let pairs = await github.matchPRPairs();
 
-  // Filter by specific PR number if provided
-  if (options.prNumber) {
-    pairs = pairs.filter(p => p.sourceNumber === options.prNumber);
+  // Filter by specific PR numbers if provided (accepts source or target PR numbers)
+  if (options.prNumbers && options.prNumbers.length > 0) {
+    pairs = pairs.filter(p => 
+      options.prNumbers!.includes(p.sourceNumber) || 
+      options.prNumbers!.includes(p.targetNumber)
+    );
   }
 
   if (pairs.length === 0) {
