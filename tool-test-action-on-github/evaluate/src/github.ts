@@ -199,14 +199,22 @@ export class GitHubService {
 
     for (const file of files) {
       if (file.filename.endsWith('.md')) {
-        // Get content before (base)
-        const before = await this.getFileContent(
-          SOURCE_OWNER,
-          SOURCE_REPO,
-          file.filename,
-          pr.base.ref
-        );
-        if (before) beforeContent.set(file.filename, before);
+        // For renamed files, get "before" content from the previous filename
+        const beforeFilename = file.status === 'renamed' && file.previousFilename 
+          ? file.previousFilename 
+          : file.filename;
+        
+        // Get content before (base) - use previous filename for renames
+        if (file.status !== 'added') {
+          const before = await this.getFileContent(
+            SOURCE_OWNER,
+            SOURCE_REPO,
+            beforeFilename,
+            pr.base.ref
+          );
+          // Store under new filename for easy matching
+          if (before) beforeContent.set(file.filename, before);
+        }
 
         // Get content after (head)
         if (file.status !== 'removed') {
@@ -245,13 +253,22 @@ export class GitHubService {
 
     for (const file of files) {
       if (file.filename.endsWith('.md') || file.filename.endsWith('.yml')) {
-        const before = await this.getFileContent(
-          TARGET_OWNER,
-          TARGET_REPO,
-          file.filename,
-          pr.base.ref
-        );
-        if (before) beforeContent.set(file.filename, before);
+        // For renamed files, get "before" content from the previous filename
+        const beforeFilename = file.status === 'renamed' && file.previousFilename 
+          ? file.previousFilename 
+          : file.filename;
+
+        // Get content before (base) - use previous filename for renames
+        if (file.status !== 'added') {
+          const before = await this.getFileContent(
+            TARGET_OWNER,
+            TARGET_REPO,
+            beforeFilename,
+            pr.base.ref
+          );
+          // Store under new filename for easy matching
+          if (before) beforeContent.set(file.filename, before);
+        }
 
         if (file.status !== 'removed') {
           const after = await this.getFileContent(

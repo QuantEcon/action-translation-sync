@@ -506,8 +506,9 @@ async function run(): Promise<void> {
           
           core.info(`Created branch: ${branchName}`);
           
-          // Fetch source PR details if available
+          // Fetch source PR details if available (title and labels)
           let sourcePrTitle = '';
+          let sourcePrLabels: string[] = [];
           if (prNumber) {
             try {
               const { data: sourcePr } = await octokit.rest.pulls.get({
@@ -516,8 +517,12 @@ async function run(): Promise<void> {
                 pull_number: prNumber,
               });
               sourcePrTitle = sourcePr.title;
+              // Get labels, excluding 'test-translation' which triggers the workflow
+              sourcePrLabels = sourcePr.labels
+                .map(label => typeof label === 'string' ? label : label.name || '')
+                .filter(name => name && name !== 'test-translation');
             } catch (error) {
-              core.warning(`Could not fetch source PR title: ${error}`);
+              core.warning(`Could not fetch source PR details: ${error}`);
             }
           }
           
@@ -583,21 +588,28 @@ ${filesChangedSection}
 ---
 *This PR was created automatically by the [translation-sync action](https://github.com/quantecon/action-translation-sync).*`;
 
-          // Create a concise title with actual filenames
-          const allFiles = [...translatedFiles.map(f => f.path), ...filesToDelete.map(f => f.path)];
-          let titleFileList: string;
-          if (allFiles.length === 1) {
-            titleFileList = allFiles[0];
-          } else if (allFiles.length === 2) {
-            titleFileList = `${allFiles[0]} + 1 more`;
+          // Create PR title - use source PR title if available, otherwise list files
+          let prTitle: string;
+          if (sourcePrTitle) {
+            prTitle = `🌐 [translation-sync] ${sourcePrTitle}`;
           } else {
-            titleFileList = `${allFiles.length} files`;
+            // Fallback: list files changed
+            const allFiles = [...translatedFiles.map(f => f.path), ...filesToDelete.map(f => f.path)];
+            let titleFileList: string;
+            if (allFiles.length === 1) {
+              titleFileList = allFiles[0];
+            } else if (allFiles.length === 2) {
+              titleFileList = `${allFiles[0]} + 1 more`;
+            } else {
+              titleFileList = `${allFiles.length} files`;
+            }
+            prTitle = `🌐 [translation-sync] ${titleFileList}`;
           }
           
           const { data: pr } = await octokit.rest.pulls.create({
             owner: targetOwner,
             repo: targetRepoName,
-            title: `🌐 [translation-sync] ${titleFileList}`,
+            title: prTitle,
             body: prBody,
             head: branchName,
             base: defaultBranch,
@@ -605,22 +617,32 @@ ${filesChangedSection}
           
           core.info(`Created PR: ${pr.html_url}`);
           
-          // Prepare labels - add test-translation if in test mode
-          const labelsToAdd = [...inputs.prLabels];
-          if (isTestMode) {
-            labelsToAdd.push('test-translation');
-            core.info('🧪 Test mode: Adding test-translation label to PR');
+          // Prepare labels:
+          // - 'automated' and 'action-translation-sync' are always added
+          // - Copy labels from source PR (excluding 'test-translation' which is source-repo specific)
+          // - Add any additional labels from inputs
+          const labelsToAdd = new Set<string>(['automated', 'action-translation-sync']);
+          
+          // Add source PR labels
+          for (const label of sourcePrLabels) {
+            labelsToAdd.add(label);
           }
           
-          // Add labels if specified
-          if (labelsToAdd.length > 0) {
+          // Add input labels
+          for (const label of inputs.prLabels) {
+            labelsToAdd.add(label);
+          }
+          
+          // Add labels to PR
+          const labelsArray = Array.from(labelsToAdd);
+          if (labelsArray.length > 0) {
             await octokit.rest.issues.addLabels({
               owner: targetOwner,
               repo: targetRepoName,
               issue_number: pr.number,
-              labels: labelsToAdd,
+              labels: labelsArray,
             });
-            core.info(`Added labels: ${labelsToAdd.join(', ')}`);
+            core.info(`Added labels: ${labelsArray.join(', ')}`);
           }
           
           // Request reviewers if specified

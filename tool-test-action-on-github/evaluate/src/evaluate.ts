@@ -11,10 +11,10 @@
  * - Target: QuantEcon/test-translation-sync.zh-cn
  * 
  * Usage:
- *   npm run evaluate                     # Evaluate all open PR pairs
- *   npm run evaluate -- --pr 123         # Evaluate specific source PR
- *   npm run evaluate -- --dry-run        # Preview without posting reviews
- *   npm run evaluate -- --output report.md # Save report to file
+ *   npm run evaluate                     # Evaluate all open PR pairs, save report
+ *   npm run evaluate:post                # Evaluate and post reviews to PRs
+ *   npm run evaluate -- --pr 123         # Evaluate specific PR number
+ *   npm run evaluate -- --output report.md # Save report to specific file
  *   npm run evaluate -- --max-suggestions 10 # Allow up to 10 suggestions
  */
 
@@ -34,9 +34,6 @@ import type {
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
-// Evaluation model - always use Opus 4.5 for quality assessment
-const EVALUATOR_MODEL = 'claude-opus-4-5-20251101';
 
 async function evaluatePRPair(
   pair: PRPair,
@@ -111,7 +108,7 @@ async function evaluatePRPair(
   // Post review if enabled
   // Always use COMMENT to avoid "can't approve own PR" errors
   // The verdict (PASS/WARN/FAIL) is included in the comment body
-  if (options.postReviews && !options.dryRun) {
+  if (options.postReviews) {
     console.log(chalk.gray('  Posting review to PR...'));
     await github.postReview(pair.targetNumber, reviewComment, 'COMMENT');
   }
@@ -136,7 +133,8 @@ async function evaluatePRPair(
 
 function generateReport(
   results: EvaluationResult[],
-  repoInfo: { sourceRepo: string; targetRepo: string }
+  repoInfo: { sourceRepo: string; targetRepo: string },
+  model: string
 ): EvaluationReport {
   const passed = results.filter(r => r.overallVerdict === 'PASS').length;
   const warned = results.filter(r => r.overallVerdict === 'WARN').length;
@@ -166,7 +164,7 @@ function generateReport(
 
   return {
     generatedAt: new Date().toISOString(),
-    evaluator: EVALUATOR_MODEL,
+    evaluator: model,
     sourceRepo: repoInfo.sourceRepo,
     targetRepo: repoInfo.targetRepo,
     prPairsEvaluated: results.length,
@@ -247,9 +245,9 @@ async function main() {
     .option('--pr <numbers...>', 'PR numbers to evaluate (from either repo)')
     .option('--post-reviews', 'Post review comments to translation PRs', false)
     .option('--output <file>', 'Output report to file (default: reports/evaluation-<date>.md)')
-    .option('--dry-run', 'Preview without posting reviews or saving', false)
     .option('--list-only', 'Only list matched PR pairs without evaluation (no API key needed)', false)
     .option('--max-suggestions <number>', 'Maximum suggestions per evaluation (default: 5)', '5')
+    .option('--model <name>', 'Claude model for evaluation (opus-4-5 or sonnet-4-5)', 'claude-opus-4-5-20251101')
     .parse(process.argv);
 
   const opts = program.opts();
@@ -313,16 +311,16 @@ async function main() {
   const options: EvaluationOptions = {
     anthropicApiKey,
     githubToken,
-    dryRun: opts.dryRun,
     prNumbers: opts.pr ? opts.pr.map((p: string) => parseInt(p, 10)) : undefined,
     postReviews: opts.postReviews,
     outputFile: opts.output,
     maxSuggestions: parseInt(opts.maxSuggestions, 10),
+    model: opts.model,
   };
 
   // Initialize services
   const github = new GitHubService(githubToken);
-  const evaluator = new TranslationEvaluator(anthropicApiKey, options.maxSuggestions);
+  const evaluator = new TranslationEvaluator(anthropicApiKey, options.maxSuggestions, options.model);
   const repoInfo = github.getRepoInfo();
 
   console.log(chalk.blue('═'.repeat(50)));
@@ -330,10 +328,10 @@ async function main() {
   console.log(chalk.blue('═'.repeat(50)));
   console.log(chalk.gray(`Source: ${repoInfo.sourceRepo}`));
   console.log(chalk.gray(`Target: ${repoInfo.targetRepo}`));
-  console.log(chalk.gray(`Model: ${EVALUATOR_MODEL}`));
+  console.log(chalk.gray(`Model: ${options.model}`));
   console.log(chalk.gray(`Max suggestions: ${options.maxSuggestions}`));
-  if (options.dryRun) {
-    console.log(chalk.yellow('DRY RUN MODE - No reviews will be posted'));
+  if (options.postReviews) {
+    console.log(chalk.green('Will post reviews to PRs'));
   }
 
   // Get PR pairs to evaluate
@@ -367,7 +365,7 @@ async function main() {
   }
 
   // Generate report
-  const report = generateReport(results, repoInfo);
+  const report = generateReport(results, repoInfo, options.model!);
 
   // Print summary
   console.log(chalk.blue('\n' + '═'.repeat(50)));
@@ -381,16 +379,14 @@ async function main() {
   console.log(`Avg Diff Score: ${report.summary.averageDiffScore}/10`);
 
   // Save report
-  if (!options.dryRun) {
-    const dateStr = new Date().toISOString().split('T')[0];
-    const outputFile = options.outputFile || path.join('..', 'reports', `evaluation-${dateStr}.md`);
-    const outputPath = path.resolve(__dirname, '..', outputFile);
-    
-    const reportMd = formatReportMarkdown(report);
-    fs.mkdirSync(path.dirname(outputPath), { recursive: true });
-    fs.writeFileSync(outputPath, reportMd);
-    console.log(chalk.green(`\nReport saved to: ${outputPath}`));
-  }
+  const dateStr = new Date().toISOString().split('T')[0];
+  const outputFile = options.outputFile || path.join('..', 'reports', `evaluation-${dateStr}.md`);
+  const outputPath = path.resolve(__dirname, '..', outputFile);
+  
+  const reportMd = formatReportMarkdown(report);
+  fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+  fs.writeFileSync(outputPath, reportMd);
+  console.log(chalk.green(`\nReport saved to: ${outputPath}`));
 
   // Exit with error code if any failures
   if (report.summary.failed > 0) {

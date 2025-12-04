@@ -8,7 +8,6 @@
     "build": "tsc",
     "test": "tsx src/test-changed-sections.ts",
     "evaluate": "tsx src/evaluate.ts",
-    "evaluate:dry-run": "tsx src/evaluate.ts --dry-run",
     "evaluate:post": "tsx src/evaluate.ts --post-reviews"
   },
   "dependencies": {

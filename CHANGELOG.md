@@ -5,6 +5,35 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- **Improved Target PR Metadata**: Translation PRs now have better titles and labels
+  - Title format: `🌐 [translation-sync] <source PR title>` (mirrors source PR)
+  - Automatic labels: `automated`, `action-translation-sync`
+  - Copies labels from source PR (except `test-translation`)
+  - Makes translation PRs easier to identify and manage
+- **Evaluator Model Selection**: New `--model` flag to choose evaluation model
+  - Default: `claude-opus-4-5-20251101` (highest quality, $0.30/PR)
+  - Alternative: `claude-sonnet-4-5-20241022` (faster, cheaper $0.06/PR)
+  - Enables cost/quality comparison for evaluation tasks
+
+### Fixed
+- **Evaluator: Renamed File Handling**: Fixed evaluation of renamed files
+  - Now fetches "before" content from `previousFilename` field
+  - Detects pure renames (no content changes) and marks appropriately
+  - Prevents showing all sections as "changed" in rename-only PRs
+- **Evaluator: Issue Normalization**: Improved parsing of Claude responses
+  - Handles object-style issues with `description`, `location`, `suggestion` fields
+  - Better fallback to JSON.stringify for unknown structures
+  - Filters out empty/malformed issue strings
+
+### Removed
+- **Evaluator: `--dry-run` Flag**: Removed redundant flag
+  - Use `npm run evaluate` to save reports (default behavior)
+  - Use `npm run evaluate:post` to post reviews to PRs
+  - Simpler CLI with clearer intent
+
 ## [0.6.1] - 2025-12-04
 
 ### Added

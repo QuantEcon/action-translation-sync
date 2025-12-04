@@ -19,8 +19,8 @@ import type {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Always use Opus 4.5 for evaluation
-const EVALUATOR_MODEL = 'claude-opus-4-5-20251101';
+// Default to Opus 4.5 for evaluation (configurable via constructor)
+export const DEFAULT_EVALUATOR_MODEL = 'claude-opus-4-5-20251101';
 
 // Load glossary
 interface GlossaryTerm {
@@ -155,6 +155,14 @@ export function identifyChangedSections(
     }));
   }
   
+  // Check for pure rename (no content changes) - normalize whitespace for comparison
+  const normalizeForComparison = (s: string) => s.replace(/\r\n/g, '\n').trim();
+  if (normalizeForComparison(sourceBefore) === normalizeForComparison(sourceAfter) &&
+      normalizeForComparison(targetBefore) === normalizeForComparison(targetAfter)) {
+    // No content changes - this is likely a pure file rename
+    return [{ heading: '(no content changes - file renamed)', changeType: 'modified' as const }];
+  }
+  
   // Check preamble changes (frontmatter, etc.)
   const sourcePreambleBefore = extractPreamble(sourceBefore);
   const sourcePreambleAfter = extractPreamble(sourceAfter);
@@ -249,11 +257,17 @@ export class TranslationEvaluator {
   private client: Anthropic;
   private glossarySection: string;
   private maxSuggestions: number;
+  private model: string;
 
-  constructor(apiKey: string, maxSuggestions: number = DEFAULT_MAX_SUGGESTIONS) {
+  constructor(
+    apiKey: string, 
+    maxSuggestions: number = DEFAULT_MAX_SUGGESTIONS,
+    model: string = DEFAULT_EVALUATOR_MODEL
+  ) {
     this.client = new Anthropic({ apiKey });
     this.glossarySection = loadGlossary();
     this.maxSuggestions = maxSuggestions;
+    this.model = model;
   }
 
   /**
@@ -378,8 +392,8 @@ Note: "syntaxErrors" should be an empty array [] if no markdown syntax errors ar
 **CRITICAL**: The "issues" array MUST contain suggestions that relate ONLY to the sections that were changed in this PR. Do not suggest improvements for unchanged parts of the document.`;
 
     const response = await this.client.messages.create({
-      model: EVALUATOR_MODEL,
-      max_tokens: 2000,
+      model: this.model,
+      max_tokens: 1500,
       messages: [{ role: 'user', content: prompt }],
     });
 
@@ -414,13 +428,31 @@ Note: "syntaxErrors" should be an empty array [] if no markdown syntax errors ar
           if (typeof issue === 'object' && issue !== null) {
             // Convert object to readable string
             const obj = issue as Record<string, unknown>;
-            const location = obj.location || '';
-            const original = obj.original || obj.current || obj.translated || '';
-            const suggestion = obj.suggestion || '';
-            return `${location}: "${original}" → ${suggestion}`;
+            
+            // Try common patterns Claude might return
+            // Pattern 1: { location, original/current, suggestion }
+            const location = obj.location || obj.section || obj.heading || '';
+            const original = obj.original || obj.current || obj.translated || obj.text || '';
+            const suggestion = obj.suggestion || obj.recommended || obj.fix || obj.correction || '';
+            const description = obj.description || obj.issue || obj.problem || obj.message || '';
+            
+            // If we have description, use that
+            if (description) {
+              return location ? `${location}: ${description}` : String(description);
+            }
+            
+            // If we have original and suggestion, format as replacement
+            if (original && suggestion) {
+              return location 
+                ? `${location}: "${original}" → "${suggestion}"`
+                : `"${original}" → "${suggestion}"`;
+            }
+            
+            // Fall back to JSON.stringify for unknown structures
+            return JSON.stringify(obj);
           }
           return String(issue);
-        });
+        }).filter(s => s && s !== '{}' && s !== '""'); // Filter out empty results
       };
 
       return {
@@ -528,7 +560,7 @@ Respond with ONLY valid JSON:
 }`;
 
     const response = await this.client.messages.create({
-      model: EVALUATOR_MODEL,
+      model: this.model,
       max_tokens: 2000,
       messages: [{ role: 'user', content: prompt }],
     });
