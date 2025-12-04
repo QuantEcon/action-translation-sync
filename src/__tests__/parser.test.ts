@@ -79,6 +79,74 @@ Content with some text.
       
       expect(sections[0].content).toContain('Content with some text');
     });
+
+    // FAULT TOLERANCE TESTS (Issue #5)
+    // Parser should handle malformed headings (missing space after #)
+    // to prevent content loss when source documents have syntax errors
+    
+    it('should parse malformed headings (missing space)', async () => {
+      const content = `## Valid Section
+
+Some content.
+
+##MalformedSection
+
+More content.
+`;
+      // Suppress console.warn for this test
+      const warnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      
+      const result = await parser.parseSections(content, 'test.md');
+      const sections = result.sections;
+      
+      // Should recognize both sections
+      expect(sections).toHaveLength(2);
+      expect(sections[0].heading).toBe('## Valid Section');
+      expect(sections[1].heading).toBe('##MalformedSection');
+      expect(sections[1].id).toBe('malformedsection');
+      
+      // Should have logged a warning
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('Malformed heading'));
+      
+      warnSpy.mockRestore();
+    });
+
+    it('should parse malformed subsection headings (missing space)', async () => {
+      const content = `## Parent
+
+Intro.
+
+### Valid Subsection
+
+Content.
+
+####MalformedSubsection
+
+More content.
+`;
+      const warnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      
+      const result = await parser.parseSections(content, 'test.md');
+      const sections = result.sections;
+      
+      // Should have one parent section
+      expect(sections).toHaveLength(1);
+      expect(sections[0].heading).toBe('## Parent');
+      
+      // Should have one level-3 subsection
+      expect(sections[0].subsections).toHaveLength(1);
+      expect(sections[0].subsections[0].heading).toBe('### Valid Subsection');
+      
+      // The malformed level-4 heading should be nested under the level-3
+      expect(sections[0].subsections[0].subsections).toHaveLength(1);
+      expect(sections[0].subsections[0].subsections[0].heading).toBe('####MalformedSubsection');
+      expect(sections[0].subsections[0].subsections[0].level).toBe(4);
+      
+      // Should have logged a warning for the malformed one
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('Malformed heading'));
+      
+      warnSpy.mockRestore();
+    });
   });
 
   describe('Real File Parsing', () => {
