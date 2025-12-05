@@ -135,8 +135,8 @@ docs/
 
 ## 📊 Project Metrics
 
-- **Core Code**: ~2,700 lines across 7 modules
-- **Test Coverage**: 155 tests (100% passing)
+- **Core Code**: ~3,400 lines across 9 modules
+- **Test Coverage**: 183 tests (100% passing)
 - **GitHub Tests**: 24 automated scenarios
 - **Glossary Terms**: 357 (Chinese), 357 (Persian)
 - **Bundle Size**: ~1.9MB
@@ -158,4 +158,4 @@ See [PROJECT-DESIGN.md](PROJECT-DESIGN.md) for detailed explanations.
 
 ---
 
-**Last Updated**: December 3, 2025 (v0.6.0)
+**Last Updated**: December 6, 2025 (v0.7.0)
