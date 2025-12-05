@@ -379,33 +379,38 @@ After v0.7.0 release, verified the `formatChangedSections` fix with Sonnet model
 | Criterion | Score |
 |-----------|-------|
 | Accuracy | 10/10 |
-| Fluency | 10/10 |
+| Fluency | 9/10 |
 | Terminology | 10/10 |
 | Formatting | 10/10 |
-| **Overall** | **10/10** |
+| **Overall** | **9.8/10** |
 
-**Summary**: Excellent translation with perfect accuracy, fluency, and terminology 
-consistency. All technical terms accurately translated following glossary...
-(No specific suggestions provided)
+**Summary**: Excellent translation quality. All changed sections accurately 
+translated with correct terminology, natural fluency, and proper formatting.
+The heading-map implementation is correct. No issues identified.
+(No specific suggestions provided - but more critical than before)
 ```
 
 **Comparison Summary**:
 
-| Model | Alignment | Score | Suggestions |
-|-------|-----------|-------|-------------|
-| Opus 4.5 | Pre | 9.4/10 | Specific improvements ✅ |
-| Opus 4.5 | Post | 9.4/10 | Specific improvements ✅ |
-| Sonnet 4.5 | Pre | 10/10 | Generic observations |
-| Sonnet 4.5 | Post | 10/10 | Generic observations |
+| Model | Alignment | Score | Behavior |
+|-------|-----------|-------|----------|
+| Opus 4.5 | Pre | 9.4/10 | Specific suggestions ✅ |
+| Opus 4.5 | Post | 9.4/10 | Specific suggestions ✅ |
+| Sonnet 4.5 | Pre | 10/10 | Generic observations, perfect scores |
+| Sonnet 4.5 | Post | 9.8/10 | More critical (Fluency 9/10), no suggestions |
 
-**Key Finding**: The `formatChangedSections` alignment improved Opus suggestion quality, but **Sonnet remains more lenient** regardless of prompt. This is a model behavior difference:
+**Key Finding**: The `formatChangedSections` alignment made **Sonnet more critical** - score dropped from 10/10 to 9.8/10 (Fluency reduced to 9/10). However, Sonnet still doesn't provide specific suggestions like Opus does.
 
-- **Opus 4.5**: More critical, provides actionable translation suggestions
-- **Sonnet 4.5**: More generous, tends to give perfect scores without specific suggestions
+- **Opus 4.5**: Most critical, provides actionable translation suggestions
+- **Sonnet 4.5** (post-alignment): More critical than before, but no specific suggestions
 
-**Recommendation**: Use **Opus 4.5** for detailed review feedback, **Sonnet 4.5** for faster/cheaper reviews where detailed suggestions aren't needed.
+**Note**: PR #530 has multiple review comments from different test runs, which can be confusing. The comments are:
+1. Evaluator (Opus) - 9.4/10
+2. Reviewer (Opus) - 9.4/10  
+3. Reviewer (Sonnet pre-alignment) - 10/10
+4. Reviewer (Sonnet post-alignment) - 9.8/10
 
-**Status**: [x] Complete - Model behavior documented
+**Status**: [x] Complete - formatChangedSections fix verified, model behavior documented
 
 ---
 
