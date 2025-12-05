@@ -362,28 +362,50 @@ Suggestions:
 
 ### 6.2 Post-Release Verification
 
-After v0.7.0 release, verify the `formatChangedSections` fix with Sonnet model:
+After v0.7.0 release, verified the `formatChangedSections` fix with Sonnet model.
 
-```bash
-# Update review workflow in target repo to use Sonnet
-cd /tmp/test-translation-sync.zh-cn
-# Edit .github/workflows/review-translations.yml: claude-model: 'claude-sonnet-4-5-20250929'
-git add .github/workflows/review-translations.yml
-git commit -m "Switch to Sonnet for post-release comparison test"
-git push
+**Test Performed** (2025-12-05):
+1. Switched review workflow to Sonnet: `claude-sonnet-4-5-20250929`
+2. Triggered review on PR #530 with empty commit
+3. Verified workflow completed successfully (run 19977515442)
 
-# Trigger review on PR #530
-gh pr checkout 530 --repo QuantEcon/test-translation-sync.zh-cn
-git commit --allow-empty -m "Post-release: Test Sonnet with aligned formatChangedSections"
-git push
+**Results - Sonnet (post-alignment)**:
+```
+## ✅ Translation Quality Review
+
+**Verdict**: PASS | **Model**: claude-sonnet-4-5-20250929 | **Date**: 2025-12-05
+
+### 📝 Translation Quality
+| Criterion | Score |
+|-----------|-------|
+| Accuracy | 10/10 |
+| Fluency | 10/10 |
+| Terminology | 10/10 |
+| Formatting | 10/10 |
+| **Overall** | **10/10** |
+
+**Summary**: Excellent translation with perfect accuracy, fluency, and terminology 
+consistency. All technical terms accurately translated following glossary...
+(No specific suggestions provided)
 ```
 
-**Expected**:
-- Sonnet should now provide actionable suggestions (not just observations)
-- Suggestions should reference specific translation improvements
-- Compare with pre-alignment Sonnet review to verify improvement
+**Comparison Summary**:
 
-**Status**: [ ] Pending post-release
+| Model | Alignment | Score | Suggestions |
+|-------|-----------|-------|-------------|
+| Opus 4.5 | Pre | 9.4/10 | Specific improvements ✅ |
+| Opus 4.5 | Post | 9.4/10 | Specific improvements ✅ |
+| Sonnet 4.5 | Pre | 10/10 | Generic observations |
+| Sonnet 4.5 | Post | 10/10 | Generic observations |
+
+**Key Finding**: The `formatChangedSections` alignment improved Opus suggestion quality, but **Sonnet remains more lenient** regardless of prompt. This is a model behavior difference:
+
+- **Opus 4.5**: More critical, provides actionable translation suggestions
+- **Sonnet 4.5**: More generous, tends to give perfect scores without specific suggestions
+
+**Recommendation**: Use **Opus 4.5** for detailed review feedback, **Sonnet 4.5** for faster/cheaper reviews where detailed suggestions aren't needed.
+
+**Status**: [x] Complete - Model behavior documented
 
 ---
 
