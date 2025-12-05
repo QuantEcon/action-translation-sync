@@ -360,6 +360,31 @@ Suggestions:
 
 **Status**: [x] Acceptable - Tools aligned and producing consistent results
 
+### 6.2 Post-Release Verification
+
+After v0.7.0 release, verify the `formatChangedSections` fix with Sonnet model:
+
+```bash
+# Update review workflow in target repo to use Sonnet
+cd /tmp/test-translation-sync.zh-cn
+# Edit .github/workflows/review-translations.yml: claude-model: 'claude-sonnet-4-5-20250929'
+git add .github/workflows/review-translations.yml
+git commit -m "Switch to Sonnet for post-release comparison test"
+git push
+
+# Trigger review on PR #530
+gh pr checkout 530 --repo QuantEcon/test-translation-sync.zh-cn
+git commit --allow-empty -m "Post-release: Test Sonnet with aligned formatChangedSections"
+git push
+```
+
+**Expected**:
+- Sonnet should now provide actionable suggestions (not just observations)
+- Suggestions should reference specific translation improvements
+- Compare with pre-alignment Sonnet review to verify improvement
+
+**Status**: [ ] Pending post-release
+
 ---
 
 ## Part 7: Release Preparation
