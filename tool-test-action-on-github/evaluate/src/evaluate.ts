@@ -2,7 +2,7 @@
 /**
  * Translation Quality Evaluation Tool
  * 
- * Evaluates translation PRs from tool-test-action-on-github using Claude Opus 4.5:
+ * Evaluates translation PRs from action-translation test suite using Claude Opus 4.5:
  * 1. Translation quality (accuracy, fluency, terminology, formatting)
  * 2. Diff quality (scope, position, structure, heading-map)
  * 

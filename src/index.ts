@@ -76,7 +76,8 @@ async function runReview(): Promise<void> {
     github.context.repo.owner,
     github.context.repo.repo,
     inputs.docsFolder,
-    glossaryTerms
+    glossaryTerms,
+    targetLanguage
   );
 
   // Set outputs

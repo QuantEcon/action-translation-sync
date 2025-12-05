@@ -31,7 +31,7 @@ export declare class TranslationReviewer {
     /**
      * Review a translation PR
      */
-    reviewPR(prNumber: number, sourceRepo: string, targetOwner: string, targetRepo: string, docsFolder: string, glossaryTerms?: string): Promise<ReviewResult>;
+    reviewPR(prNumber: number, sourceRepo: string, targetOwner: string, targetRepo: string, docsFolder: string, glossaryTerms?: string, targetLanguage?: string): Promise<ReviewResult>;
     /**
      * Evaluate translation quality using Claude
      */

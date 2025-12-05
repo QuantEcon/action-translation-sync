@@ -311,7 +311,8 @@ export class TranslationReviewer {
     targetOwner: string,
     targetRepo: string,
     docsFolder: string,
-    glossaryTerms?: string
+    glossaryTerms?: string,
+    targetLanguage?: string
   ): Promise<ReviewResult> {
     core.info(`Starting review of PR #${prNumber}...`);
 
@@ -464,7 +465,8 @@ export class TranslationReviewer {
       sourceEnglish,
       targetTranslation,
       changedSections,
-      glossaryTerms
+      glossaryTerms,
+      targetLanguage
     );
 
     // Evaluate diff quality
@@ -518,40 +520,88 @@ export class TranslationReviewer {
     sourceEnglish: string,
     targetTranslation: string,
     changedSections: ChangedSection[],
-    glossaryTerms?: string
+    glossaryTerms?: string,
+    targetLanguage?: string
   ): Promise<TranslationQualityResult> {
     const changedSectionsPrompt = this.formatChangedSections(changedSections);
+    
+    // Determine language name for prompt
+    const languageNames: Record<string, string> = {
+      'zh-cn': 'Simplified Chinese',
+      'zh-tw': 'Traditional Chinese',
+      'fa': 'Persian (Farsi)',
+      'es': 'Spanish',
+      'fr': 'French',
+      'de': 'German',
+      'ja': 'Japanese',
+      'ko': 'Korean',
+    };
+    const targetLangName = targetLanguage ? (languageNames[targetLanguage] || targetLanguage) : 'the target language';
+    
     const glossarySection = glossaryTerms 
       ? `\n## Reference Glossary\nThe translation should follow this established terminology glossary:\n${glossaryTerms}\n`
       : '';
 
-    const prompt = `You are a professional translator and quality evaluator specializing in technical/academic content translation.
+    const prompt = `You are a professional translator and quality evaluator specializing in technical/academic content translation from English to ${targetLangName}.
 
 ## Task
-Evaluate the quality of the translation compared to the English source.
+Evaluate the quality of the ${targetLangName} translation compared to the English source.
 ${changedSectionsPrompt}
 ## English Source Document
 \`\`\`markdown
-${sourceEnglish.slice(0, 8000)}${sourceEnglish.length > 8000 ? '\n... (truncated)' : ''}
+${sourceEnglish}
 \`\`\`
 
-## Translation
+## ${targetLangName} Translation
 \`\`\`markdown
-${targetTranslation.slice(0, 8000)}${targetTranslation.length > 8000 ? '\n... (truncated)' : ''}
+${targetTranslation}
 \`\`\`
 ${glossarySection}
 ## IMPORTANT: About the Heading-Map
 
-The translation contains a \`heading-map\` section in the YAML frontmatter that is NOT present in the English source. This is CORRECT and EXPECTED behavior - it maps English heading IDs to translated headings for section matching across languages.
+The ${targetLangName} translation contains a \`heading-map\` section in the YAML frontmatter that is NOT present in the English source. This is CORRECT and EXPECTED behavior:
+
+\`\`\`yaml
+heading-map:
+  introduction: "介绍"
+  background: "背景"
+\`\`\`
+
+This is a feature of the translation sync system that maps English heading IDs to ${targetLangName} headings for section matching across languages. Do NOT flag this as an issue or formatting problem - it is intentional and does not affect Jupyter Book compilation.
+
+**Note on double-colon notation**: The heading-map may use \`section::subsection\` notation (e.g., \`supply-and-demand::market-dynamics\`) to represent hierarchical headings. This double-colon \`::\` syntax is intentional and valid - it represents the relationship between a section and its nested subsection. This is safe in YAML because YAML only treats \`:\` as a key-value separator when followed by a space.
 
 ## Evaluation Criteria
 Rate each criterion from 1-10:
 
 1. **Accuracy** (1-10): Does the translation accurately convey the meaning of the English source?
-2. **Fluency** (1-10): Does the translation read naturally?
+   - Technical terms translated correctly
+   - No missing or added information
+   - Mathematical concepts preserved
+
+2. **Fluency** (1-10): Does the translation read naturally in ${targetLangName}?
+   - Natural sentence structure
+   - Appropriate academic register
+   - No awkward phrasing
+
 3. **Terminology** (1-10): Is technical terminology consistent and correct?
+   - Does the translation follow the reference glossary above?
+   - Domain-specific terms handled appropriately
+   - Consistent translation of repeated terms
+   - Proper use of established ${targetLangName} terminology
+
 4. **Formatting** (1-10): Is MyST/Markdown formatting preserved?
-5. **Syntax** (check for errors): Check for markdown/MyST syntax errors
+   - Math equations (LaTeX) intact
+   - Code blocks preserved
+   - Headings, lists, and structure maintained
+   - Links and references correct
+
+5. **Syntax** (check for errors): Check for markdown/MyST syntax errors in the translation:
+   - Headings MUST have a space after # (e.g., "## Title" not "##Title")
+   - Code blocks must have matching \`\`\` delimiters
+   - Math blocks must have matching $$ delimiters
+   - MyST directives must use correct syntax: \`\`\`{directive}
+   - Report any syntax errors found - these are CRITICAL issues that must be fixed
 
 ## Response Format
 Respond with ONLY valid JSON in this exact format (no markdown code blocks):
@@ -566,7 +616,17 @@ Respond with ONLY valid JSON in this exact format (no markdown code blocks):
   "summary": "Brief overall assessment"
 }
 
-Note: The "issues" array can contain 0 to ${this.maxSuggestions} suggestions. Focus ONLY on the changed sections.`;
+Note: "syntaxErrors" should be an empty array [] if no markdown syntax errors are found. Syntax errors are CRITICAL and should always be reported even if the array would otherwise be empty.
+
+## Suggestions Guidelines
+- The "issues" array can contain **0 to ${this.maxSuggestions} string suggestions**
+- Each issue should be a PLAIN STRING (not an object), formatted as: "Location: original text → suggestion"
+- Only include actual issues found - an empty array [] is perfectly valid for excellent translations
+- Each suggestion should be specific and actionable
+- Prioritize by importance: accuracy issues first, then fluency, terminology, formatting
+- Do NOT invent issues just to fill the array - quality over quantity
+
+**CRITICAL**: The "issues" array MUST contain suggestions that relate ONLY to the sections that were changed in this PR. Do not suggest improvements for unchanged parts of the document.`;
 
     const response = await this.anthropic.messages.create({
       model: this.model,
@@ -621,45 +681,65 @@ Note: The "issues" array can contain 0 to ${this.maxSuggestions} suggestions. Fo
     targetAfter: string,
     targetFiles: FileChange[]
   ): Promise<DiffQualityResult> {
-    const prompt = `You are an expert code reviewer specializing in translation sync workflows. Verify that translation changes are correctly positioned.
+    const prompt = `You are an expert code reviewer specializing in translation sync workflows. Your task is to verify that translation changes are correctly positioned in the target document.
 
 ## Context
-A translation sync action detected changes and created corresponding changes in the target document.
+A translation sync action detected changes in an English source document and created corresponding changes in the target document. We need to verify:
+
+1. **Scope**: Only the correct files were modified
+2. **Position**: Changes appear in the same relative positions
+3. **Structure**: Document structure is preserved
+4. **Heading-map**: The heading-map in frontmatter is correctly updated
+
+## IMPORTANT: About the Heading-Map System
+
+The \`heading-map\` in the frontmatter is a CRITICAL feature of this translation system, NOT a bug. Here's how it works:
+
+- English headings generate IDs from English text: \`## Introduction\` → ID: \`introduction\`
+- Translated headings generate IDs from translated text: \`## 介绍\` → ID: \`介绍\`
+- The heading-map bridges this gap by mapping English IDs to translated headings
+
+Example:
+\`\`\`yaml
+heading-map:
+  introduction: "介绍"
+  supply-and-demand: "供需分析"
+\`\`\`
+
+**Note on double-colon notation**: The heading-map may use \`section::subsection\` notation to represent hierarchical headings. This is intentional and valid YAML.
 
 ## Source Document (English)
 ### Before:
 \`\`\`markdown
-${sourceBefore.slice(0, 3000)}${sourceBefore.length > 3000 ? '\n... (truncated)' : ''}
+${sourceBefore}
 \`\`\`
 
 ### After:
 \`\`\`markdown
-${sourceAfter.slice(0, 3000)}${sourceAfter.length > 3000 ? '\n... (truncated)' : ''}
+${sourceAfter}
 \`\`\`
 
 ## Target Document (Translation)
 ### Before:
 \`\`\`markdown
-${targetBefore.slice(0, 3000)}${targetBefore.length > 3000 ? '\n... (truncated)' : ''}
+${targetBefore}
 \`\`\`
 
 ### After:
 \`\`\`markdown
-${targetAfter.slice(0, 3000)}${targetAfter.length > 3000 ? '\n... (truncated)' : ''}
+${targetAfter}
 \`\`\`
 
 ### Files Changed:
 ${targetFiles.map(f => `- ${f.filename}: ${f.status} (+${f.additions}/-${f.deletions})`).join('\n')}
 
-## IMPORTANT: About the Heading-Map
+## Verification Checks
+Evaluate each criterion:
 
-The \`heading-map\` in the frontmatter is a CRITICAL feature of this translation system. It maps English heading IDs to translated headings. This is CORRECT and EXPECTED.
-
-## Verification
-1. **Scope Correct**: Were only the necessary files modified?
-2. **Position Correct**: Do changes appear in the same sections as source?
-3. **Structure Preserved**: Is the document structure maintained?
-4. **Heading-map Correct**: Is the heading-map updated appropriately?
+1. **Scope Correct**: Were only the necessary files modified? The target should change the same files as the source.
+2. **Position Correct**: Do changes appear in the same sections as source? Section order should match.
+3. **Structure Preserved**: Is the document structure (heading levels, nesting) maintained?
+4. **Heading-map Correct**: Is the heading-map updated with new/changed headings?
 
 ## Response Format
 Respond with ONLY valid JSON:

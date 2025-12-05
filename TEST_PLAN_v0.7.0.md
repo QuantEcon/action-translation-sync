@@ -43,7 +43,7 @@ npm test
 ```
 
 **Expected**: 183 tests pass  
-**Status**: [ ] Pass / [ ] Fail
+**Status**: [x] Pass
 
 ### 1.2 Build Verification
 ```bash
@@ -51,7 +51,7 @@ npm run build
 ```
 
 **Expected**: Build succeeds, dist/index.js ~2000kB  
-**Status**: [ ] Pass / [ ] Fail
+**Status**: [x] Pass
 
 ### 1.3 TypeScript Compilation
 ```bash
@@ -59,7 +59,7 @@ npx tsc --noEmit
 ```
 
 **Expected**: No errors  
-**Status**: [ ] Pass / [ ] Fail
+**Status**: [x] Pass
 
 ---
 
@@ -71,11 +71,11 @@ git push origin main
 ```
 
 **Expected**: Push succeeds  
-**Status**: [ ] Pass / [ ] Fail
+**Status**: [x] Pass
 
 ### 2.2 Verify GitHub Actions
-- [ ] Check repository settings are accessible
-- [ ] Verify action.yml is valid (no syntax errors shown)
+- [x] Check repository settings are accessible
+- [x] Verify action.yml is valid (no syntax errors shown)
 
 ---
 
@@ -88,7 +88,7 @@ cd tool-test-action-on-github
 ```
 
 **Expected**: Shows 24 test scenarios without making changes  
-**Status**: [ ] Pass / [ ] Fail
+**Status**: [x] Pass
 
 ### 3.2 Run Full Test Suite
 ```bash
@@ -96,12 +96,12 @@ cd tool-test-action-on-github
 ```
 
 **Expected**:
-- [ ] Both repos reset to base state
-- [ ] All open PRs closed
-- [ ] 24 new PRs created in source repo
-- [ ] Each PR has `test-translation` label
+- [x] Both repos reset to base state
+- [x] All open PRs closed
+- [x] 24 new PRs created in source repo (#540-563)
+- [x] Each PR has `test-translation` label
 
-**Status**: [ ] Pass / [ ] Fail
+**Status**: [x] Pass
 
 ### 3.3 Monitor Sync Workflow
 ```bash
@@ -113,11 +113,11 @@ gh pr list --repo QuantEcon/test-translation-sync.zh-cn
 ```
 
 **Expected**:
-- [ ] Workflows triggered for each test PR
-- [ ] Translation PRs created in target repo (one per source PR)
-- [ ] PRs have `action-translation,automated` labels
+- [x] Workflows triggered for each test PR
+- [x] Translation PRs created in target repo (#508-531, one per source PR)
+- [x] PRs have `action-translation,automated` labels
 
-**Status**: [ ] Pass / [ ] Fail
+**Status**: [x] Pass
 
 ### 3.4 Spot Check Translation PRs
 
@@ -125,13 +125,14 @@ Check a few translation PRs for correctness:
 
 | PR | Scenario | Check |
 |----|----------|-------|
-| #1 | Intro change | [ ] Correct translation, heading-map updated |
-| #5 | Add section | [ ] New section translated, positioned correctly |
-| #9 | Real-world | [ ] Code cells preserved, math rendered |
-| #17 | New document | [ ] New file created with correct content |
-| #20 | Rename | [ ] File renamed, old file deleted |
+| #530 | Empty sections | [x] All sections translated, heading-map complete |
+| #508 | Intro change | [x] Correct translation, heading-map updated |
+| #512 | Add section | [x] New section translated, positioned correctly |
+| #516 | Real-world | [x] Code cells preserved, math rendered |
+| #524 | New document | [x] New file created with correct content |
+| #527 | Rename | [x] File renamed, old file deleted |
 
-**Status**: [ ] Pass / [ ] Fail
+**Status**: [x] Pass
 
 ---
 
@@ -141,24 +142,36 @@ Check a few translation PRs for correctness:
 ```bash
 cd tool-test-action-on-github/evaluate
 npm install
-npm run evaluate
+GITHUB_TOKEN=$(gh auth token) npm run evaluate:post
 ```
 
 **Expected**:
-- [ ] Evaluator runs without errors
-- [ ] Report generated in `reports/evaluation-YYYY-MM-DD.md`
+- [x] Evaluator runs without errors
+- [x] Report generated in `reports/evaluation-YYYY-MM-DD.md`
+- [x] Review comments posted to all 24 translation PRs
 
-**Status**: [ ] Pass / [ ] Fail
+**Status**: [x] Pass
+
+**Notes**: 
+- Updated evaluator label from `test-translation` to match source PRs
+- Created comprehensive README documenting PR review vs issue comment behavior
+- All 24 PRs received review comments successfully
 
 ### 4.2 Review Evaluation Report
 
-Check `reports/evaluation-*.md`:
-- [ ] All 24 scenarios evaluated
-- [ ] Average scores ≥ 8.0
-- [ ] No FAIL verdicts
-- [ ] Issues identified are minor/cosmetic
+Check `reports/evaluation-2025-12-05.md`:
+- [x] All 24 scenarios evaluated
+- [x] Average scores ≥ 8.0 (Translation: 9.5/10, Diff: 10/10)
+- [x] No FAIL verdicts (24 PASS, 0 WARN, 0 FAIL)
+- [x] Issues identified are minor/cosmetic
 
-**Status**: [ ] Pass / [ ] Fail
+**Results Summary**:
+- **24/24 PRs PASSED** ✅
+- **Translation Quality**: 9.5/10 average (range: 8.9-10.0)
+- **Diff Quality**: 10/10 average (perfect)
+- **0 warnings, 0 failures**
+
+**Status**: [x] Pass
 
 ---
 
@@ -226,26 +239,31 @@ git push origin main
 
 ### 5.2 Trigger Review Workflow
 
-Re-trigger a translation PR to test review:
+Trigger review workflow on translation PRs using empty commits (triggers `synchronize` event):
 
 ```bash
-# Find an open translation PR
-gh pr list --repo QuantEcon/test-translation-sync.zh-cn
+# Test single PR first (e.g., #530 for comparison with evaluator)
+gh pr checkout 530 --repo QuantEcon/test-translation-sync.zh-cn
+git commit --allow-empty -m "Trigger review workflow"
+git push
 
-# Add a comment to trigger workflow (or close/reopen)
-gh pr comment <PR_NUMBER> --repo QuantEcon/test-translation-sync.zh-cn --body "Testing review workflow"
+# Watch workflow execution
+gh run watch --repo QuantEcon/test-translation-sync.zh-cn
+
+# Verify review comment posted
+gh pr view 530 --repo QuantEcon/test-translation-sync.zh-cn --comments
 ```
 
-Or create a new sync to generate fresh PR:
+Optional - trigger all 24 PRs:
 ```bash
-# Re-run one test scenario
-cd tool-test-action-on-github/test-translation-sync
-git checkout test/01-intro-change-minimal
-# Make a small change
-echo "" >> lecture-minimal.md
-git add lecture-minimal.md
-git commit -m "Trigger re-sync"
-git push -f origin test/01-intro-change-minimal
+# Trigger reviews on all translation PRs
+for pr in {508..531}; do
+  echo "Triggering review for PR #$pr..."
+  gh pr checkout $pr --repo QuantEcon/test-translation-sync.zh-cn
+  git commit --allow-empty -m "Trigger review workflow"
+  git push
+  sleep 5  # Avoid rate limiting
+done
 ```
 
 **Status**: [ ] Complete
