@@ -58,6 +58,14 @@ Complete documentation for the Translation Action (GitHub Action).
 
 ---
 
+## 🔮 Future Planning
+
+**Roadmap and feature planning:**
+
+1. **[Future Features Plan](PLAN-FUTURE-FEATURES.md)** - Resync tools, multi-language architecture, bidirectional suggestions
+
+---
+
 ## 📋 Release Notes
 
 **Version history:** See [CHANGELOG.md](../CHANGELOG.md) for full release history.
@@ -88,6 +96,7 @@ Complete documentation for the Translation Action (GitHub Action).
 | Add glossary terms | [../glossary/README.md](../glossary/README.md) |
 | Configure language rules | [Language Config](IMPLEMENTATION.md#language-configuration) |
 | Check version history | [CHANGELOG.md](../CHANGELOG.md) |
+| Plan future features | [PLAN-FUTURE-FEATURES.md](PLAN-FUTURE-FEATURES.md) |
 | Bulk translate initial setup | [../tool-bulk-translator/README.md](../tool-bulk-translator/README.md) |
 | Test with GitHub PRs | [../tool-test-action-on-github/README.md](../tool-test-action-on-github/README.md) |
 
@@ -106,10 +115,11 @@ docs/
 ├── CLAUDE-MODELS.md         # Model selection and configuration
 ├── TESTING.md               # Test suite guide (183 tests)
 ├── TEST-REPOSITORIES.md     # GitHub integration testing setup
+├── PLAN-FUTURE-FEATURES.md  # Future roadmap and planning
 └── presentations/           # Marp slide deck
 ```
 
-**Total**: 9 focused documentation files
+**Total**: 10 focused documentation files
 
 ---
 

@@ -257,6 +257,7 @@ For comprehensive documentation, see the [`docs/`](docs/) directory:
 - **[Project Design](docs/PROJECT-DESIGN.md)** - Architecture and design decisions
 - **[Architecture](docs/ARCHITECTURE.md)** - System diagrams and data flow
 - **[Implementation](docs/IMPLEMENTATION.md)** - What's been built and how it works
+- **[Future Features](docs/PLAN-FUTURE-FEATURES.md)** - Roadmap: resync tools, multi-language architecture, bidirectional suggestions
 - **[CHANGELOG](CHANGELOG.md)** - Version history and current status
 - **[Documentation Index](docs/INDEX.md)** - Complete documentation navigation
 
