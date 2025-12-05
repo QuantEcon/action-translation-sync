@@ -818,9 +818,11 @@ Respond with ONLY valid JSON:
 
     return `\n## IMPORTANT: Changed Sections in This PR
 
-The following sections were modified in this PR. **Focus your evaluation on these changed sections**:
+The following sections were actually modified in this PR. **Your suggestions MUST focus ONLY on these changed sections**. Do NOT suggest improvements for unchanged parts of the document.
 
 ${sectionsList}
+
+**Rule**: Any suggestions you make must be about the translation quality of the changed sections listed above. Ignore any issues in other parts of the document - those can be addressed in a separate comprehensive review.
 `;
   }
 
