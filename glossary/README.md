@@ -38,30 +38,45 @@ When the action runs with `target-language: 'zh-cn'`:
 
 ### Simplified Chinese (`zh-cn.json`)
 
-**Status**: ✅ Complete (342 terms)
+**Status**: ✅ Complete (357 terms)
 
 **Contents**:
-- 152 economic terms (GDP, equilibrium, fiscal policy, etc.)
-- 98 mathematical terms (eigenvalue, matrix, derivative, etc.)
-- 32 statistical terms (distribution, regression, variance, etc.)
-- 42 economist names (Robert Solow, Kenneth Arrow, etc.)
-- 18 miscellaneous terms
+- ~160 economic terms (GDP, equilibrium, fiscal policy, etc.)
+- ~100 mathematical terms (eigenvalue, matrix, derivative, etc.)
+- ~35 statistical terms (distribution, regression, variance, etc.)
+- ~45 economist names (Robert Solow, Kenneth Arrow, etc.)
+- ~17 miscellaneous terms
 
 **Maintained by**: QuantEcon team
 
 **Last updated**: October 2025
 
+### Persian/Farsi (`fa.json`)
+
+**Status**: ✅ Complete (357 terms)
+
+**Contents**:
+- ~160 economic terms (تولید ناخالص داخلی, تعادل, سیاست مالی, etc.)
+- ~100 mathematical terms (مقدار ویژه, ماتریس, مشتق, etc.)
+- ~35 statistical terms (توزیع, رگرسیون, واریانس, etc.)
+- ~45 economist names (رابرت سولو, کنت آرو, etc.)
+- ~17 miscellaneous terms
+
+**Maintained by**: QuantEcon team
+
+**Last updated**: December 2025
+
 ### Japanese (`ja.json`)
 
-**Status**: 🚧 Planned for v0.2.0
+**Status**: 🚧 Planned
 
-Will include translations for all terms in the Chinese glossary.
+Will include translations for all terms in the existing glossaries.
 
 ### Spanish (`es.json`)
 
-**Status**: 🚧 Planned for v0.3.0
+**Status**: 🚧 Planned
 
-Will include translations for all terms in the Chinese glossary.
+Will include translations for all terms in the existing glossaries.
 
 ## Glossary Format
 
@@ -224,4 +239,4 @@ These glossaries are part of the Translation Sync Action and inherit its license
 ---
 
 **Maintained by**: QuantEcon Team  
-**Last updated**: October 16, 2025
+**Last updated**: December 5, 2025
