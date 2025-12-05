@@ -4,6 +4,10 @@
 
 This action uses a **section-based approach** to translate MyST Markdown documents.
 
+**Two Modes**:
+- **Sync Mode**: Runs in SOURCE repo, creates translation PRs in target repo
+- **Review Mode**: Runs in TARGET repo, posts quality review comments on translation PRs
+
 **Core Principle**: Documents are structured into sections (## headings). Translations operate at the section level, not on individual blocks.
 
 ## Why Section-Based?
@@ -22,6 +26,7 @@ This action uses a **section-based approach** to translate MyST Markdown documen
 
 ## Architecture Flow
 
+### Sync Mode
 ```
 PR Merged (English)
        ↓
@@ -44,6 +49,29 @@ translator.ts
 Reconstruct document
        ↓
 Create PR (Chinese)
+```
+
+### Review Mode
+```
+PR Created (Chinese)
+       ↓
+index.ts: Mode routing
+       ↓
+reviewer.ts: TranslationReviewer
+       ↓
+   ┌──────────────┬──────────────┐
+   │              │              │
+evaluateTranslation   evaluateDiff
+   ↓              ↓
+Translation Quality   Diff Quality
+(accuracy, fluency,  (scope, position,
+terminology, format)  structure, heading-map)
+       ↓              ↓
+       └──────┬───────┘
+              ↓
+generateReviewComment
+       ↓
+postReviewComment (GitHub PR)
 ```
 
 ## Components
@@ -74,16 +102,29 @@ Create PR (Chinese)
 - Recursive subsection support
 - **246 lines**
 
-### 6. Language Config (language-config.ts)
+### 6. Reviewer (reviewer.ts)
+- AI-powered quality assessment
+- Translation quality: accuracy, fluency, terminology, formatting
+- Diff quality: scope, position, structure, heading-map
+- **~600 lines**
+
+### 7. Language Config (language-config.ts)
 - Language-specific translation rules
 - Extensible for multiple languages
 - Input validation (language codes)
 - **102 lines**
 
-### 7. Index (index.ts)
+### 8. Index (index.ts)
 - GitHub Actions entry point
+- Mode routing (sync/review)
 - PR and file processing
-- **543 lines**
+- **~780 lines**
+
+### 9. Inputs (inputs.ts)
+- Action input parsing and validation
+- Mode-specific input handling
+- PR event validation
+- **~200 lines**
 
 ## Data Structures
 

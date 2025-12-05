@@ -1,7 +1,7 @@
 {
-  "name": "action-translation-sync",
+  "name": "action-translation",
   "version": "0.6.3",
-  "description": "GitHub Action to synchronize translations across repositories",
+  "description": "GitHub Action to sync and review translations across repositories",
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc && ncc build dist/index.js -o dist",
@@ -13,11 +13,16 @@
     "github-action",
     "translation",
     "sync",
+    "review",
     "myst",
     "markdown"
   ],
   "author": "QuantEcon",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/QuantEcon/action-translation.git"
+  },
   "dependencies": {
     "@actions/core": "^1.10.1",
     "@actions/github": "^6.0.0",

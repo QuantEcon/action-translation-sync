@@ -22,6 +22,16 @@ export interface ActionInputs {
     prTeamReviewers: string[];
     testMode: boolean;
 }
+export interface ReviewInputs {
+    sourceRepo: string;
+    maxSuggestions: number;
+    docsFolder: string;
+    sourceLanguage: string;
+    glossaryPath: string;
+    anthropicApiKey: string;
+    claudeModel: string;
+    githubToken: string;
+}
 export interface GlossaryTerm {
     en: string;
     context?: string;
@@ -140,5 +150,55 @@ export interface TranslatedFile {
     path: string;
     content: string;
     sha?: string;
+}
+/**
+ * Represents a changed section identified for review
+ */
+export interface ChangedSection {
+    heading: string;
+    changeType: 'added' | 'modified' | 'deleted';
+    englishContent?: string;
+    translatedContent?: string;
+}
+/**
+ * Result of translation quality evaluation
+ */
+export interface TranslationQualityResult {
+    score: number;
+    accuracy: number;
+    fluency: number;
+    terminology: number;
+    formatting: number;
+    syntaxErrors: string[];
+    issues: string[];
+    strengths: string[];
+    summary: string;
+}
+/**
+ * Result of diff quality evaluation
+ */
+export interface DiffQualityResult {
+    score: number;
+    scopeCorrect: boolean;
+    positionCorrect: boolean;
+    structurePreserved: boolean;
+    headingMapCorrect: boolean;
+    issues: string[];
+    summary: string;
+    scopeDetails: string;
+    positionDetails: string;
+    structureDetails: string;
+}
+/**
+ * Overall review result for a PR
+ */
+export interface ReviewResult {
+    prNumber: number;
+    timestamp: string;
+    translationQuality: TranslationQualityResult;
+    diffQuality: DiffQualityResult;
+    overallScore: number;
+    verdict: 'PASS' | 'WARN' | 'FAIL';
+    reviewComment: string;
 }
 //# sourceMappingURL=types.d.ts.map

@@ -2,13 +2,17 @@
 
 ## Project Overview
 
-**action-translation-sync** is a GitHub Action that automatically translates MyST Markdown documents from English to Chinese using Claude AI (Anthropic). It uses a **section-based approach** for robust, maintainable translation.
+**action-translation** is a GitHub Action that automatically translates and reviews MyST Markdown documents using Claude AI (Anthropic). It uses a **section-based approach** for robust, maintainable translation.
+
+**Two Modes**:
+- **Sync Mode**: Runs in SOURCE repo, creates translation PRs in target repo
+- **Review Mode**: Runs in TARGET repo, posts quality review comments on translation PRs
 
 **Core Architecture**: Section-based translation with full recursive heading support
-**Current Version**: v0.6.3 (Testing & Development)
-**Test Coverage**: 155 tests, all passing
-**Code Size**: ~2,700 lines core logic across 7 modules
-**Glossary**: 357 terms (zh-cn)
+**Current Version**: v0.7.0 (Testing & Development)
+**Test Coverage**: 183 tests, all passing
+**Code Size**: ~3,400 lines core logic across 9 modules
+**Glossary**: 357 terms (zh-cn, fa)
 
 ## Key Design Principles
 
@@ -18,7 +22,7 @@
 
 3. **Position-Based Matching**: Sections match by position (1st → 1st), not by content matching. This works across languages.
 
-4. **Heading-Map System**: Maps English heading IDs to Chinese headings for language-independent section matching.
+4. **Heading-Map System**: Maps English heading IDs to translated headings for language-independent section matching.
 
 5. **Recursive Subsection Support**: Subsections at any depth are parsed, compared, and integrated into heading-maps (v0.4.7+).
 
@@ -61,7 +65,7 @@ heading-map:
 ---
 ```
 
-**Purpose**: Maps English IDs to Chinese headings for section matching.
+**Purpose**: Maps English IDs to translated headings for section matching.
 
 **Features**:
 - Flat structure (no nesting)
@@ -73,7 +77,7 @@ heading-map:
 
 **UPDATE Mode** (incremental):
 - For MODIFIED sections
-- Provides: old English, new English, current Chinese
+- Provides: old English, new English, current translation
 - Maintains translation consistency
 - Faster than full re-translation
 
@@ -82,21 +86,33 @@ heading-map:
 - Provides: English content + glossary
 - Full translation with glossary support
 
+### Review Mode (v0.7.0)
+
+**Purpose**: AI-powered quality assessment of translation PRs
+
+**Evaluates**:
+- Translation Quality: accuracy, fluency, terminology, formatting
+- Diff Quality: scope, position, structure, heading-map correctness
+
+**Output**: Review comment with scores, strengths, and suggestions
+**Verdict**: PASS (≥8), WARN (≥6), FAIL (<6)
+
 ## Code Organization
 
 ### Module Structure
 
 ```
 src/
-├── index.ts             # GitHub Actions entry point (543 lines)
+├── index.ts             # GitHub Actions entry point + mode routing (~780 lines)
 ├── parser.ts            # MyST Markdown parser (282 lines)
 ├── diff-detector.ts     # Change detection (195 lines)
-├── translator.ts        # Claude API integration (305 lines)
+├── translator.ts        # Claude API - sync mode (305 lines)
+├── reviewer.ts          # Claude API - review mode (~700 lines)
 ├── file-processor.ts    # Translation orchestration (739 lines)
 ├── heading-map.ts       # Heading-map system (246 lines)
 ├── language-config.ts   # Language-specific translation rules (102 lines)
-├── inputs.ts            # Action inputs (138 lines)
-└── types.ts             # TypeScript types (182 lines)
+├── inputs.ts            # Action inputs + validation (~200 lines)
+└── types.ts             # TypeScript types (~250 lines)
 ```
 
 ### Module Responsibilities
@@ -120,6 +136,17 @@ src/
 - Glossary support
 - Language-specific prompt customization
 
+**reviewer.ts** (v0.7.0):
+- Claude API integration for review mode
+- `TranslationReviewer` class for PR workflow
+- `parseSourcePRNumber()` - Extract source PR # from translation PR body
+- `getSourceDiff()` - Fetch English before/after from source PR
+- `evaluateTranslation()` - Assess quality (accuracy, fluency, terminology, formatting)
+- `evaluateDiff()` - Verify changes are in correct locations
+- `generateReviewComment()` - Format markdown review
+- `postReviewComment()` - Post/update comment on GitHub PR
+- `identifyChangedSections()` - Detect what changed between source/target
+
 **language-config.ts**:
 - Language-specific translation rules
 - Extensible configuration for multiple target languages
@@ -138,10 +165,19 @@ src/
 - Inject map back into frontmatter
 - **Recursive subsection processing** at any depth
 
+**inputs.ts**:
+- `getMode()` - Get action mode (sync/review)
+- `getInputs()` - Sync mode inputs with validation
+- `getReviewInputs()` - Review mode inputs with validation
+- `validatePREvent()` - Validate merged PR event (sync)
+- `validateReviewPREvent()` - Validate PR event (review)
+
 **index.ts**:
 - GitHub Actions entry point
-- Detect changed files in merged PR
-- Create translation PRs in target repo
+- **Mode routing**: `runSync()` or `runReview()`
+- Detect changed files in merged PR (sync mode)
+- Create translation PRs in target repo (sync mode)
+- Evaluate and post reviews (review mode)
 - Handle root-level files (`docs-folder: '.'`)
 
 ## Important Implementation Details
@@ -191,7 +227,7 @@ if (docsFolder === '') {
 **Purpose**: Fast, comprehensive testing of core logic
 **Location**: `src/__tests__/*.test.ts`
 **Run**: `npm test`
-**Coverage**: 155 tests across 9 files
+**Coverage**: 183 tests across 10 files
 
 **Test Files**:
 - `parser.test.ts` - MyST parsing, frontmatter (15 tests)
@@ -203,6 +239,7 @@ if (docsFolder === '') {
 - `integration.test.ts` - End-to-end (9 tests)
 - `e2e-fixtures.test.ts` - End-to-end fixtures (1 test)
 - `component-reconstruction.test.ts` - Component assembly (4 tests)
+- `reviewer.test.ts` - Review mode (28 tests)
 
 **Key Regression Tests** (v0.4.7):
 - Nested subsection change detection (####, #####)
@@ -210,6 +247,12 @@ if (docsFolder === '') {
 - Subsection duplication prevention
 - Heading-map completeness
 - Root-level file handling
+
+**Review Mode Tests** (v0.7.0):
+- Change detection (new/deleted/modified/renamed sections)
+- Review comment formatting
+- Input validation (sync vs review mode)
+- Integration scenarios
 
 ### 2. GitHub Repository Tests
 **Purpose**: Real-world validation with actual PRs and GitHub Actions
@@ -251,7 +294,7 @@ The project includes two independent tools at the root level:
 **Location**: `tool-bulk-translator/` (standalone npm package)
 **Documentation**: `tool-bulk-translator/README.md`
 
-**When to Use**: Initial repository setup only. After bulk translation, use `action-translation-sync` for incremental updates.
+**When to Use**: Initial repository setup only. After bulk translation, use `action-translation` for incremental updates.
 
 ### 2. GitHub Action Test Tool (`tool-test-action-on-github/`)
 
@@ -317,9 +360,7 @@ docs/
 ├── TESTING.md            # Testing guide
 ├── HEADING-MAPS.md       # Heading-map system
 ├── TEST-REPOSITORIES.md  # GitHub test setup guide
-└── releases/             # Release notes
-    ├── v0.4.3.md
-    └── v0.4.4.md
+└── presentations/        # Marp slide deck
 ```
 
 **Always Update**:
@@ -416,10 +457,11 @@ gh pr view 123
 **Key files to check when modifying**:
 - Subsection handling → `file-processor.ts:parseTranslatedSubsections`
 - Translation → `translator.ts:translateSection`
+- Review → `reviewer.ts:TranslationReviewer`
 - Parsing → `parser.ts:parseSections`
 - Change detection → `diff-detector.ts:detectSectionChanges`
 - Heading-maps → `heading-map.ts:updateHeadingMap`
 
 ---
 
-**Last Updated**: October 24, 2025
+**Last Updated**: December 2025

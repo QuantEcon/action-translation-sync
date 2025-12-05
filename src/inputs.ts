@@ -1,5 +1,5 @@
 import * as core from '@actions/core';
-import { ActionInputs } from './types';
+import { ActionInputs, ReviewInputs } from './types';
 import { validateLanguageCode, getSupportedLanguages } from './language-config';
 
 /**
@@ -11,6 +11,7 @@ const VALID_MODEL_PATTERNS = [
   /^claude-sonnet-4-5-\d{8}$/,      // claude-sonnet-4-5-20250929
   /^claude-3-5-haiku-\d{8}$/,       // claude-3-5-haiku-20241022
   /^claude-3-opus-\d{8}$/,          // claude-3-opus-20240229
+  /^claude-opus-4-5-\d{8}$/,        // claude-opus-4-5-20251101
   /^claude-3-sonnet-\d{8}$/,        // claude-3-sonnet-20240229
   /^claude-3-haiku-\d{8}$/,         // claude-3-haiku-20240307
 ];
@@ -30,7 +31,21 @@ function validateClaudeModel(model: string): void {
 }
 
 /**
- * Get and validate action inputs
+ * Get the action mode (sync or review)
+ */
+export function getMode(): 'sync' | 'review' {
+  const mode = core.getInput('mode', { required: true });
+  if (!mode) {
+    throw new Error(`Missing required input: 'mode'. Expected 'sync' or 'review'.`);
+  }
+  if (mode !== 'sync' && mode !== 'review') {
+    throw new Error(`Invalid mode: '${mode}'. Expected 'sync' or 'review'.`);
+  }
+  return mode;
+}
+
+/**
+ * Get and validate action inputs for SYNC mode
  */
 export function getInputs(): ActionInputs {
   const targetRepo = core.getInput('target-repo', { required: true });
@@ -45,7 +60,7 @@ export function getInputs(): ActionInputs {
   const claudeModel = core.getInput('claude-model', { required: false }) || 'claude-sonnet-4-5-20250929';
   const githubToken = core.getInput('github-token', { required: true });
   
-  const prLabelsRaw = core.getInput('pr-labels', { required: false }) || 'action-translation-sync,automated';
+  const prLabelsRaw = core.getInput('pr-labels', { required: false }) || 'action-translation,automated';
   const prLabels = prLabelsRaw.split(',').map((l: string) => l.trim()).filter((l: string) => l.length > 0);
   
   const prReviewersRaw = core.getInput('pr-reviewers', { required: false }) || '';
@@ -90,21 +105,64 @@ export function getInputs(): ActionInputs {
 }
 
 /**
- * Validate that the event is a merged PR, test mode label, or manual dispatch
+ * Get and validate action inputs for REVIEW mode
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function validatePREvent(context: any, testMode: boolean): { merged: boolean; prNumber: number | null; isTestMode: boolean } {
-  const { eventName, payload } = context;
-
-  // Handle workflow_dispatch for manual testing
-  if (eventName === 'workflow_dispatch') {
-    core.info('Manual workflow dispatch - will process latest commit');
-    return { merged: true, prNumber: null, isTestMode: false };
+export function getReviewInputs(): ReviewInputs {
+  const sourceRepo = core.getInput('source-repo', { required: true });
+  const maxSuggestionsRaw = core.getInput('max-suggestions', { required: false }) || '5';
+  const maxSuggestions = parseInt(maxSuggestionsRaw, 10);
+  
+  if (isNaN(maxSuggestions) || maxSuggestions < 0) {
+    throw new Error(`Invalid max-suggestions: '${maxSuggestionsRaw}'. Expected a non-negative integer.`);
   }
 
-  // Handle pull_request events
+  // Handle docs-folder: '.' means root level (empty string for no prefix filter)
+  const docsFolderInput = core.getInput('docs-folder', { required: false });
+  const docsFolder = (docsFolderInput === '.' || docsFolderInput === '/') ? '' : docsFolderInput;
+  
+  const sourceLanguage = core.getInput('source-language', { required: false }) || 'en';
+  const glossaryPath = core.getInput('glossary-path', { required: false }) || '';
+  const anthropicApiKey = core.getInput('anthropic-api-key', { required: true });
+  const claudeModel = core.getInput('claude-model', { required: false }) || 'claude-sonnet-4-5-20250929';
+  const githubToken = core.getInput('github-token', { required: true });
+
+  // Validate source repo format
+  if (!sourceRepo.includes('/')) {
+    throw new Error(`Invalid source-repo format: ${sourceRepo}. Expected format: owner/repo`);
+  }
+
+  // Validate Claude model (warning only, doesn't throw)
+  validateClaudeModel(claudeModel);
+
+  // Ensure docs folder ends with / (unless it's empty string for root level)
+  const normalizedDocsFolder = docsFolder === '' ? '' : (docsFolder.endsWith('/') ? docsFolder : `${docsFolder}/`);
+
+  return {
+    sourceRepo,
+    maxSuggestions,
+    docsFolder: normalizedDocsFolder,
+    sourceLanguage,
+    glossaryPath,
+    anthropicApiKey,
+    claudeModel,
+    githubToken,
+  };
+}
+
+/**
+ * Validate that the event is a merged PR or test mode label (SYNC mode)
+ * Note: workflow_dispatch is NOT supported - use test-translation label for manual testing
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function validatePREvent(context: any, testMode: boolean): { merged: boolean; prNumber: number; isTestMode: boolean } {
+  const { eventName, payload } = context;
+
+  // Handle pull_request events only
   if (eventName !== 'pull_request') {
-    throw new Error(`This action only works on pull_request or workflow_dispatch events. Got: ${eventName}`);
+    throw new Error(
+      `This action only works on pull_request events. Got: ${eventName}. ` +
+      `For manual testing, add the 'test-translation' label to a PR instead of using workflow_dispatch.`
+    );
   }
 
   // Test mode: triggered by label, use PR head (not merged)
@@ -135,4 +193,25 @@ export function validatePREvent(context: any, testMode: boolean): { merged: bool
 
   core.info(`🚀 Running in PRODUCTION mode for merged PR #${prNumber}`);
   return { merged, prNumber, isTestMode: false };
+}
+
+/**
+ * Validate that the event is a PR event (REVIEW mode)
+ * Returns PR number for open PRs, or throws if not a PR event
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function validateReviewPREvent(context: any): { prNumber: number } {
+  const { eventName, payload } = context;
+
+  if (eventName !== 'pull_request') {
+    throw new Error(`Review mode only works on pull_request events. Got: ${eventName}`);
+  }
+
+  const prNumber = payload.pull_request?.number;
+  if (!prNumber) {
+    throw new Error('Could not determine PR number from event payload');
+  }
+
+  core.info(`📝 Running REVIEW mode for PR #${prNumber}`);
+  return { prNumber };
 }

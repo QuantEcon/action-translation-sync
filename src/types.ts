@@ -28,6 +28,17 @@ export interface ActionInputs {
   testMode: boolean;        // If true, run on PR head instead of merge commit
 }
 
+export interface ReviewInputs {
+  sourceRepo: string;       // Source repository for English content (owner/repo)
+  maxSuggestions: number;   // Maximum suggestions in review comment
+  docsFolder: string;       // Documentation folder pattern
+  sourceLanguage: string;   // Source language code (default: en)
+  glossaryPath: string;     // Path to custom glossary
+  anthropicApiKey: string;  // Anthropic API key for Claude
+  claudeModel: string;      // Claude model for evaluation
+  githubToken: string;      // GitHub token for API access
+}
+
 // ============================================================================
 // GLOSSARY
 // ============================================================================
@@ -180,4 +191,62 @@ export interface TranslatedFile {
   path: string;
   content: string;
   sha?: string; // SHA of existing file (for updates)
+}
+
+// ============================================================================
+// REVIEW MODE TYPES
+// ============================================================================
+
+/**
+ * Represents a changed section identified for review
+ */
+export interface ChangedSection {
+  heading: string;          // The section heading (e.g., "## Introduction")
+  changeType: 'added' | 'modified' | 'deleted';
+  englishContent?: string;  // For added/modified sections
+  translatedContent?: string;  // For added/modified sections (target language)
+}
+
+/**
+ * Result of translation quality evaluation
+ */
+export interface TranslationQualityResult {
+  score: number;           // Overall score 1-10
+  accuracy: number;        // Accuracy score 1-10
+  fluency: number;         // Fluency score 1-10
+  terminology: number;     // Terminology score 1-10
+  formatting: number;      // Formatting score 1-10
+  syntaxErrors: string[];  // Markdown/MyST syntax errors found
+  issues: string[];        // Suggested improvements
+  strengths: string[];     // Positive aspects
+  summary: string;         // Brief overall assessment
+}
+
+/**
+ * Result of diff quality evaluation
+ */
+export interface DiffQualityResult {
+  score: number;              // Overall score 1-10
+  scopeCorrect: boolean;      // Only intended files changed?
+  positionCorrect: boolean;   // Changes in correct document locations?
+  structurePreserved: boolean; // Document structure maintained?
+  headingMapCorrect: boolean; // Heading-map properly updated?
+  issues: string[];           // Issues found
+  summary: string;            // Brief overall assessment
+  scopeDetails: string;       // Explanation of scope check
+  positionDetails: string;    // Explanation of position check
+  structureDetails: string;   // Explanation of structure check
+}
+
+/**
+ * Overall review result for a PR
+ */
+export interface ReviewResult {
+  prNumber: number;
+  timestamp: string;
+  translationQuality: TranslationQualityResult;
+  diffQuality: DiffQualityResult;
+  overallScore: number;
+  verdict: 'PASS' | 'WARN' | 'FAIL';
+  reviewComment: string;
 }

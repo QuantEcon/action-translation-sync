@@ -1,6 +1,6 @@
 # GitHub Action Test Tool
 
-This tool provides automated testing of the `action-translation-sync` GitHub Action using real GitHub repositories.
+This tool provides automated testing of the `action-translation` GitHub Action using real GitHub repositories.
 
 ## Overview
 
@@ -9,6 +9,8 @@ The test script creates and manages test PRs in source and target repositories t
 **Two-phase workflow:**
 1. **Test Phase** (`test-action-on-github.sh`): Run test scenarios, create PRs
 2. **Evaluation Phase** (`evaluate/`): Review translation quality with Opus 4.5
+
+**Note**: The evaluation functionality is now also available as the action's **review mode**, which can be run directly in CI/CD workflows.
 
 ## Prerequisites
 
@@ -19,15 +21,19 @@ The test script creates and manages test PRs in source and target repositories t
 
 ## Test Repositories
 
-- **Source**: `QuantEcon/test-translation-sync`
-- **Target**: `QuantEcon/test-translation-sync.zh-cn`
+| Repository | Purpose | URL |
+|------------|---------|-----|
+| **Source** | English content, triggers sync | `QuantEcon/test-translation-sync` |
+| **Target** | Chinese translations | `QuantEcon/test-translation-sync.zh-cn` |
+
+**Note**: These repositories retain their original names (`test-translation-sync`) even though the action was renamed to `action-translation`. This avoids disrupting existing GitHub configurations, Netlify deployments, and secrets. The names remain descriptive of their purpose (testing the translation sync workflow).
 
 ## Usage
 
 ### Phase 1: Run Test Scenarios
 
 ```bash
-cd /path/to/action-translation-sync/tool-test-action-on-github
+cd /path/to/action-translation/tool-test-action-on-github
 ./test-action-on-github.sh
 ```
 

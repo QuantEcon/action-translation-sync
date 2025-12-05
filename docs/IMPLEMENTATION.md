@@ -1,15 +1,19 @@
 # Implementation Guide
 
-This document explains how the Translation Sync Action works internally. For architecture overview, see [ARCHITECTURE.md](ARCHITECTURE.md). For design decisions, see [PROJECT-DESIGN.md](PROJECT-DESIGN.md).
+This document explains how the Translation Action works internally. For architecture overview, see [ARCHITECTURE.md](ARCHITECTURE.md). For design decisions, see [PROJECT-DESIGN.md](PROJECT-DESIGN.md).
 
-**Version**: v0.6.0  
+**Version**: v0.7.0  
 **Status**: Testing & Development
 
 ---
 
 ## Overview
 
-The implementation is **simple by design** - ~2,700 lines of core code across 7 modules, no complex AST parsing, and straightforward position-based matching.
+The implementation is **simple by design** - ~3,400 lines of core code across 9 modules, no complex AST parsing, and straightforward position-based matching.
+
+**Two Modes**:
+- **Sync Mode**: Runs in SOURCE repo, creates translation PRs in target repo
+- **Review Mode**: Runs in TARGET repo, posts quality review comments on translation PRs
 
 **Core Philosophy**: Keep it simple, maintainable, and easy to understand.
 
@@ -1007,8 +1011,9 @@ The action is distributed via GitHub releases with the bundled `dist/index.js`:
 
 ```yaml
 # In user's workflow
-- uses: quantecon/action-translation-sync@v1
+- uses: quantecon/action-translation@v1
   with:
+    mode: sync
     target-repo: 'org/repo.zh-cn'
     target-language: 'zh-cn'
 ```
@@ -1043,7 +1048,7 @@ core.debug('Section details: ' + JSON.stringify(section));
 Enable detailed logging:
 
 ```yaml
-- uses: quantecon/action-translation-sync@v1
+- uses: quantecon/action-translation@v1
   env:
     ACTIONS_STEP_DEBUG: true
 ```

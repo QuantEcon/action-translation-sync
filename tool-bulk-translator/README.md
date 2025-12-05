@@ -4,7 +4,7 @@ A standalone CLI tool for **one-time bulk translation** of entire Jupyter Book l
 
 ## Purpose
 
-This tool is designed for **initial setup** when creating a new language version of an existing lecture series. After the initial bulk translation, use the main `action-translation-sync` GitHub Action for incremental updates.
+This tool is designed for **initial setup** when creating a new language version of an existing lecture series. After the initial bulk translation, use the main `action-translation` GitHub Action for incremental updates.
 
 **Use Case**: Creating `lecture-python.zh-cn` from `lecture-python`
 
@@ -149,7 +149,7 @@ Once the initial translation is complete:
 1. **Review translations** in the target folder
 2. **Build book**: `jupyter-book build lecture-python.zh-cn`
 3. **Push to GitHub** as new repository
-4. **Configure `action-translation-sync`** for incremental updates
+4. **Configure `action-translation`** for incremental updates
 
 ## Example: Full Workflow
 
@@ -220,5 +220,5 @@ If you hit API rate limits, increase the batch delay:
 
 ## Related
 
-- **[action-translation-sync](../)** - GitHub Action for incremental translation sync
+- **[action-translation](../)** - GitHub Action for incremental translation sync
 - **[tool-test-action-on-github](../tool-test-action-on-github/)** - Testing framework

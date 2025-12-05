@@ -348,8 +348,11 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-      - uses: quantecon/action-translation-sync@v1
+      - uses: quantecon/action-translation@v0.7
         with:
+          # Mode
+          mode: sync
+          
           # Target repository
           target-repo: 'quantecon/lecture-python.zh-cn'
           target-language: 'zh-cn'

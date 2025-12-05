@@ -1079,150 +1079,284 @@ const github = __importStar(__nccwpck_require__(3228));
 const inputs_1 = __nccwpck_require__(9196);
 const translator_1 = __nccwpck_require__(7003);
 const file_processor_1 = __nccwpck_require__(5134);
+const reviewer_1 = __nccwpck_require__(9822);
 const fs_1 = __nccwpck_require__(9896);
 const path = __importStar(__nccwpck_require__(6928));
 /**
  * Main entry point for the GitHub Action
+ * Routes to sync or review mode based on 'mode' input
  */
 async function run() {
     try {
-        // Get and validate inputs
-        core.info('Getting action inputs...');
-        const inputs = (0, inputs_1.getInputs)();
-        // Validate this is a merged PR event, test mode, or manual dispatch
-        core.info('Validating PR event...');
-        const { merged, prNumber, isTestMode } = (0, inputs_1.validatePREvent)(github.context, inputs.testMode);
-        if (!merged) {
-            core.info('PR was not merged. Exiting.');
-            return;
-        }
-        if (isTestMode) {
-            core.info(`🧪 TEST MODE: Processing PR #${prNumber} (using head commit)`);
-        }
-        else if (prNumber) {
-            core.info(`Processing merged PR #${prNumber}`);
+        const mode = (0, inputs_1.getMode)();
+        core.info(`🚀 Running in ${mode.toUpperCase()} mode`);
+        if (mode === 'sync') {
+            await runSync();
         }
         else {
-            core.info('Processing manual workflow dispatch');
+            await runReview();
         }
-        // Get changed files
-        const octokit = github.getOctokit(inputs.githubToken);
-        let files;
-        if (prNumber) {
-            // Get files from PR
-            const { data: prFiles } = await octokit.rest.pulls.listFiles({
-                owner: github.context.repo.owner,
-                repo: github.context.repo.repo,
-                pull_number: prNumber,
-            });
-            files = prFiles;
-        }
-        else {
-            // For workflow_dispatch, get files from the latest commit
-            const { data: commit } = await octokit.rest.repos.getCommit({
-                owner: github.context.repo.owner,
-                repo: github.context.repo.repo,
-                ref: github.context.sha,
-            });
-            files = commit.files || [];
-        }
-        // Filter for renamed markdown files (need special handling)
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const renamedMarkdownFiles = files.filter((file) => file.filename.startsWith(inputs.docsFolder) &&
-            file.filename.endsWith('.md') &&
-            file.status === 'renamed');
-        // Filter for files to sync: markdown files and TOC files (excluding renamed, handled separately)
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const changedMarkdownFiles = files.filter((file) => file.filename.startsWith(inputs.docsFolder) &&
-            file.filename.endsWith('.md') &&
-            file.status !== 'removed' &&
-            file.status !== 'renamed');
-        // Filter for TOC files to sync (status: added or modified, not removed or renamed)
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const changedTocFiles = files.filter((file) => file.filename.startsWith(inputs.docsFolder) &&
-            file.filename.endsWith('_toc.yml') &&
-            file.status !== 'removed' &&
-            file.status !== 'renamed');
-        // Filter for removed markdown files (for deletion)
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const removedMarkdownFiles = files.filter((file) => file.filename.startsWith(inputs.docsFolder) &&
-            file.filename.endsWith('.md') &&
-            file.status === 'removed');
-        // Filter for removed TOC files (for deletion)
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const removedTocFiles = files.filter((file) => file.filename.startsWith(inputs.docsFolder) &&
-            file.filename.endsWith('_toc.yml') &&
-            file.status === 'removed');
-        if (changedMarkdownFiles.length === 0 && changedTocFiles.length === 0 &&
-            removedMarkdownFiles.length === 0 && removedTocFiles.length === 0 &&
-            renamedMarkdownFiles.length === 0) {
-            core.info('No markdown or TOC files changed in docs folder. Exiting.');
-            return;
-        }
-        core.info(`Found ${changedMarkdownFiles.length} changed markdown files`);
-        core.info(`Found ${renamedMarkdownFiles.length} renamed markdown files`);
-        core.info(`Found ${changedTocFiles.length} changed TOC files`);
-        core.info(`Found ${removedMarkdownFiles.length} removed markdown files`);
-        core.info(`Found ${removedTocFiles.length} removed TOC files`);
-        // Load glossary - uses built-in glossary by default
-        let glossary;
-        // First, try to load the built-in glossary (shipped with the action)
-        // Glossary path is language-specific: glossary/{target-language}.json
-        const builtInGlossaryPath = path.join(__dirname, '..', 'glossary', `${inputs.targetLanguage}.json`);
+    }
+    catch (error) {
+        core.setFailed(`Action failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
+}
+/**
+ * Run the REVIEW mode - evaluate translation quality on a PR
+ */
+async function runReview() {
+    // Get and validate inputs
+    core.info('Getting review mode inputs...');
+    const inputs = (0, inputs_1.getReviewInputs)();
+    // Validate this is a PR event
+    core.info('Validating PR event...');
+    const { prNumber } = (0, inputs_1.validateReviewPREvent)(github.context);
+    core.info(`📝 Reviewing translation PR #${prNumber}`);
+    // Initialize reviewer
+    const reviewer = new reviewer_1.TranslationReviewer(inputs.anthropicApiKey, inputs.githubToken, inputs.claudeModel, inputs.maxSuggestions);
+    // Load glossary
+    let glossaryTerms;
+    const targetLanguage = detectTargetLanguage();
+    if (targetLanguage) {
+        const builtInGlossaryPath = path.join(__dirname, '..', 'glossary', `${targetLanguage}.json`);
         try {
             const glossaryContent = await fs_1.promises.readFile(builtInGlossaryPath, 'utf-8');
-            glossary = JSON.parse(glossaryContent);
-            if (glossary) {
-                core.info(`✓ Loaded built-in glossary for ${inputs.targetLanguage} with ${glossary.terms.length} terms`);
+            const glossary = JSON.parse(glossaryContent);
+            if (glossary && glossary.terms) {
+                glossaryTerms = glossary.terms
+                    .map((t) => `- "${t.en}" → "${t[targetLanguage] || ''}"${t.context ? ` (${t.context})` : ''}`)
+                    .join('\n');
+                core.info(`✓ Loaded glossary for ${targetLanguage} with ${glossary.terms.length} terms`);
             }
         }
         catch (error) {
-            core.warning(`Could not load built-in glossary for ${inputs.targetLanguage}: ${error}`);
-            // Fallback: try custom glossary path if provided
-            if (inputs.glossaryPath) {
-                try {
-                    const customGlossaryContent = await fs_1.promises.readFile(inputs.glossaryPath, 'utf-8');
-                    glossary = JSON.parse(customGlossaryContent);
-                    if (glossary) {
-                        core.info(`✓ Loaded custom glossary from ${inputs.glossaryPath} with ${glossary.terms.length} terms`);
-                    }
-                }
-                catch (fallbackError) {
-                    core.warning(`Could not load custom glossary from ${inputs.glossaryPath}: ${fallbackError}`);
+            core.warning(`Could not load glossary for ${targetLanguage}: ${error}`);
+        }
+    }
+    // Run review
+    const result = await reviewer.reviewPR(prNumber, inputs.sourceRepo, github.context.repo.owner, github.context.repo.repo, inputs.docsFolder, glossaryTerms);
+    // Set outputs
+    core.setOutput('review-verdict', result.verdict);
+    core.setOutput('translation-score', result.translationQuality.score.toString());
+    core.setOutput('diff-score', result.diffQuality.score.toString());
+    core.info(`✅ Review complete: ${result.verdict} (Translation: ${result.translationQuality.score}/10, Diff: ${result.diffQuality.score}/10)`);
+}
+/**
+ * Detect target language from repository name
+ * e.g., 'lecture-python.zh-cn' -> 'zh-cn'
+ */
+function detectTargetLanguage() {
+    const repoName = github.context.repo.repo;
+    const match = repoName.match(/\.([a-z]{2}(?:-[a-z]{2})?)$/);
+    return match ? match[1] : undefined;
+}
+/**
+ * Run the SYNC mode - create translation PRs
+ */
+async function runSync() {
+    // Get and validate inputs
+    core.info('Getting action inputs...');
+    const inputs = (0, inputs_1.getInputs)();
+    // Validate this is a merged PR event, test mode, or manual dispatch
+    core.info('Validating PR event...');
+    const { merged, prNumber, isTestMode } = (0, inputs_1.validatePREvent)(github.context, inputs.testMode);
+    if (!merged) {
+        core.info('PR was not merged. Exiting.');
+        return;
+    }
+    if (isTestMode) {
+        core.info(`🧪 TEST MODE: Processing PR #${prNumber} (using head commit)`);
+    }
+    else {
+        core.info(`Processing merged PR #${prNumber}`);
+    }
+    // Get changed files from PR
+    const octokit = github.getOctokit(inputs.githubToken);
+    const { data: files } = await octokit.rest.pulls.listFiles({
+        owner: github.context.repo.owner,
+        repo: github.context.repo.repo,
+        pull_number: prNumber,
+    });
+    // Filter for renamed markdown files (need special handling)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const renamedMarkdownFiles = files.filter((file) => file.filename.startsWith(inputs.docsFolder) &&
+        file.filename.endsWith('.md') &&
+        file.status === 'renamed');
+    // Filter for files to sync: markdown files and TOC files (excluding renamed, handled separately)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const changedMarkdownFiles = files.filter((file) => file.filename.startsWith(inputs.docsFolder) &&
+        file.filename.endsWith('.md') &&
+        file.status !== 'removed' &&
+        file.status !== 'renamed');
+    // Filter for TOC files to sync (status: added or modified, not removed or renamed)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const changedTocFiles = files.filter((file) => file.filename.startsWith(inputs.docsFolder) &&
+        file.filename.endsWith('_toc.yml') &&
+        file.status !== 'removed' &&
+        file.status !== 'renamed');
+    // Filter for removed markdown files (for deletion)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const removedMarkdownFiles = files.filter((file) => file.filename.startsWith(inputs.docsFolder) &&
+        file.filename.endsWith('.md') &&
+        file.status === 'removed');
+    // Filter for removed TOC files (for deletion)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const removedTocFiles = files.filter((file) => file.filename.startsWith(inputs.docsFolder) &&
+        file.filename.endsWith('_toc.yml') &&
+        file.status === 'removed');
+    if (changedMarkdownFiles.length === 0 && changedTocFiles.length === 0 &&
+        removedMarkdownFiles.length === 0 && removedTocFiles.length === 0 &&
+        renamedMarkdownFiles.length === 0) {
+        core.info('No markdown or TOC files changed in docs folder. Exiting.');
+        return;
+    }
+    core.info(`Found ${changedMarkdownFiles.length} changed markdown files`);
+    core.info(`Found ${renamedMarkdownFiles.length} renamed markdown files`);
+    core.info(`Found ${changedTocFiles.length} changed TOC files`);
+    core.info(`Found ${removedMarkdownFiles.length} removed markdown files`);
+    core.info(`Found ${removedTocFiles.length} removed TOC files`);
+    // Load glossary - uses built-in glossary by default
+    let glossary;
+    // First, try to load the built-in glossary (shipped with the action)
+    // Glossary path is language-specific: glossary/{target-language}.json
+    const builtInGlossaryPath = path.join(__dirname, '..', 'glossary', `${inputs.targetLanguage}.json`);
+    try {
+        const glossaryContent = await fs_1.promises.readFile(builtInGlossaryPath, 'utf-8');
+        glossary = JSON.parse(glossaryContent);
+        if (glossary) {
+            core.info(`✓ Loaded built-in glossary for ${inputs.targetLanguage} with ${glossary.terms.length} terms`);
+        }
+    }
+    catch (error) {
+        core.warning(`Could not load built-in glossary for ${inputs.targetLanguage}: ${error}`);
+        // Fallback: try custom glossary path if provided
+        if (inputs.glossaryPath) {
+            try {
+                const customGlossaryContent = await fs_1.promises.readFile(inputs.glossaryPath, 'utf-8');
+                glossary = JSON.parse(customGlossaryContent);
+                if (glossary) {
+                    core.info(`✓ Loaded custom glossary from ${inputs.glossaryPath} with ${glossary.terms.length} terms`);
                 }
             }
+            catch (fallbackError) {
+                core.warning(`Could not load custom glossary from ${inputs.glossaryPath}: ${fallbackError}`);
+            }
         }
-        // Initialize translation service
-        // Enable debug mode for detailed logging
-        const debugMode = true;
-        const translator = new translator_1.TranslationService(inputs.anthropicApiKey, inputs.claudeModel, debugMode);
-        const processor = new file_processor_1.FileProcessor(translator, debugMode);
-        // Process each changed file
-        const processedFiles = [];
-        const translatedFiles = [];
-        const filesToDelete = [];
-        const errors = [];
-        for (const file of changedMarkdownFiles) {
+    }
+    // Initialize translation service
+    // Enable debug mode for detailed logging
+    const debugMode = true;
+    const translator = new translator_1.TranslationService(inputs.anthropicApiKey, inputs.claudeModel, debugMode);
+    const processor = new file_processor_1.FileProcessor(translator, debugMode);
+    // Process each changed file
+    const processedFiles = [];
+    const translatedFiles = [];
+    const filesToDelete = [];
+    const errors = [];
+    for (const file of changedMarkdownFiles) {
+        try {
+            core.info(`Processing ${file.filename}...`);
+            // Get file content from PR
+            const { data: fileData } = await octokit.rest.repos.getContent({
+                owner: github.context.repo.owner,
+                repo: github.context.repo.repo,
+                path: file.filename,
+                ref: github.context.sha,
+            });
+            if (!('content' in fileData)) {
+                throw new Error(`Could not get content for ${file.filename}`);
+            }
+            const newContent = Buffer.from(fileData.content, 'base64').toString('utf-8');
+            // Get old content (before the PR)
+            let oldContent = '';
             try {
-                core.info(`Processing ${file.filename}...`);
-                // Get file content from PR
-                const { data: fileData } = await octokit.rest.repos.getContent({
+                const { data: oldFileData } = await octokit.rest.repos.getContent({
                     owner: github.context.repo.owner,
                     repo: github.context.repo.repo,
                     path: file.filename,
-                    ref: github.context.sha,
+                    ref: `${github.context.sha}^`, // Parent commit
                 });
-                if (!('content' in fileData)) {
-                    throw new Error(`Could not get content for ${file.filename}`);
+                if ('content' in oldFileData) {
+                    oldContent = Buffer.from(oldFileData.content, 'base64').toString('utf-8');
                 }
-                const newContent = Buffer.from(fileData.content, 'base64').toString('utf-8');
-                // Get old content (before the PR)
-                let oldContent = '';
+            }
+            catch (error) {
+                // File is new (doesn't exist in parent)
+                core.info(`${file.filename} is a new file`);
+            }
+            // Check if file exists in target repo
+            const [targetOwner, targetRepo] = inputs.targetRepo.split('/');
+            let targetContent = '';
+            let isNewFile = false;
+            let existingFileSha;
+            try {
+                const { data: targetFileData } = await octokit.rest.repos.getContent({
+                    owner: targetOwner,
+                    repo: targetRepo,
+                    path: file.filename,
+                });
+                if ('content' in targetFileData) {
+                    targetContent = Buffer.from(targetFileData.content, 'base64').toString('utf-8');
+                    existingFileSha = targetFileData.sha;
+                }
+            }
+            catch (error) {
+                isNewFile = true;
+                core.info(`${file.filename} does not exist in target repo - will create it`);
+            }
+            // Process the file using section-based approach
+            let translatedContent;
+            if (isNewFile) {
+                translatedContent = await processor.processFull(newContent, file.filename, inputs.sourceLanguage, inputs.targetLanguage, glossary);
+            }
+            else {
+                // Use new section-based processing
+                translatedContent = await processor.processSectionBased(oldContent, newContent, targetContent, file.filename, inputs.sourceLanguage, inputs.targetLanguage, glossary);
+            }
+            // Validate the translated content
+            const validation = await processor.validateMyST(translatedContent, file.filename);
+            if (!validation.valid) {
+                throw new Error(`Validation failed: ${validation.error}`);
+            }
+            core.info(`Successfully processed ${file.filename}`);
+            processedFiles.push(file.filename);
+            // Store translated content for PR creation
+            translatedFiles.push({
+                path: file.filename,
+                content: translatedContent,
+                sha: existingFileSha,
+            });
+        }
+        catch (error) {
+            const errorMessage = `Error processing ${file.filename}: ${error}`;
+            core.error(errorMessage);
+            errors.push(errorMessage);
+        }
+    }
+    // Process renamed markdown files (special handling: preserve translation, delete old file)
+    for (const file of renamedMarkdownFiles) {
+        try {
+            const previousFilename = file.previous_filename;
+            core.info(`Processing renamed file: ${previousFilename} → ${file.filename}...`);
+            // Get the new file content from the source repo
+            const { data: fileData } = await octokit.rest.repos.getContent({
+                owner: github.context.repo.owner,
+                repo: github.context.repo.repo,
+                path: file.filename,
+                ref: github.context.sha,
+            });
+            if (!('content' in fileData)) {
+                throw new Error(`Could not get content for ${file.filename}`);
+            }
+            const newContent = Buffer.from(fileData.content, 'base64').toString('utf-8');
+            // Get the old content (before rename) using previous_filename
+            let oldContent = '';
+            if (previousFilename) {
                 try {
                     const { data: oldFileData } = await octokit.rest.repos.getContent({
                         owner: github.context.repo.owner,
                         repo: github.context.repo.repo,
-                        path: file.filename,
+                        path: previousFilename,
                         ref: `${github.context.sha}^`, // Parent commit
                     });
                     if ('content' in oldFileData) {
@@ -1230,332 +1364,249 @@ async function run() {
                     }
                 }
                 catch (error) {
-                    // File is new (doesn't exist in parent)
-                    core.info(`${file.filename} is a new file`);
+                    core.info(`Could not get old content from ${previousFilename}`);
                 }
-                // Check if file exists in target repo
-                const [targetOwner, targetRepo] = inputs.targetRepo.split('/');
-                let targetContent = '';
-                let isNewFile = false;
-                let existingFileSha;
+            }
+            // Check if old file exists in target repo (to get existing translation)
+            const [targetOwner, targetRepo] = inputs.targetRepo.split('/');
+            let targetContent = '';
+            let oldFileSha;
+            if (previousFilename) {
                 try {
                     const { data: targetFileData } = await octokit.rest.repos.getContent({
                         owner: targetOwner,
                         repo: targetRepo,
-                        path: file.filename,
+                        path: previousFilename,
                     });
                     if ('content' in targetFileData) {
                         targetContent = Buffer.from(targetFileData.content, 'base64').toString('utf-8');
-                        existingFileSha = targetFileData.sha;
+                        oldFileSha = targetFileData.sha;
+                        core.info(`Found existing translation at ${previousFilename} - will transfer to ${file.filename}`);
                     }
                 }
                 catch (error) {
-                    isNewFile = true;
-                    core.info(`${file.filename} does not exist in target repo - will create it`);
+                    core.info(`${previousFilename} does not exist in target repo`);
                 }
-                // Process the file using section-based approach
-                let translatedContent;
-                if (isNewFile) {
-                    translatedContent = await processor.processFull(newContent, file.filename, inputs.sourceLanguage, inputs.targetLanguage, glossary);
-                }
-                else {
-                    // Use new section-based processing
-                    translatedContent = await processor.processSectionBased(oldContent, newContent, targetContent, file.filename, inputs.sourceLanguage, inputs.targetLanguage, glossary);
-                }
-                // Validate the translated content
-                const validation = await processor.validateMyST(translatedContent, file.filename);
-                if (!validation.valid) {
-                    throw new Error(`Validation failed: ${validation.error}`);
-                }
-                core.info(`Successfully processed ${file.filename}`);
-                processedFiles.push(file.filename);
-                // Store translated content for PR creation
-                translatedFiles.push({
-                    path: file.filename,
-                    content: translatedContent,
-                    sha: existingFileSha,
-                });
             }
-            catch (error) {
-                const errorMessage = `Error processing ${file.filename}: ${error}`;
-                core.error(errorMessage);
-                errors.push(errorMessage);
+            // Process the file
+            let translatedContent;
+            if (targetContent) {
+                // We have an existing translation - use section-based processing to update it
+                translatedContent = await processor.processSectionBased(oldContent, newContent, targetContent, file.filename, inputs.sourceLanguage, inputs.targetLanguage, glossary);
+            }
+            else {
+                // No existing translation - do full translation
+                translatedContent = await processor.processFull(newContent, file.filename, inputs.sourceLanguage, inputs.targetLanguage, glossary);
+            }
+            // Validate the translated content
+            const validation = await processor.validateMyST(translatedContent, file.filename);
+            if (!validation.valid) {
+                throw new Error(`Validation failed: ${validation.error}`);
+            }
+            core.info(`Successfully processed renamed file ${file.filename}`);
+            processedFiles.push(file.filename);
+            // Store translated content at NEW path
+            translatedFiles.push({
+                path: file.filename,
+                content: translatedContent,
+                // Note: no sha because this is a new file (renamed)
+            });
+            // Mark the OLD file for deletion if it existed in target repo
+            if (oldFileSha && previousFilename) {
+                filesToDelete.push({
+                    path: previousFilename,
+                    sha: oldFileSha,
+                });
+                core.info(`Marked ${previousFilename} for deletion (renamed to ${file.filename})`);
             }
         }
-        // Process renamed markdown files (special handling: preserve translation, delete old file)
-        for (const file of renamedMarkdownFiles) {
+        catch (error) {
+            const errorMessage = `Error processing renamed file ${file.filename}: ${error}`;
+            core.error(errorMessage);
+            errors.push(errorMessage);
+        }
+    }
+    // Process TOC files (copy directly without translation)
+    for (const file of changedTocFiles) {
+        try {
+            core.info(`Processing TOC file ${file.filename}...`);
+            // Get file content from PR
+            const { data: fileData } = await octokit.rest.repos.getContent({
+                owner: github.context.repo.owner,
+                repo: github.context.repo.repo,
+                path: file.filename,
+                ref: github.context.sha,
+            });
+            if (!('content' in fileData)) {
+                throw new Error(`Could not get content for ${file.filename}`);
+            }
+            const newContent = Buffer.from(fileData.content, 'base64').toString('utf-8');
+            // Check if file exists in target repo
+            const [targetOwner, targetRepo] = inputs.targetRepo.split('/');
+            let existingFileSha;
             try {
-                const previousFilename = file.previous_filename;
-                core.info(`Processing renamed file: ${previousFilename} → ${file.filename}...`);
-                // Get the new file content from the source repo
-                const { data: fileData } = await octokit.rest.repos.getContent({
-                    owner: github.context.repo.owner,
-                    repo: github.context.repo.repo,
+                const { data: targetFileData } = await octokit.rest.repos.getContent({
+                    owner: targetOwner,
+                    repo: targetRepo,
                     path: file.filename,
-                    ref: github.context.sha,
                 });
-                if (!('content' in fileData)) {
-                    throw new Error(`Could not get content for ${file.filename}`);
+                if ('content' in targetFileData) {
+                    existingFileSha = targetFileData.sha;
                 }
-                const newContent = Buffer.from(fileData.content, 'base64').toString('utf-8');
-                // Get the old content (before rename) using previous_filename
-                let oldContent = '';
-                if (previousFilename) {
+            }
+            catch (error) {
+                core.info(`${file.filename} does not exist in target repo - will create it`);
+            }
+            core.info(`Successfully processed ${file.filename}`);
+            processedFiles.push(file.filename);
+            // Store content for PR creation
+            translatedFiles.push({
+                path: file.filename,
+                content: newContent,
+                sha: existingFileSha,
+            });
+        }
+        catch (error) {
+            const errorMessage = `Error processing ${file.filename}: ${error}`;
+            core.error(errorMessage);
+            errors.push(errorMessage);
+        }
+    }
+    // Process removed files (prepare for deletion in target repo)
+    const [targetOwner, targetRepo] = inputs.targetRepo.split('/');
+    for (const file of [...removedMarkdownFiles, ...removedTocFiles]) {
+        try {
+            core.info(`Processing removal of ${file.filename}...`);
+            // Check if file exists in target repo
+            try {
+                const { data: targetFileData } = await octokit.rest.repos.getContent({
+                    owner: targetOwner,
+                    repo: targetRepo,
+                    path: file.filename,
+                });
+                if ('content' in targetFileData) {
+                    // File exists in target, mark for deletion
+                    filesToDelete.push({
+                        path: file.filename,
+                        sha: targetFileData.sha,
+                    });
+                    core.info(`Marked ${file.filename} for deletion`);
+                    processedFiles.push(file.filename);
+                }
+            }
+            catch (error) {
+                core.info(`${file.filename} does not exist in target repo - skipping deletion`);
+            }
+        }
+        catch (error) {
+            const errorMessage = `Error processing removal of ${file.filename}: ${error}`;
+            core.error(errorMessage);
+            errors.push(errorMessage);
+        }
+    }
+    // Report results
+    if (errors.length > 0) {
+        core.setFailed(`Translation completed with ${errors.length} errors`);
+    }
+    else {
+        core.info(`Successfully processed ${processedFiles.length} files`);
+        // Create PR in target repo with translated content
+        if (translatedFiles.length > 0 || filesToDelete.length > 0) {
+            try {
+                core.info('Creating PR in target repository...');
+                const [targetOwner, targetRepoName] = inputs.targetRepo.split('/');
+                const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+                const branchName = `translation-sync-${timestamp}-pr-${prNumber}`;
+                // Get default branch of target repo
+                const { data: targetRepoData } = await octokit.rest.repos.get({
+                    owner: targetOwner,
+                    repo: targetRepoName,
+                });
+                const defaultBranch = targetRepoData.default_branch;
+                // Get the SHA of the default branch
+                const { data: refData } = await octokit.rest.git.getRef({
+                    owner: targetOwner,
+                    repo: targetRepoName,
+                    ref: `heads/${defaultBranch}`,
+                });
+                const baseSha = refData.object.sha;
+                // Create a new branch
+                await octokit.rest.git.createRef({
+                    owner: targetOwner,
+                    repo: targetRepoName,
+                    ref: `refs/heads/${branchName}`,
+                    sha: baseSha,
+                });
+                core.info(`Created branch: ${branchName}`);
+                // Fetch source PR details if available (title and labels)
+                let sourcePrTitle = '';
+                let sourcePrLabels = [];
+                if (prNumber) {
                     try {
-                        const { data: oldFileData } = await octokit.rest.repos.getContent({
+                        const { data: sourcePr } = await octokit.rest.pulls.get({
                             owner: github.context.repo.owner,
                             repo: github.context.repo.repo,
-                            path: previousFilename,
-                            ref: `${github.context.sha}^`, // Parent commit
+                            pull_number: prNumber,
                         });
-                        if ('content' in oldFileData) {
-                            oldContent = Buffer.from(oldFileData.content, 'base64').toString('utf-8');
-                        }
+                        sourcePrTitle = sourcePr.title;
+                        // Get labels, excluding 'test-translation' which triggers the workflow
+                        sourcePrLabels = sourcePr.labels
+                            .map(label => typeof label === 'string' ? label : label.name || '')
+                            .filter(name => name && name !== 'test-translation');
                     }
                     catch (error) {
-                        core.info(`Could not get old content from ${previousFilename}`);
+                        core.warning(`Could not fetch source PR details: ${error}`);
                     }
                 }
-                // Check if old file exists in target repo (to get existing translation)
-                const [targetOwner, targetRepo] = inputs.targetRepo.split('/');
-                let targetContent = '';
-                let oldFileSha;
-                if (previousFilename) {
-                    try {
-                        const { data: targetFileData } = await octokit.rest.repos.getContent({
-                            owner: targetOwner,
-                            repo: targetRepo,
-                            path: previousFilename,
-                        });
-                        if ('content' in targetFileData) {
-                            targetContent = Buffer.from(targetFileData.content, 'base64').toString('utf-8');
-                            oldFileSha = targetFileData.sha;
-                            core.info(`Found existing translation at ${previousFilename} - will transfer to ${file.filename}`);
-                        }
-                    }
-                    catch (error) {
-                        core.info(`${previousFilename} does not exist in target repo`);
-                    }
-                }
-                // Process the file
-                let translatedContent;
-                if (targetContent) {
-                    // We have an existing translation - use section-based processing to update it
-                    translatedContent = await processor.processSectionBased(oldContent, newContent, targetContent, file.filename, inputs.sourceLanguage, inputs.targetLanguage, glossary);
-                }
-                else {
-                    // No existing translation - do full translation
-                    translatedContent = await processor.processFull(newContent, file.filename, inputs.sourceLanguage, inputs.targetLanguage, glossary);
-                }
-                // Validate the translated content
-                const validation = await processor.validateMyST(translatedContent, file.filename);
-                if (!validation.valid) {
-                    throw new Error(`Validation failed: ${validation.error}`);
-                }
-                core.info(`Successfully processed renamed file ${file.filename}`);
-                processedFiles.push(file.filename);
-                // Store translated content at NEW path
-                translatedFiles.push({
-                    path: file.filename,
-                    content: translatedContent,
-                    // Note: no sha because this is a new file (renamed)
-                });
-                // Mark the OLD file for deletion if it existed in target repo
-                if (oldFileSha && previousFilename) {
-                    filesToDelete.push({
-                        path: previousFilename,
-                        sha: oldFileSha,
-                    });
-                    core.info(`Marked ${previousFilename} for deletion (renamed to ${file.filename})`);
-                }
-            }
-            catch (error) {
-                const errorMessage = `Error processing renamed file ${file.filename}: ${error}`;
-                core.error(errorMessage);
-                errors.push(errorMessage);
-            }
-        }
-        // Process TOC files (copy directly without translation)
-        for (const file of changedTocFiles) {
-            try {
-                core.info(`Processing TOC file ${file.filename}...`);
-                // Get file content from PR
-                const { data: fileData } = await octokit.rest.repos.getContent({
-                    owner: github.context.repo.owner,
-                    repo: github.context.repo.repo,
-                    path: file.filename,
-                    ref: github.context.sha,
-                });
-                if (!('content' in fileData)) {
-                    throw new Error(`Could not get content for ${file.filename}`);
-                }
-                const newContent = Buffer.from(fileData.content, 'base64').toString('utf-8');
-                // Check if file exists in target repo
-                const [targetOwner, targetRepo] = inputs.targetRepo.split('/');
-                let existingFileSha;
-                try {
-                    const { data: targetFileData } = await octokit.rest.repos.getContent({
-                        owner: targetOwner,
-                        repo: targetRepo,
-                        path: file.filename,
-                    });
-                    if ('content' in targetFileData) {
-                        existingFileSha = targetFileData.sha;
-                    }
-                }
-                catch (error) {
-                    core.info(`${file.filename} does not exist in target repo - will create it`);
-                }
-                core.info(`Successfully processed ${file.filename}`);
-                processedFiles.push(file.filename);
-                // Store content for PR creation
-                translatedFiles.push({
-                    path: file.filename,
-                    content: newContent,
-                    sha: existingFileSha,
-                });
-            }
-            catch (error) {
-                const errorMessage = `Error processing ${file.filename}: ${error}`;
-                core.error(errorMessage);
-                errors.push(errorMessage);
-            }
-        }
-        // Process removed files (prepare for deletion in target repo)
-        const [targetOwner, targetRepo] = inputs.targetRepo.split('/');
-        for (const file of [...removedMarkdownFiles, ...removedTocFiles]) {
-            try {
-                core.info(`Processing removal of ${file.filename}...`);
-                // Check if file exists in target repo
-                try {
-                    const { data: targetFileData } = await octokit.rest.repos.getContent({
-                        owner: targetOwner,
-                        repo: targetRepo,
-                        path: file.filename,
-                    });
-                    if ('content' in targetFileData) {
-                        // File exists in target, mark for deletion
-                        filesToDelete.push({
-                            path: file.filename,
-                            sha: targetFileData.sha,
-                        });
-                        core.info(`Marked ${file.filename} for deletion`);
-                        processedFiles.push(file.filename);
-                    }
-                }
-                catch (error) {
-                    core.info(`${file.filename} does not exist in target repo - skipping deletion`);
-                }
-            }
-            catch (error) {
-                const errorMessage = `Error processing removal of ${file.filename}: ${error}`;
-                core.error(errorMessage);
-                errors.push(errorMessage);
-            }
-        }
-        // Report results
-        if (errors.length > 0) {
-            core.setFailed(`Translation completed with ${errors.length} errors`);
-        }
-        else {
-            core.info(`Successfully processed ${processedFiles.length} files`);
-            // Create PR in target repo with translated content
-            if (translatedFiles.length > 0 || filesToDelete.length > 0) {
-                try {
-                    core.info('Creating PR in target repository...');
-                    const [targetOwner, targetRepoName] = inputs.targetRepo.split('/');
-                    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
-                    const branchName = `translation-sync-${timestamp}-pr-${prNumber}`;
-                    // Get default branch of target repo
-                    const { data: targetRepoData } = await octokit.rest.repos.get({
+                // Commit each translated file
+                for (const file of translatedFiles) {
+                    await octokit.rest.repos.createOrUpdateFileContents({
                         owner: targetOwner,
                         repo: targetRepoName,
+                        path: file.path,
+                        message: `Update translation: ${file.path}`,
+                        content: Buffer.from(file.content).toString('base64'),
+                        branch: branchName,
+                        sha: file.sha, // Include SHA if updating existing file
                     });
-                    const defaultBranch = targetRepoData.default_branch;
-                    // Get the SHA of the default branch
-                    const { data: refData } = await octokit.rest.git.getRef({
+                    core.info(`Committed: ${file.path}`);
+                }
+                // Delete removed files
+                for (const file of filesToDelete) {
+                    await octokit.rest.repos.deleteFile({
                         owner: targetOwner,
                         repo: targetRepoName,
-                        ref: `heads/${defaultBranch}`,
+                        path: file.path,
+                        message: `Delete removed file: ${file.path}`,
+                        branch: branchName,
+                        sha: file.sha,
                     });
-                    const baseSha = refData.object.sha;
-                    // Create a new branch
-                    await octokit.rest.git.createRef({
-                        owner: targetOwner,
-                        repo: targetRepoName,
-                        ref: `refs/heads/${branchName}`,
-                        sha: baseSha,
-                    });
-                    core.info(`Created branch: ${branchName}`);
-                    // Fetch source PR details if available (title and labels)
-                    let sourcePrTitle = '';
-                    let sourcePrLabels = [];
-                    if (prNumber) {
-                        try {
-                            const { data: sourcePr } = await octokit.rest.pulls.get({
-                                owner: github.context.repo.owner,
-                                repo: github.context.repo.repo,
-                                pull_number: prNumber,
-                            });
-                            sourcePrTitle = sourcePr.title;
-                            // Get labels, excluding 'test-translation' which triggers the workflow
-                            sourcePrLabels = sourcePr.labels
-                                .map(label => typeof label === 'string' ? label : label.name || '')
-                                .filter(name => name && name !== 'test-translation');
-                        }
-                        catch (error) {
-                            core.warning(`Could not fetch source PR details: ${error}`);
-                        }
-                    }
-                    // Commit each translated file
-                    for (const file of translatedFiles) {
-                        await octokit.rest.repos.createOrUpdateFileContents({
-                            owner: targetOwner,
-                            repo: targetRepoName,
-                            path: file.path,
-                            message: `Update translation: ${file.path}`,
-                            content: Buffer.from(file.content).toString('base64'),
-                            branch: branchName,
-                            sha: file.sha, // Include SHA if updating existing file
-                        });
-                        core.info(`Committed: ${file.path}`);
-                    }
-                    // Delete removed files
-                    for (const file of filesToDelete) {
-                        await octokit.rest.repos.deleteFile({
-                            owner: targetOwner,
-                            repo: targetRepoName,
-                            path: file.path,
-                            message: `Delete removed file: ${file.path}`,
-                            branch: branchName,
-                            sha: file.sha,
-                        });
-                        core.info(`Deleted: ${file.path}`);
-                    }
-                    // Create pull request
-                    // Build file change list with operation indicators
-                    const newFiles = translatedFiles.filter(f => !f.sha);
-                    const updatedFiles = translatedFiles.filter(f => f.sha);
-                    let filesChangedSection = '';
-                    if (newFiles.length > 0) {
-                        filesChangedSection += '### Files Added\n' + newFiles.map(f => `- ✅ \`${f.path}\``).join('\n');
-                    }
-                    if (updatedFiles.length > 0) {
-                        if (filesChangedSection)
-                            filesChangedSection += '\n\n';
-                        filesChangedSection += '### Files Updated\n' + updatedFiles.map(f => `- ✏️ \`${f.path}\``).join('\n');
-                    }
-                    if (filesToDelete.length > 0) {
-                        if (filesChangedSection)
-                            filesChangedSection += '\n\n';
-                        filesChangedSection += '### Files Deleted\n' + filesToDelete.map(f => `- ❌ \`${f.path}\``).join('\n');
-                    }
-                    const prBody = `## Automated Translation Sync
+                    core.info(`Deleted: ${file.path}`);
+                }
+                // Create pull request
+                // Build file change list with operation indicators
+                const newFiles = translatedFiles.filter(f => !f.sha);
+                const updatedFiles = translatedFiles.filter(f => f.sha);
+                let filesChangedSection = '';
+                if (newFiles.length > 0) {
+                    filesChangedSection += '### Files Added\n' + newFiles.map(f => `- ✅ \`${f.path}\``).join('\n');
+                }
+                if (updatedFiles.length > 0) {
+                    if (filesChangedSection)
+                        filesChangedSection += '\n\n';
+                    filesChangedSection += '### Files Updated\n' + updatedFiles.map(f => `- ✏️ \`${f.path}\``).join('\n');
+                }
+                if (filesToDelete.length > 0) {
+                    if (filesChangedSection)
+                        filesChangedSection += '\n\n';
+                    filesChangedSection += '### Files Deleted\n' + filesToDelete.map(f => `- ❌ \`${f.path}\``).join('\n');
+                }
+                const prBody = `## Automated Translation Sync
 
 This PR contains automated translations from [${github.context.repo.owner}/${github.context.repo.repo}](https://github.com/${github.context.repo.owner}/${github.context.repo.repo}).
 
 ### Source PR
-${prNumber ? `**[#${prNumber}${sourcePrTitle ? ` - ${sourcePrTitle}` : ''}](https://github.com/${github.context.repo.owner}/${github.context.repo.repo}/pull/${prNumber})**` : '**Manual workflow dispatch**'}
+**[#${prNumber}${sourcePrTitle ? ` - ${sourcePrTitle}` : ''}](https://github.com/${github.context.repo.owner}/${github.context.repo.repo}/pull/${prNumber})**
 
 ${filesChangedSection}
 
@@ -1565,101 +1616,97 @@ ${filesChangedSection}
 - **Model**: ${inputs.claudeModel}
 
 ---
-*This PR was created automatically by the [translation-sync action](https://github.com/quantecon/action-translation-sync).*`;
-                    // Create PR title - use source PR title if available, otherwise list files
-                    let prTitle;
-                    if (sourcePrTitle) {
-                        prTitle = `🌐 [translation-sync] ${sourcePrTitle}`;
+*This PR was created automatically by the [translation action](https://github.com/quantecon/action-translation).*`;
+                // Create PR title - use source PR title if available, otherwise list files
+                let prTitle;
+                if (sourcePrTitle) {
+                    prTitle = `🌐 [translation-sync] ${sourcePrTitle}`;
+                }
+                else {
+                    // Fallback: list files changed
+                    const allFiles = [...translatedFiles.map(f => f.path), ...filesToDelete.map(f => f.path)];
+                    let titleFileList;
+                    if (allFiles.length === 1) {
+                        titleFileList = allFiles[0];
+                    }
+                    else if (allFiles.length === 2) {
+                        titleFileList = `${allFiles[0]} + 1 more`;
                     }
                     else {
-                        // Fallback: list files changed
-                        const allFiles = [...translatedFiles.map(f => f.path), ...filesToDelete.map(f => f.path)];
-                        let titleFileList;
-                        if (allFiles.length === 1) {
-                            titleFileList = allFiles[0];
-                        }
-                        else if (allFiles.length === 2) {
-                            titleFileList = `${allFiles[0]} + 1 more`;
-                        }
-                        else {
-                            titleFileList = `${allFiles.length} files`;
-                        }
-                        prTitle = `🌐 [translation-sync] ${titleFileList}`;
+                        titleFileList = `${allFiles.length} files`;
                     }
-                    const { data: pr } = await octokit.rest.pulls.create({
+                    prTitle = `🌐 [translation-sync] ${titleFileList}`;
+                }
+                const { data: pr } = await octokit.rest.pulls.create({
+                    owner: targetOwner,
+                    repo: targetRepoName,
+                    title: prTitle,
+                    body: prBody,
+                    head: branchName,
+                    base: defaultBranch,
+                });
+                core.info(`Created PR: ${pr.html_url}`);
+                // Prepare labels:
+                // - Start with labels from pr-labels input (default: 'action-translation,automated')
+                // - Add labels from source PR (excluding source-specific labels like 'test-translation')
+                const labelsToAdd = new Set();
+                // Add input labels first
+                for (const label of inputs.prLabels) {
+                    labelsToAdd.add(label);
+                }
+                // Add source PR labels
+                for (const label of sourcePrLabels) {
+                    labelsToAdd.add(label);
+                }
+                // Add labels to PR
+                const labelsArray = Array.from(labelsToAdd);
+                if (labelsArray.length > 0) {
+                    await octokit.rest.issues.addLabels({
                         owner: targetOwner,
                         repo: targetRepoName,
-                        title: prTitle,
-                        body: prBody,
-                        head: branchName,
-                        base: defaultBranch,
+                        issue_number: pr.number,
+                        labels: labelsArray,
                     });
-                    core.info(`Created PR: ${pr.html_url}`);
-                    // Prepare labels:
-                    // - Start with labels from pr-labels input (default: 'action-translation-sync,automated')
-                    // - Add labels from source PR (excluding source-specific labels like 'test-translation')
-                    const labelsToAdd = new Set();
-                    // Add input labels first
-                    for (const label of inputs.prLabels) {
-                        labelsToAdd.add(label);
-                    }
-                    // Add source PR labels
-                    for (const label of sourcePrLabels) {
-                        labelsToAdd.add(label);
-                    }
-                    // Add labels to PR
-                    const labelsArray = Array.from(labelsToAdd);
-                    if (labelsArray.length > 0) {
-                        await octokit.rest.issues.addLabels({
+                    core.info(`Added labels: ${labelsArray.join(', ')}`);
+                }
+                // Request reviewers if specified
+                if (inputs.prReviewers.length > 0 || inputs.prTeamReviewers.length > 0) {
+                    try {
+                        const reviewRequest = {};
+                        if (inputs.prReviewers.length > 0) {
+                            reviewRequest.reviewers = inputs.prReviewers;
+                        }
+                        if (inputs.prTeamReviewers.length > 0) {
+                            reviewRequest.team_reviewers = inputs.prTeamReviewers;
+                        }
+                        await octokit.rest.pulls.requestReviewers({
                             owner: targetOwner,
                             repo: targetRepoName,
-                            issue_number: pr.number,
-                            labels: labelsArray,
+                            pull_number: pr.number,
+                            ...reviewRequest,
                         });
-                        core.info(`Added labels: ${labelsArray.join(', ')}`);
-                    }
-                    // Request reviewers if specified
-                    if (inputs.prReviewers.length > 0 || inputs.prTeamReviewers.length > 0) {
-                        try {
-                            const reviewRequest = {};
-                            if (inputs.prReviewers.length > 0) {
-                                reviewRequest.reviewers = inputs.prReviewers;
-                            }
-                            if (inputs.prTeamReviewers.length > 0) {
-                                reviewRequest.team_reviewers = inputs.prTeamReviewers;
-                            }
-                            await octokit.rest.pulls.requestReviewers({
-                                owner: targetOwner,
-                                repo: targetRepoName,
-                                pull_number: pr.number,
-                                ...reviewRequest,
-                            });
-                            const reviewersList = [];
-                            if (inputs.prReviewers.length > 0) {
-                                reviewersList.push(`users: ${inputs.prReviewers.join(', ')}`);
-                            }
-                            if (inputs.prTeamReviewers.length > 0) {
-                                reviewersList.push(`teams: ${inputs.prTeamReviewers.join(', ')}`);
-                            }
-                            core.info(`Requested reviewers: ${reviewersList.join('; ')}`);
+                        const reviewersList = [];
+                        if (inputs.prReviewers.length > 0) {
+                            reviewersList.push(`users: ${inputs.prReviewers.join(', ')}`);
                         }
-                        catch (reviewerError) {
-                            // Don't fail the entire action if reviewer request fails
-                            // (e.g., if PR author is in the reviewer list)
-                            core.warning(`Could not request reviewers: ${reviewerError instanceof Error ? reviewerError.message : String(reviewerError)}`);
+                        if (inputs.prTeamReviewers.length > 0) {
+                            reviewersList.push(`teams: ${inputs.prTeamReviewers.join(', ')}`);
                         }
+                        core.info(`Requested reviewers: ${reviewersList.join('; ')}`);
                     }
-                    core.setOutput('pr-url', pr.html_url);
-                    core.setOutput('files-synced', processedFiles.length.toString());
+                    catch (reviewerError) {
+                        // Don't fail the entire action if reviewer request fails
+                        // (e.g., if PR author is in the reviewer list)
+                        core.warning(`Could not request reviewers: ${reviewerError instanceof Error ? reviewerError.message : String(reviewerError)}`);
+                    }
                 }
-                catch (prError) {
-                    core.setFailed(`Failed to create PR: ${prError instanceof Error ? prError.message : String(prError)}`);
-                }
+                core.setOutput('pr-url', pr.html_url);
+                core.setOutput('files-synced', processedFiles.length.toString());
+            }
+            catch (prError) {
+                core.setFailed(`Failed to create PR: ${prError instanceof Error ? prError.message : String(prError)}`);
             }
         }
-    }
-    catch (error) {
-        core.setFailed(`Action failed: ${error instanceof Error ? error.message : String(error)}`);
     }
 }
 // Run the action
@@ -1707,8 +1754,11 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.getMode = getMode;
 exports.getInputs = getInputs;
+exports.getReviewInputs = getReviewInputs;
 exports.validatePREvent = validatePREvent;
+exports.validateReviewPREvent = validateReviewPREvent;
 const core = __importStar(__nccwpck_require__(7484));
 const language_config_1 = __nccwpck_require__(2142);
 /**
@@ -1720,6 +1770,7 @@ const VALID_MODEL_PATTERNS = [
     /^claude-sonnet-4-5-\d{8}$/, // claude-sonnet-4-5-20250929
     /^claude-3-5-haiku-\d{8}$/, // claude-3-5-haiku-20241022
     /^claude-3-opus-\d{8}$/, // claude-3-opus-20240229
+    /^claude-opus-4-5-\d{8}$/, // claude-opus-4-5-20251101
     /^claude-3-sonnet-\d{8}$/, // claude-3-sonnet-20240229
     /^claude-3-haiku-\d{8}$/, // claude-3-haiku-20240307
 ];
@@ -1735,7 +1786,20 @@ function validateClaudeModel(model) {
     }
 }
 /**
- * Get and validate action inputs
+ * Get the action mode (sync or review)
+ */
+function getMode() {
+    const mode = core.getInput('mode', { required: true });
+    if (!mode) {
+        throw new Error(`Missing required input: 'mode'. Expected 'sync' or 'review'.`);
+    }
+    if (mode !== 'sync' && mode !== 'review') {
+        throw new Error(`Invalid mode: '${mode}'. Expected 'sync' or 'review'.`);
+    }
+    return mode;
+}
+/**
+ * Get and validate action inputs for SYNC mode
  */
 function getInputs() {
     const targetRepo = core.getInput('target-repo', { required: true });
@@ -1749,7 +1813,7 @@ function getInputs() {
     const anthropicApiKey = core.getInput('anthropic-api-key', { required: true });
     const claudeModel = core.getInput('claude-model', { required: false }) || 'claude-sonnet-4-5-20250929';
     const githubToken = core.getInput('github-token', { required: true });
-    const prLabelsRaw = core.getInput('pr-labels', { required: false }) || 'action-translation-sync,automated';
+    const prLabelsRaw = core.getInput('pr-labels', { required: false }) || 'action-translation,automated';
     const prLabels = prLabelsRaw.split(',').map((l) => l.trim()).filter((l) => l.length > 0);
     const prReviewersRaw = core.getInput('pr-reviewers', { required: false }) || '';
     const prReviewers = prReviewersRaw.split(',').map((r) => r.trim()).filter((r) => r.length > 0);
@@ -1785,19 +1849,53 @@ function getInputs() {
     };
 }
 /**
- * Validate that the event is a merged PR, test mode label, or manual dispatch
+ * Get and validate action inputs for REVIEW mode
+ */
+function getReviewInputs() {
+    const sourceRepo = core.getInput('source-repo', { required: true });
+    const maxSuggestionsRaw = core.getInput('max-suggestions', { required: false }) || '5';
+    const maxSuggestions = parseInt(maxSuggestionsRaw, 10);
+    if (isNaN(maxSuggestions) || maxSuggestions < 0) {
+        throw new Error(`Invalid max-suggestions: '${maxSuggestionsRaw}'. Expected a non-negative integer.`);
+    }
+    // Handle docs-folder: '.' means root level (empty string for no prefix filter)
+    const docsFolderInput = core.getInput('docs-folder', { required: false });
+    const docsFolder = (docsFolderInput === '.' || docsFolderInput === '/') ? '' : docsFolderInput;
+    const sourceLanguage = core.getInput('source-language', { required: false }) || 'en';
+    const glossaryPath = core.getInput('glossary-path', { required: false }) || '';
+    const anthropicApiKey = core.getInput('anthropic-api-key', { required: true });
+    const claudeModel = core.getInput('claude-model', { required: false }) || 'claude-sonnet-4-5-20250929';
+    const githubToken = core.getInput('github-token', { required: true });
+    // Validate source repo format
+    if (!sourceRepo.includes('/')) {
+        throw new Error(`Invalid source-repo format: ${sourceRepo}. Expected format: owner/repo`);
+    }
+    // Validate Claude model (warning only, doesn't throw)
+    validateClaudeModel(claudeModel);
+    // Ensure docs folder ends with / (unless it's empty string for root level)
+    const normalizedDocsFolder = docsFolder === '' ? '' : (docsFolder.endsWith('/') ? docsFolder : `${docsFolder}/`);
+    return {
+        sourceRepo,
+        maxSuggestions,
+        docsFolder: normalizedDocsFolder,
+        sourceLanguage,
+        glossaryPath,
+        anthropicApiKey,
+        claudeModel,
+        githubToken,
+    };
+}
+/**
+ * Validate that the event is a merged PR or test mode label (SYNC mode)
+ * Note: workflow_dispatch is NOT supported - use test-translation label for manual testing
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function validatePREvent(context, testMode) {
     const { eventName, payload } = context;
-    // Handle workflow_dispatch for manual testing
-    if (eventName === 'workflow_dispatch') {
-        core.info('Manual workflow dispatch - will process latest commit');
-        return { merged: true, prNumber: null, isTestMode: false };
-    }
-    // Handle pull_request events
+    // Handle pull_request events only
     if (eventName !== 'pull_request') {
-        throw new Error(`This action only works on pull_request or workflow_dispatch events. Got: ${eventName}`);
+        throw new Error(`This action only works on pull_request events. Got: ${eventName}. ` +
+            `For manual testing, add the 'test-translation' label to a PR instead of using workflow_dispatch.`);
     }
     // Test mode: triggered by label, use PR head (not merged)
     if (testMode || (payload.action === 'labeled' && payload.label?.name === 'test-translation')) {
@@ -1822,6 +1920,23 @@ function validatePREvent(context, testMode) {
     }
     core.info(`🚀 Running in PRODUCTION mode for merged PR #${prNumber}`);
     return { merged, prNumber, isTestMode: false };
+}
+/**
+ * Validate that the event is a PR event (REVIEW mode)
+ * Returns PR number for open PRs, or throws if not a PR event
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function validateReviewPREvent(context) {
+    const { eventName, payload } = context;
+    if (eventName !== 'pull_request') {
+        throw new Error(`Review mode only works on pull_request events. Got: ${eventName}`);
+    }
+    const prNumber = payload.pull_request?.number;
+    if (!prNumber) {
+        throw new Error('Could not determine PR number from event payload');
+    }
+    core.info(`📝 Running REVIEW mode for PR #${prNumber}`);
+    return { prNumber };
 }
 //# sourceMappingURL=inputs.js.map
 
@@ -2200,6 +2315,795 @@ class MystParser {
 }
 exports.MystParser = MystParser;
 //# sourceMappingURL=parser.js.map
+
+/***/ }),
+
+/***/ 9822:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+/**
+ * Translation Reviewer for GitHub Action Review Mode
+ *
+ * Provides AI-powered quality assessment of translation PRs.
+ * Adapted from tool-test-action-on-github/evaluate/src/evaluator.ts
+ */
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.TranslationReviewer = void 0;
+exports.identifyChangedSections = identifyChangedSections;
+const core = __importStar(__nccwpck_require__(7484));
+const github = __importStar(__nccwpck_require__(3228));
+const sdk_1 = __importDefault(__nccwpck_require__(121));
+// Default model for review (can be overridden)
+const DEFAULT_REVIEW_MODEL = 'claude-sonnet-4-5-20250929';
+/**
+ * Extract preamble (content before first heading) from a markdown document
+ */
+function extractPreamble(content) {
+    const lines = content.split('\n');
+    const preambleLines = [];
+    for (const line of lines) {
+        if (line.match(/^#{1,6}\s+/)) {
+            break;
+        }
+        preambleLines.push(line);
+    }
+    return preambleLines.join('\n').trim();
+}
+/**
+ * Extract sections from a markdown document
+ * Returns an array of {heading, content} in document order
+ */
+function extractSections(content) {
+    const sections = [];
+    const lines = content.split('\n');
+    let currentHeading = '';
+    let currentContent = [];
+    let inSection = false;
+    for (const line of lines) {
+        const headingMatch = line.match(/^(#{2,6})\s+(.+)$/);
+        if (headingMatch) {
+            // Save previous section
+            if (inSection && currentHeading) {
+                sections.push({
+                    heading: currentHeading,
+                    content: currentContent.join('\n').trim(),
+                });
+            }
+            currentHeading = line;
+            currentContent = [];
+            inSection = true;
+        }
+        else if (inSection) {
+            currentContent.push(line);
+        }
+    }
+    // Save last section
+    if (inSection && currentHeading) {
+        sections.push({
+            heading: currentHeading,
+            content: currentContent.join('\n').trim(),
+        });
+    }
+    return sections;
+}
+/**
+ * Generate a simple ID from heading text for matching
+ */
+function headingToId(heading) {
+    return heading
+        .replace(/^#{2,6}\s+/, '')
+        .toLowerCase()
+        .replace(/[^a-z0-9\u4e00-\u9fff\u0600-\u06FF]+/g, '-')
+        .replace(/^-|-$/g, '');
+}
+/**
+ * Identify changed sections by comparing before and after content
+ */
+function identifyChangedSections(sourceBefore, sourceAfter, targetBefore, targetAfter) {
+    const changedSections = [];
+    // Handle empty documents
+    if (!sourceAfter && !targetAfter) {
+        return [{ heading: '(document deleted)', changeType: 'deleted' }];
+    }
+    if (!sourceBefore && !targetBefore) {
+        const sections = extractSections(sourceAfter);
+        if (sections.length === 0) {
+            return [{ heading: '(new document)', changeType: 'added', englishContent: sourceAfter }];
+        }
+        return sections.map(s => ({
+            heading: s.heading,
+            changeType: 'added',
+            englishContent: s.content,
+        }));
+    }
+    // Check for pure rename (no content changes)
+    const normalizeForComparison = (s) => s.replace(/\r\n/g, '\n').trim();
+    if (normalizeForComparison(sourceBefore) === normalizeForComparison(sourceAfter) &&
+        normalizeForComparison(targetBefore) === normalizeForComparison(targetAfter)) {
+        return [{ heading: '(no content changes - file renamed)', changeType: 'modified' }];
+    }
+    // Check preamble changes
+    const sourcePreambleBefore = extractPreamble(sourceBefore);
+    const sourcePreambleAfter = extractPreamble(sourceAfter);
+    const targetPreambleBefore = extractPreamble(targetBefore);
+    const targetPreambleAfter = extractPreamble(targetAfter);
+    if (sourcePreambleBefore !== sourcePreambleAfter || targetPreambleBefore !== targetPreambleAfter) {
+        changedSections.push({
+            heading: '(preamble/frontmatter)',
+            changeType: 'modified',
+            englishContent: sourcePreambleAfter,
+            translatedContent: targetPreambleAfter,
+        });
+    }
+    // Extract sections
+    const sourceBeforeSections = extractSections(sourceBefore);
+    const sourceAfterSections = extractSections(sourceAfter);
+    const targetAfterSections = extractSections(targetAfter);
+    // Build maps for quick lookup by ID
+    const beforeById = new Map(sourceBeforeSections.map(s => [headingToId(s.heading), s]));
+    const afterById = new Map(sourceAfterSections.map(s => [headingToId(s.heading), s]));
+    // Check for added and modified sections
+    for (let i = 0; i < sourceAfterSections.length; i++) {
+        const section = sourceAfterSections[i];
+        const id = headingToId(section.heading);
+        const beforeSection = beforeById.get(id);
+        const targetSection = targetAfterSections[i];
+        if (!beforeSection) {
+            changedSections.push({
+                heading: section.heading,
+                changeType: 'added',
+                englishContent: section.content,
+                translatedContent: targetSection?.content,
+            });
+        }
+        else if (beforeSection.content !== section.content || beforeSection.heading !== section.heading) {
+            changedSections.push({
+                heading: section.heading,
+                changeType: 'modified',
+                englishContent: section.content,
+                translatedContent: targetSection?.content,
+            });
+        }
+    }
+    // Check for deleted sections
+    for (const section of sourceBeforeSections) {
+        const id = headingToId(section.heading);
+        if (!afterById.has(id)) {
+            changedSections.push({
+                heading: section.heading,
+                changeType: 'deleted',
+            });
+        }
+    }
+    return changedSections;
+}
+/**
+ * Translation Reviewer class
+ * Evaluates translation quality and posts review comments on PRs
+ */
+class TranslationReviewer {
+    constructor(anthropicApiKey, githubToken, model = DEFAULT_REVIEW_MODEL, maxSuggestions = 5) {
+        this.anthropic = new sdk_1.default({ apiKey: anthropicApiKey });
+        this.octokit = github.getOctokit(githubToken);
+        this.model = model;
+        this.maxSuggestions = maxSuggestions;
+    }
+    /**
+     * Parse source PR number from translation PR body
+     * Looks for: ### Source PR\n**[#123 - ...
+     */
+    parseSourcePRNumber(prBody) {
+        if (!prBody)
+            return null;
+        // Match: ### Source PR\n**[#123
+        const match = prBody.match(/### Source PR\n\*\*\[#(\d+)/);
+        if (match) {
+            return parseInt(match[1], 10);
+        }
+        return null;
+    }
+    /**
+     * Get source PR diff (English before/after)
+     */
+    async getSourceDiff(sourceOwner, sourceRepoName, sourcePrNumber, filenames) {
+        const before = new Map();
+        const after = new Map();
+        try {
+            // Get source PR details
+            const { data: sourcePr } = await this.octokit.rest.pulls.get({
+                owner: sourceOwner,
+                repo: sourceRepoName,
+                pull_number: sourcePrNumber,
+            });
+            // Get files changed in source PR
+            const { data: sourceFiles } = await this.octokit.rest.pulls.listFiles({
+                owner: sourceOwner,
+                repo: sourceRepoName,
+                pull_number: sourcePrNumber,
+            });
+            for (const filename of filenames) {
+                // Check if this file was changed in source PR
+                const sourceFile = sourceFiles.find(f => f.filename === filename);
+                // For renamed files, use previous filename for "before"
+                const beforeFilename = sourceFile?.status === 'renamed' && sourceFile.previous_filename
+                    ? sourceFile.previous_filename
+                    : filename;
+                // Get content BEFORE (from base ref)
+                if (!sourceFile || sourceFile.status !== 'added') {
+                    try {
+                        const { data: beforeData } = await this.octokit.rest.repos.getContent({
+                            owner: sourceOwner,
+                            repo: sourceRepoName,
+                            path: beforeFilename,
+                            ref: sourcePr.base.sha,
+                        });
+                        if ('content' in beforeData) {
+                            before.set(filename, Buffer.from(beforeData.content, 'base64').toString('utf-8'));
+                        }
+                    }
+                    catch {
+                        // File didn't exist before
+                    }
+                }
+                // Get content AFTER (from head ref)
+                if (!sourceFile || sourceFile.status !== 'removed') {
+                    try {
+                        const { data: afterData } = await this.octokit.rest.repos.getContent({
+                            owner: sourceOwner,
+                            repo: sourceRepoName,
+                            path: filename,
+                            ref: sourcePr.head.sha,
+                        });
+                        if ('content' in afterData) {
+                            after.set(filename, Buffer.from(afterData.content, 'base64').toString('utf-8'));
+                        }
+                    }
+                    catch {
+                        // File doesn't exist after (deleted)
+                    }
+                }
+            }
+            core.info(`✓ Fetched source PR #${sourcePrNumber} diff for ${filenames.length} file(s)`);
+        }
+        catch (error) {
+            core.warning(`Could not fetch source PR #${sourcePrNumber}: ${error}`);
+        }
+        return { before, after };
+    }
+    /**
+     * Review a translation PR
+     */
+    async reviewPR(prNumber, sourceRepo, targetOwner, targetRepo, docsFolder, glossaryTerms) {
+        core.info(`Starting review of PR #${prNumber}...`);
+        // Get PR details
+        const { data: pr } = await this.octokit.rest.pulls.get({
+            owner: targetOwner,
+            repo: targetRepo,
+            pull_number: prNumber,
+        });
+        // Get changed files in the PR
+        const { data: files } = await this.octokit.rest.pulls.listFiles({
+            owner: targetOwner,
+            repo: targetRepo,
+            pull_number: prNumber,
+        });
+        // Filter for markdown files in docs folder
+        const markdownFiles = files.filter((f) => f.filename.startsWith(docsFolder) && f.filename.endsWith('.md'));
+        if (markdownFiles.length === 0) {
+            core.info('No markdown files to review');
+            const emptyResult = {
+                prNumber,
+                timestamp: new Date().toISOString(),
+                translationQuality: {
+                    score: 10,
+                    accuracy: 10,
+                    fluency: 10,
+                    terminology: 10,
+                    formatting: 10,
+                    syntaxErrors: [],
+                    issues: [],
+                    strengths: ['No markdown files to review'],
+                    summary: 'No markdown files changed in this PR.',
+                },
+                diffQuality: {
+                    score: 10,
+                    scopeCorrect: true,
+                    positionCorrect: true,
+                    structurePreserved: true,
+                    headingMapCorrect: true,
+                    issues: [],
+                    summary: 'No changes to evaluate.',
+                    scopeDetails: 'No markdown files changed.',
+                    positionDetails: 'N/A',
+                    structureDetails: 'N/A',
+                },
+                overallScore: 10,
+                verdict: 'PASS',
+                reviewComment: 'No markdown files to review in this PR.',
+            };
+            return emptyResult;
+        }
+        // Get content for evaluation
+        const [sourceOwner, sourceRepoName] = sourceRepo.split('/');
+        // Parse source PR number from translation PR body
+        // Format: "### Source PR\n**[#123 - Title](url)**"
+        // This is always present for PRs created by sync mode
+        const sourcePrNumber = this.parseSourcePRNumber(pr.body);
+        if (!sourcePrNumber) {
+            throw new Error('Could not find source PR reference in translation PR body. ' +
+                'This PR may not have been created by the translation action. ' +
+                'Expected format: "### Source PR\\n**[#123..."');
+        }
+        core.info(`Found source PR reference: #${sourcePrNumber}`);
+        // Get filenames for fetching
+        const filenames = markdownFiles.map(f => f.filename);
+        // Fetch source PR diff (English before/after) - this gives us accurate change detection
+        const { before: sourceBeforeMap, after: sourceAfterMap } = await this.getSourceDiff(sourceOwner, sourceRepoName, sourcePrNumber, filenames);
+        // Build content strings for evaluation
+        let sourceEnglish = '';
+        let targetTranslation = '';
+        let sourceBefore = '';
+        let targetBefore = '';
+        const changedSections = [];
+        for (const file of markdownFiles) {
+            try {
+                // Get target (translation) content - after changes
+                const { data: targetData } = await this.octokit.rest.repos.getContent({
+                    owner: targetOwner,
+                    repo: targetRepo,
+                    path: file.filename,
+                    ref: pr.head.sha,
+                });
+                if ('content' in targetData) {
+                    targetTranslation += Buffer.from(targetData.content, 'base64').toString('utf-8') + '\n\n';
+                }
+                // Get target content before changes (base branch)
+                try {
+                    const { data: targetBeforeData } = await this.octokit.rest.repos.getContent({
+                        owner: targetOwner,
+                        repo: targetRepo,
+                        path: file.filename,
+                        ref: pr.base.sha,
+                    });
+                    if ('content' in targetBeforeData) {
+                        targetBefore += Buffer.from(targetBeforeData.content, 'base64').toString('utf-8') + '\n\n';
+                    }
+                }
+                catch {
+                    // File is new in target
+                }
+                // Get source (English) content from source PR diff
+                if (sourceAfterMap.has(file.filename)) {
+                    sourceEnglish += sourceAfterMap.get(file.filename) + '\n\n';
+                }
+                else {
+                    core.warning(`Source content not found for ${file.filename} in source PR #${sourcePrNumber}`);
+                }
+                // Get source content before from source PR diff
+                if (sourceBeforeMap.has(file.filename)) {
+                    sourceBefore += sourceBeforeMap.get(file.filename) + '\n\n';
+                }
+                // Note: sourceBefore may be empty for new files, which is correct
+            }
+            catch (error) {
+                core.warning(`Error processing ${file.filename}: ${error}`);
+            }
+        }
+        // Identify changed sections
+        const detectedChanges = identifyChangedSections(sourceBefore, sourceEnglish, targetBefore, targetTranslation);
+        changedSections.push(...detectedChanges);
+        // Evaluate translation quality
+        const translationQuality = await this.evaluateTranslation(sourceEnglish, targetTranslation, changedSections, glossaryTerms);
+        // Evaluate diff quality
+        const diffQuality = await this.evaluateDiff(sourceBefore, sourceEnglish, targetBefore, targetTranslation, markdownFiles.map(f => ({
+            filename: f.filename,
+            status: f.status,
+            additions: f.additions,
+            deletions: f.deletions,
+        })));
+        // Calculate overall score and verdict
+        const overallScore = (translationQuality.score * 0.7 + diffQuality.score * 0.3);
+        let verdict;
+        if (overallScore >= 8 && translationQuality.syntaxErrors.length === 0) {
+            verdict = 'PASS';
+        }
+        else if (overallScore >= 6) {
+            verdict = 'WARN';
+        }
+        else {
+            verdict = 'FAIL';
+        }
+        // Generate review comment
+        const reviewComment = this.generateReviewComment(translationQuality, diffQuality, verdict);
+        // Post review comment
+        await this.postReviewComment(prNumber, targetOwner, targetRepo, reviewComment);
+        const result = {
+            prNumber,
+            timestamp: new Date().toISOString(),
+            translationQuality,
+            diffQuality,
+            overallScore: Math.round(overallScore * 10) / 10,
+            verdict,
+            reviewComment,
+        };
+        return result;
+    }
+    /**
+     * Evaluate translation quality using Claude
+     */
+    async evaluateTranslation(sourceEnglish, targetTranslation, changedSections, glossaryTerms) {
+        const changedSectionsPrompt = this.formatChangedSections(changedSections);
+        const glossarySection = glossaryTerms
+            ? `\n## Reference Glossary\nThe translation should follow this established terminology glossary:\n${glossaryTerms}\n`
+            : '';
+        const prompt = `You are a professional translator and quality evaluator specializing in technical/academic content translation.
+
+## Task
+Evaluate the quality of the translation compared to the English source.
+${changedSectionsPrompt}
+## English Source Document
+\`\`\`markdown
+${sourceEnglish.slice(0, 8000)}${sourceEnglish.length > 8000 ? '\n... (truncated)' : ''}
+\`\`\`
+
+## Translation
+\`\`\`markdown
+${targetTranslation.slice(0, 8000)}${targetTranslation.length > 8000 ? '\n... (truncated)' : ''}
+\`\`\`
+${glossarySection}
+## IMPORTANT: About the Heading-Map
+
+The translation contains a \`heading-map\` section in the YAML frontmatter that is NOT present in the English source. This is CORRECT and EXPECTED behavior - it maps English heading IDs to translated headings for section matching across languages.
+
+## Evaluation Criteria
+Rate each criterion from 1-10:
+
+1. **Accuracy** (1-10): Does the translation accurately convey the meaning of the English source?
+2. **Fluency** (1-10): Does the translation read naturally?
+3. **Terminology** (1-10): Is technical terminology consistent and correct?
+4. **Formatting** (1-10): Is MyST/Markdown formatting preserved?
+5. **Syntax** (check for errors): Check for markdown/MyST syntax errors
+
+## Response Format
+Respond with ONLY valid JSON in this exact format (no markdown code blocks):
+{
+  "accuracy": <number 1-10>,
+  "fluency": <number 1-10>,
+  "terminology": <number 1-10>,
+  "formatting": <number 1-10>,
+  "syntaxErrors": ["error 1 with line/location if possible", "error 2"],
+  "issues": ["Issue 1: description with location and suggestion", "Issue 2: description"],
+  "strengths": ["strength 1", "strength 2"],
+  "summary": "Brief overall assessment"
+}
+
+Note: The "issues" array can contain 0 to ${this.maxSuggestions} suggestions. Focus ONLY on the changed sections.`;
+        const response = await this.anthropic.messages.create({
+            model: this.model,
+            max_tokens: 1500,
+            messages: [{ role: 'user', content: prompt }],
+        });
+        const content = response.content[0];
+        if (content.type !== 'text') {
+            throw new Error('Unexpected response type from Claude');
+        }
+        try {
+            let jsonStr = content.text;
+            const jsonMatch = jsonStr.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+                jsonStr = jsonMatch[0];
+            }
+            const result = JSON.parse(jsonStr);
+            const score = (result.accuracy * 0.35 +
+                result.fluency * 0.25 +
+                result.terminology * 0.25 +
+                result.formatting * 0.15);
+            return {
+                score: Math.round(score * 10) / 10,
+                accuracy: result.accuracy,
+                fluency: result.fluency,
+                terminology: result.terminology,
+                formatting: result.formatting,
+                syntaxErrors: result.syntaxErrors || [],
+                issues: this.normalizeIssues(result.issues || []),
+                strengths: result.strengths || [],
+                summary: result.summary || '',
+            };
+        }
+        catch (error) {
+            core.error(`Failed to parse evaluation response: ${content.text}`);
+            throw new Error('Failed to parse translation quality evaluation');
+        }
+    }
+    /**
+     * Evaluate diff quality using Claude
+     */
+    async evaluateDiff(sourceBefore, sourceAfter, targetBefore, targetAfter, targetFiles) {
+        const prompt = `You are an expert code reviewer specializing in translation sync workflows. Verify that translation changes are correctly positioned.
+
+## Context
+A translation sync action detected changes and created corresponding changes in the target document.
+
+## Source Document (English)
+### Before:
+\`\`\`markdown
+${sourceBefore.slice(0, 3000)}${sourceBefore.length > 3000 ? '\n... (truncated)' : ''}
+\`\`\`
+
+### After:
+\`\`\`markdown
+${sourceAfter.slice(0, 3000)}${sourceAfter.length > 3000 ? '\n... (truncated)' : ''}
+\`\`\`
+
+## Target Document (Translation)
+### Before:
+\`\`\`markdown
+${targetBefore.slice(0, 3000)}${targetBefore.length > 3000 ? '\n... (truncated)' : ''}
+\`\`\`
+
+### After:
+\`\`\`markdown
+${targetAfter.slice(0, 3000)}${targetAfter.length > 3000 ? '\n... (truncated)' : ''}
+\`\`\`
+
+### Files Changed:
+${targetFiles.map(f => `- ${f.filename}: ${f.status} (+${f.additions}/-${f.deletions})`).join('\n')}
+
+## IMPORTANT: About the Heading-Map
+
+The \`heading-map\` in the frontmatter is a CRITICAL feature of this translation system. It maps English heading IDs to translated headings. This is CORRECT and EXPECTED.
+
+## Verification
+1. **Scope Correct**: Were only the necessary files modified?
+2. **Position Correct**: Do changes appear in the same sections as source?
+3. **Structure Preserved**: Is the document structure maintained?
+4. **Heading-map Correct**: Is the heading-map updated appropriately?
+
+## Response Format
+Respond with ONLY valid JSON:
+{
+  "scopeCorrect": true/false,
+  "positionCorrect": true/false,
+  "structurePreserved": true/false,
+  "headingMapCorrect": true/false,
+  "issues": ["issue 1 if any"],
+  "summary": "One sentence overall summary",
+  "scopeDetails": "Brief explanation of scope check",
+  "positionDetails": "Brief explanation of position check",
+  "structureDetails": "Brief explanation of structure check"
+}`;
+        const response = await this.anthropic.messages.create({
+            model: this.model,
+            max_tokens: 1500,
+            messages: [{ role: 'user', content: prompt }],
+        });
+        const content = response.content[0];
+        if (content.type !== 'text') {
+            throw new Error('Unexpected response type from Claude');
+        }
+        try {
+            let jsonStr = content.text;
+            const jsonMatch = jsonStr.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+                jsonStr = jsonMatch[0];
+            }
+            const result = JSON.parse(jsonStr);
+            const checks = [
+                result.scopeCorrect,
+                result.positionCorrect,
+                result.structurePreserved,
+                result.headingMapCorrect,
+            ];
+            const passedChecks = checks.filter(Boolean).length;
+            const score = (passedChecks / checks.length) * 10;
+            return {
+                score: Math.round(score * 10) / 10,
+                scopeCorrect: result.scopeCorrect,
+                positionCorrect: result.positionCorrect,
+                structurePreserved: result.structurePreserved,
+                headingMapCorrect: result.headingMapCorrect,
+                issues: result.issues || [],
+                summary: result.summary || '',
+                scopeDetails: result.scopeDetails || '',
+                positionDetails: result.positionDetails || '',
+                structureDetails: result.structureDetails || '',
+            };
+        }
+        catch (error) {
+            core.error(`Failed to parse diff evaluation response: ${content.text}`);
+            throw new Error('Failed to parse diff quality evaluation');
+        }
+    }
+    /**
+     * Format changed sections for the prompt
+     */
+    formatChangedSections(changedSections) {
+        if (changedSections.length === 0) {
+            return '';
+        }
+        const sectionsList = changedSections.map(s => {
+            if (s.changeType === 'deleted') {
+                return `- **DELETED**: ${s.heading}`;
+            }
+            return `- **${s.changeType.toUpperCase()}**: ${s.heading}`;
+        }).join('\n');
+        return `\n## IMPORTANT: Changed Sections in This PR
+
+The following sections were modified in this PR. **Focus your evaluation on these changed sections**:
+
+${sectionsList}
+`;
+    }
+    /**
+     * Normalize issues to strings
+     */
+    normalizeIssues(issues) {
+        if (!Array.isArray(issues))
+            return [];
+        return issues.map(issue => {
+            if (typeof issue === 'string')
+                return issue;
+            if (typeof issue === 'object' && issue !== null) {
+                const obj = issue;
+                const location = obj.location || obj.section || obj.heading || '';
+                const original = obj.original || obj.current || obj.translated || obj.text || '';
+                const suggestion = obj.suggestion || obj.recommended || obj.fix || obj.correction || '';
+                const description = obj.description || obj.issue || obj.problem || obj.message || '';
+                if (description) {
+                    return location ? `${location}: ${description}` : String(description);
+                }
+                if (original && suggestion) {
+                    return location
+                        ? `${location}: "${original}" → "${suggestion}"`
+                        : `"${original}" → "${suggestion}"`;
+                }
+                return JSON.stringify(obj);
+            }
+            return String(issue);
+        }).filter(s => s && s !== '{}' && s !== '""');
+    }
+    /**
+     * Generate review comment
+     */
+    generateReviewComment(translationResult, diffResult, verdict) {
+        const emoji = verdict === 'PASS' ? '✅' : verdict === 'WARN' ? '⚠️' : '❌';
+        let comment = `## ${emoji} Translation Quality Review
+
+**Verdict**: ${verdict} | **Model**: ${this.model} | **Date**: ${new Date().toISOString().split('T')[0]}
+
+---
+
+### 📝 Translation Quality
+
+| Criterion | Score |
+|-----------|-------|
+| Accuracy | ${translationResult.accuracy}/10 |
+| Fluency | ${translationResult.fluency}/10 |
+| Terminology | ${translationResult.terminology}/10 |
+| Formatting | ${translationResult.formatting}/10 |
+| **Overall** | **${translationResult.score}/10** |
+
+**Summary**: ${translationResult.summary}`;
+        if (translationResult.strengths.length > 0) {
+            comment += ` ${translationResult.strengths.join(' ')}`;
+        }
+        if (translationResult.syntaxErrors && translationResult.syntaxErrors.length > 0) {
+            comment += `
+
+### ⚠️ Markdown Syntax Errors (CRITICAL)
+${translationResult.syntaxErrors.map(e => `- 🔴 ${e}`).join('\n')}`;
+        }
+        if (translationResult.issues.length > 0) {
+            comment += `
+
+**Suggestions**:
+${translationResult.issues.map(i => `- ${i}`).join('\n')}`;
+        }
+        comment += `
+
+---
+
+### 🔍 Diff Quality
+
+| Check | Status |
+|-------|--------|
+| Scope Correct | ${diffResult.scopeCorrect ? '✅' : '❌'} |
+| Position Correct | ${diffResult.positionCorrect ? '✅' : '❌'} |
+| Structure Preserved | ${diffResult.structurePreserved ? '✅' : '❌'} |
+| Heading-map Correct | ${diffResult.headingMapCorrect ? '✅' : '❌'} |
+| **Overall** | **${diffResult.score}/10** |
+
+**Summary**: ${diffResult.summary}`;
+        if (diffResult.issues.length > 0) {
+            comment += `
+
+**Issues**:
+${diffResult.issues.map(i => `- ${i}`).join('\n')}`;
+        }
+        comment += `
+
+---
+*This review was generated automatically by [action-translation](https://github.com/quantecon/action-translation) review mode.*`;
+        return comment;
+    }
+    /**
+     * Post review comment on PR
+     */
+    async postReviewComment(prNumber, owner, repo, comment) {
+        try {
+            // Check for existing review comment and update it instead of creating new
+            const { data: comments } = await this.octokit.rest.issues.listComments({
+                owner,
+                repo,
+                issue_number: prNumber,
+            });
+            const existingComment = comments.find(c => c.body?.includes('Translation Quality Review') &&
+                c.body?.includes('action-translation'));
+            if (existingComment) {
+                await this.octokit.rest.issues.updateComment({
+                    owner,
+                    repo,
+                    comment_id: existingComment.id,
+                    body: comment,
+                });
+                core.info(`Updated existing review comment on PR #${prNumber}`);
+            }
+            else {
+                await this.octokit.rest.issues.createComment({
+                    owner,
+                    repo,
+                    issue_number: prNumber,
+                    body: comment,
+                });
+                core.info(`Posted review comment on PR #${prNumber}`);
+            }
+        }
+        catch (error) {
+            core.error(`Failed to post review comment: ${error}`);
+            throw error;
+        }
+    }
+}
+exports.TranslationReviewer = TranslationReviewer;
+//# sourceMappingURL=reviewer.js.map
 
 /***/ }),
 

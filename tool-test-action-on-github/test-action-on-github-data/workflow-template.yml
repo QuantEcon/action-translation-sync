@@ -17,7 +17,7 @@ jobs:
       - name: Checkout action repository
         uses: actions/checkout@v4
         with:
-          repository: QuantEcon/action-translation-sync
+          repository: QuantEcon/action-translation
           path: action
       
       - name: Setup Node.js
@@ -44,7 +44,9 @@ jobs:
           fi
       
       - name: Run translation sync
+        uses: ./action
         with:
+          mode: sync
           target-repo: ${{ github.repository }}.zh-cn
           target-language: zh-cn
           source-language: en
@@ -52,4 +54,3 @@ jobs:
           anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
           github-token: ${{ secrets.QUANTECON_SERVICES_PAT }}
           test-mode: ${{ steps.mode.outputs.mode == 'test' }}
-        uses: ./action

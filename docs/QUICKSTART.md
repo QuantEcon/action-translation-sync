@@ -1,6 +1,6 @@
 # Quick Start Guide
 
-Get started with the Translation Sync Action development.
+Get started with the Translation Action development.
 
 ---
 
@@ -25,8 +25,8 @@ Get started with the Translation Sync Action development.
 
 ```bash
 # Clone repository
-git clone https://github.com/quantecon/action-translation-sync.git
-cd action-translation-sync
+git clone https://github.com/quantecon/action-translation.git
+cd action-translation
 
 # Install dependencies
 npm install
@@ -41,14 +41,16 @@ npm test
 ### Project Structure
 
 ```
-action-translation-sync/
+action-translation/
 ├── src/                    # TypeScript source code
-│   ├── index.ts           # Main entry point
+│   ├── index.ts           # Main entry point (mode routing)
 │   ├── types.ts           # Type definitions
 │   ├── parser.ts          # MyST Markdown parser
 │   ├── diff-detector.ts   # Change detection
-│   ├── translator.ts      # Claude API integration
+│   ├── translator.ts      # Claude API integration (sync)
+│   ├── reviewer.ts        # Claude API integration (review)
 │   ├── file-processor.ts  # Translation orchestration
+│   ├── heading-map.ts     # Heading-map system
 │   └── inputs.ts          # Input validation
 ├── dist/                   # Built JavaScript (committed)
 ├── glossary/               # Built-in glossaries
@@ -95,9 +97,14 @@ git push
 - Maps changes to target document
 
 **Translator** (`src/translator.ts`):
-- Integrates with Claude Sonnet 4
+- Integrates with Claude Sonnet 4.5
 - Dual mode: diff (incremental) and full (new files)
 - Uses built-in glossary for consistency
+
+**Reviewer** (`src/reviewer.ts`):
+- Evaluates translation quality
+- Posts review comments on PRs
+- Returns verdict: PASS, WARN, or FAIL
 
 **File Processor** (`src/file-processor.ts`):
 - Orchestrates the translation workflow
@@ -201,7 +208,7 @@ git tag -f v0.1 -m "Latest v0.1.x"
 git push origin v0.1 --force
 ```
 
-See [releases/](releases/) for release notes.
+See [CHANGELOG.md](../CHANGELOG.md) for release notes.
 
 ---
 
@@ -210,7 +217,6 @@ See [releases/](releases/) for release notes.
 - **Architecture**: [ARCHITECTURE.md](ARCHITECTURE.md)
 - **Implementation**: [IMPLEMENTATION.md](IMPLEMENTATION.md)
 - **Design Decisions**: [PROJECT-DESIGN.md](PROJECT-DESIGN.md)
-- **TODO List**: [TODO.md](TODO.md)
 - **Testing Guide**: [TEST-REPOSITORIES.md](TEST-REPOSITORIES.md)
 - **Development Guidelines**: [../.github/copilot-instructions.md](../.github/copilot-instructions.md)
 
@@ -218,8 +224,8 @@ See [releases/](releases/) for release notes.
 
 ## Getting Help
 
-- **Issues**: https://github.com/quantecon/action-translation-sync/issues
-- **Discussions**: https://github.com/quantecon/action-translation-sync/discussions
+- **Issues**: https://github.com/quantecon/action-translation/issues
+- **Discussions**: https://github.com/quantecon/action-translation/discussions
 - **Documentation**: [INDEX.md](INDEX.md)
 
 ---

@@ -9,8 +9,9 @@ By default, the action uses **`claude-sonnet-4-5-20250929`** (Claude Sonnet 4.5)
 No configuration needed - it just works!
 
 ```yaml
-- uses: quantecon/action-translation-sync@v0.1
+- uses: quantecon/action-translation@v0.7
   with:
+    mode: sync
     target-repo: 'quantecon/lecture-python.zh-cn'
     target-language: 'zh-cn'
     anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -23,8 +24,9 @@ No configuration needed - it just works!
 You can specify a different Claude model using the `claude-model` parameter:
 
 ```yaml
-- uses: quantecon/action-translation-sync@v0.1
+- uses: quantecon/action-translation@v0.7
   with:
+    mode: sync
     target-repo: 'quantecon/lecture-python.zh-cn'
     target-language: 'zh-cn'
     anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -66,14 +68,16 @@ You can test different models on the same content to compare quality:
 
 ```yaml
 # Test workflow 1: Using Sonnet
-- uses: quantecon/action-translation-sync@v0.1
+- uses: quantecon/action-translation@v0.7
   with:
+    mode: sync
     claude-model: 'claude-sonnet-4-20250514'
     # ... other parameters
 
 # Test workflow 2: Using Opus
-- uses: quantecon/action-translation-sync@v0.1
+- uses: quantecon/action-translation@v0.7
   with:
+    mode: sync
     claude-model: 'claude-opus-4-20250514'
     # ... other parameters
 ```

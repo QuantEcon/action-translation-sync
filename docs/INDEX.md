@@ -1,9 +1,9 @@
 # Documentation Index
 
-Complete documentation for the Translation Sync GitHub Action.
+Complete documentation for the Translation Action (GitHub Action).
 
-**Current Version**: v0.6.0 (Testing & Development)  
-**Status**: Input Validation & Error Handling
+**Current Version**: v0.7.0 (Testing & Development)  
+**Status**: Review Mode & Repository Rename
 
 ---
 
@@ -23,7 +23,7 @@ Complete documentation for the Translation Sync GitHub Action.
 
 1. **[Project Design](PROJECT-DESIGN.md)** - Design decisions and philosophy
 2. **[Architecture](ARCHITECTURE.md)** - System architecture and component design
-3. **[Implementation](IMPLEMENTATION.md)** - Comprehensive technical guide (~2,600 lines of code)
+3. **[Implementation](IMPLEMENTATION.md)** - Comprehensive technical guide (~3,000 lines of code)
 
 ---
 
@@ -33,8 +33,9 @@ Complete documentation for the Translation Sync GitHub Action.
 
 1. **[Heading Maps](HEADING-MAPS.md)** - Robust cross-language section matching system
 2. **[Claude Models](CLAUDE-MODELS.md)** - Model selection and configuration
-3. **[Translation Glossary](../glossary/README.md)** - Built-in glossary system (355 terms for zh-cn)
+3. **[Translation Glossary](../glossary/README.md)** - Built-in glossary system (357 terms for zh-cn, fa)
 4. **[Language Configuration](IMPLEMENTATION.md#language-configuration)** - Language-specific translation rules (v0.5.1)
+5. **Review Mode** - AI-powered translation quality assessment (v0.7.0)
 
 ---
 
@@ -42,7 +43,7 @@ Complete documentation for the Translation Sync GitHub Action.
 
 **For contributors and testers:**
 
-1. **[Testing Guide](TESTING.md)** - Test suite design and how to write tests (155 tests)
+1. **[Testing Guide](TESTING.md)** - Test suite design and how to write tests (183 tests)
 2. **[Test Repositories](TEST-REPOSITORIES.md)** - GitHub integration testing setup (24 scenarios)
 3. **[CHANGELOG](../CHANGELOG.md)** - Version history and release notes
 
@@ -59,22 +60,16 @@ Complete documentation for the Translation Sync GitHub Action.
 
 ## 📋 Release Notes
 
-**Version history:**
+**Version history:** See [CHANGELOG.md](../CHANGELOG.md) for full release history.
 
-- **[v0.6.0](../CHANGELOG.md#060---2025-12-03)** - Opus 4.5 evaluation tool, input validation, error handling ✅
-- **[v0.5.1](releases/v0.5.1.md)** - Language configuration system + GPT5 validation
-- **[v0.5.0](releases/v0.5.0.md)** - TOC files, file deletions, enhanced test coverage
-- **[v0.4.10](releases/v0.4.10.md)** - Bug fixes and improvements
-- **[v0.4.7](releases/v0.4.7.md)** - Full recursive heading support (##-######)
-- **[v0.4.6](releases/v0.4.6.md)** - Exact section comparison, branch collision fix
-- **[v0.4.5](releases/v0.4.5.md)** - Bug fixes and stability
-- **[v0.4.4](releases/v0.4.4.md)** - Developer experience, GitHub testing, root-level support
-- **[v0.4.3](releases/v0.4.3.md)** - Subsection support with regression tests
-- **[v0.3.0](releases/v0.3.0.md)** - Section-based refactor, Claude 4.5, test suite
-- **[v0.2.2](releases/v0.2.2.md)** - Team reviewers support
-- **[v0.1.2](releases/v0.1.2.md)** - Documentation and glossary updates
-- **[v0.1.1](releases/v0.1.1.md)** - Bug fixes and configurable model
-- **[v0.1.0](releases/v0.1.0.md)** - Initial development release
+**Recent releases:**
+
+- **[v0.7.0](../CHANGELOG.md#070---2025-12-05)** - Review mode, repository rename
+- **[v0.6.0](../CHANGELOG.md#060---2025-12-03)** - Input validation, error handling
+- **[v0.5.1](../CHANGELOG.md#051---2025-11-06)** - Language configuration system
+- **[v0.5.0](../CHANGELOG.md#050---2025-11-06)** - TOC files, file deletions
+- **[v0.4.7](../CHANGELOG.md#047---2025-10-24)** - Full recursive heading support
+- **[v0.3.0](../CHANGELOG.md#030---2025-10-15)** - Section-based architecture
 
 ---
 
@@ -109,10 +104,9 @@ docs/
 ├── IMPLEMENTATION.md        # Comprehensive technical guide
 ├── HEADING-MAPS.md          # Cross-language matching system
 ├── CLAUDE-MODELS.md         # Model selection and configuration
-├── TESTING.md               # Test suite guide (155 tests)
+├── TESTING.md               # Test suite guide (183 tests)
 ├── TEST-REPOSITORIES.md     # GitHub integration testing setup
-└── releases/                # Version release notes
-    ├── v0.1.0.md ... v0.5.1.md
+└── presentations/           # Marp slide deck
 ```
 
 **Total**: 9 focused documentation files
@@ -124,8 +118,8 @@ docs/
 - **Main README**: [../README.md](../README.md)
 - **Glossary System**: [../glossary/README.md](../glossary/README.md)
 - **Examples**: [../examples/](../examples/)
-- **GitHub Repository**: https://github.com/quantecon/action-translation-sync
-- **Issues**: https://github.com/quantecon/action-translation-sync/issues
+- **GitHub Repository**: https://github.com/quantecon/action-translation
+- **Issues**: https://github.com/quantecon/action-translation/issues
 
 ---
 

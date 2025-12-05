@@ -22,8 +22,9 @@ jobs:
     
     steps:
       - name: Sync translations
-        uses: quantecon/action-translation-sync@v1
+        uses: quantecon/action-translation@v0.7
         with:
+          mode: sync
           target-repo: 'quantecon/lecture-python.zh-cn'
           target-language: 'zh-cn'
           docs-folder: 'lectures/'
@@ -54,8 +55,9 @@ jobs:
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     steps:
-      - uses: quantecon/action-translation-sync@v1
+      - uses: quantecon/action-translation@v0.7
         with:
+          mode: sync
           target-repo: 'quantecon/lecture-python.zh-cn'
           target-language: 'zh-cn'
           docs-folder: 'lectures/'
@@ -67,8 +69,9 @@ jobs:
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     steps:
-      - uses: quantecon/action-translation-sync@v1
+      - uses: quantecon/action-translation@v0.7
         with:
+          mode: sync
           target-repo: 'quantecon/lecture-python.ja'
           target-language: 'ja'
           docs-folder: 'lectures/'

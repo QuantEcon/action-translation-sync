@@ -1,38 +1,43 @@
-# Translation Sync Action
+# Translation Action
 
-A GitHub Action that automatically synchronizes translations across repositories using Claude Sonnet 4.5.
+A GitHub Action that automatically synchronizes and reviews translations across repositories using Claude AI.
 
-**Version**: v0.6.3 | **Status**: Testing & Development ✅
+**Version**: v0.7.0 | **Status**: Testing & Development ✅
 
 ## Overview
 
-This action monitors a source repository for merged pull requests and automatically translates changed MyST Markdown files to a target repository, creating pull requests for review.
+This action provides two modes for managing translations of MyST Markdown files:
+
+1. **Sync Mode**: Monitors a source repository for merged pull requests and automatically translates changed files to a target repository, creating pull requests for review.
+
+2. **Review Mode**: Provides AI-powered quality assessment of translation PRs, posting detailed review comments with scores and suggestions.
 
 **Key Features**:
 - 🌍 **Language-Extensible**: Easy configuration for multiple target languages
 - 🗺️ **Heading-Map System**: Robust cross-language section matching
 - 🔄 **Intelligent Diff Translation**: Only translates changed sections
+- 📝 **AI-Powered Review**: Automated quality assessment of translations
 - ✍️ **MyST Markdown Support**: Preserves code blocks, math equations, and directives
 - 📚 **Glossary Support**: Built-in glossaries for consistent terminology
-- ✅ **Opus 4.5 Validated**: 100% pass rate on 24 comprehensive test scenarios
+- ✅ **Extensively Tested**: 183 unit tests passing, 24 GitHub integration scenarios
 
 ## Features
 
 - 🌍 **Language Configuration** (v0.5.1): Extensible system for language-specific rules (punctuation, typography)
+- 📝 **Review Mode** (v0.7.0): AI-powered translation quality assessment with scoring and suggestions
 - ✅ **Input Validation** (v0.6.0): Validates language codes and Claude model names with helpful error messages
 - 🗺️ **Heading-Map System**: Robust cross-language section matching that survives reordering
 - 🔄 **Intelligent Diff Translation**: Only translates changed sections, preserving existing translations
 - 📄 **Full File Translation**: Handles new files with complete translation
 - ✍️ **MyST Markdown Support**: Preserves code blocks, math equations, and MyST directives
-- 📚 **Glossary Support**: Built-in glossaries for consistent technical terminology (355 terms for zh-cn)
+- 📚 **Glossary Support**: Built-in glossaries for consistent technical terminology (357 terms for zh-cn, fa)
 - 📑 **Automatic TOC Updates**: Updates `_toc.yml` when new files are added
 - 🔍 **PR-Based Workflow**: All translations go through pull request review
 - ♻️ **Recursive Subsections**: Full support for nested headings at any depth (##-######)
-- ✅ **Extensively Tested**: 155 unit tests passing, 24 GitHub integration test scenarios
 
 ## Usage
 
-### Basic Setup
+### Sync Mode (Source Repository)
 
 Add this workflow to your source repository (e.g., `.github/workflows/sync-translations.yml`):
 
@@ -51,44 +56,102 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-      - uses: quantecon/action-translation-sync@v1
+      - uses: quantecon/action-translation@v0.7
         with:
+          mode: sync  # Default mode
           target-repo: 'quantecon/lecture-python.zh-cn'
           target-language: 'zh-cn'
           docs-folder: 'lectures/'
-          source-language: 'en'
-          glossary-path: '.github/translation-glossary.json'
           anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           # Optional: Request reviewers for translation PRs
           pr-reviewers: 'username1,username2'
-          pr-team-reviewers: 'translation-team'
           pr-labels: 'translation,automated,needs-review'
+```
+
+### Review Mode (Target Repository)
+
+Add this workflow to your target (translation) repository (e.g., `.github/workflows/review-translations.yml`):
+
+```yaml
+name: Review Translations
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  review:
+    # Only review PRs created by the sync action
+    if: contains(github.event.pull_request.labels.*.name, 'action-translation')
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: quantecon/action-translation@v0.7
+        with:
+          mode: review
+          source-repo: 'quantecon/lecture-python'
+          anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          max-suggestions: 5  # Optional, default is 5
 ```
 
 ### Inputs
 
+#### Mode Selection
+
 | Input | Required | Default | Description |
 |-------|----------|---------|-------------|
-| `target-repo` | Yes | - | Target repository (format: `owner/repo`) |
-| `target-language` | Yes | - | Target language code (e.g., `zh-cn`, `ja`, `es`) |
+| `mode` | **Yes** | - | Operation mode: `sync` or `review` |
+
+#### Sync Mode Inputs
+
+| Input | Required | Default | Description |
+|-------|----------|---------|-------------|
+| `target-repo` | Yes* | - | Target repository (format: `owner/repo`) |
+| `target-language` | Yes* | - | Target language code (e.g., `zh-cn`, `fa`) |
 | `docs-folder` | No | `lectures/` | Documentation folder to monitor |
 | `source-language` | No | `en` | Source language code |
-| `glossary-path` | No | - | Path to **custom** glossary (built-in glossary used by default) |
-| `toc-file` | No | `_toc.yml` | Table of contents file name |
+| `pr-labels` | No | `action-translation,automated` | Comma-separated PR labels |
+| `pr-reviewers` | No | - | Comma-separated GitHub usernames |
+| `pr-team-reviewers` | No | - | Comma-separated GitHub team slugs |
+
+*Required when `mode: sync`
+
+#### Review Mode Inputs
+
+| Input | Required | Default | Description |
+|-------|----------|---------|-------------|
+| `source-repo` | Yes** | - | Source repository for English content (format: `owner/repo`) |
+| `max-suggestions` | No | `5` | Maximum improvement suggestions in review |
+
+**Required when `mode: review`
+
+#### Shared Inputs
+
+| Input | Required | Default | Description |
+|-------|----------|---------|-------------|
 | `anthropic-api-key` | Yes | - | Anthropic API key for Claude |
-| `claude-model` | No | `claude-sonnet-4-5-20250929` | Claude model to use for translation |
+| `claude-model` | No | `claude-sonnet-4-5-20250929` | Claude model to use |
 | `github-token` | Yes | - | GitHub token for API access |
-| `pr-labels` | No | `action-translation-sync,automated` | Comma-separated PR labels |
-| `pr-reviewers` | No | - | Comma-separated GitHub usernames (e.g., `user1,user2`) |
-| `pr-team-reviewers` | No | - | Comma-separated GitHub team slugs (e.g., `team1,team2`) |
+| `glossary-path` | No | - | Path to custom glossary (built-in used by default) |
 
 ### Outputs
+
+#### Sync Mode Outputs
 
 | Output | Description |
 |--------|-------------|
 | `pr-url` | URL of the created pull request |
 | `files-synced` | Number of files synchronized |
+
+#### Review Mode Outputs
+
+| Output | Description |
+|--------|-------------|
+| `review-verdict` | Review verdict: `PASS`, `WARN`, or `FAIL` |
+| `translation-score` | Overall translation quality score (1-10) |
+| `diff-score` | Diff quality score (1-10) |
 
 ## Glossary Format
 
@@ -152,7 +215,16 @@ Glossary format:
 6. **Heading-Map Update**: Automatically maintains English→Translation mappings
 7. **Validation**: Verifies MyST syntax of translated content
 8. **PR Creation**: Opens a pull request in the target repository
-9. **Review**: Team reviews and merges the translation
+9. **Review**: Team reviews and merges the translation (optionally with AI review)
+
+### Review Mode Process
+
+1. **Trigger**: Activates when a translation PR is opened/updated
+2. **Content Fetch**: Retrieves source (English) and target (translation) content
+3. **Change Detection**: Identifies which sections were changed
+4. **Quality Evaluation**: Claude evaluates translation quality (accuracy, fluency, terminology, formatting)
+5. **Diff Evaluation**: Verifies changes are in correct locations with proper structure
+6. **Review Comment**: Posts detailed review with scores, strengths, and suggestions
 
 ### Heading-Map System (v0.4.0)
 
@@ -267,10 +339,11 @@ npm run format
 ```
 .
 ├── src/                          # Main action source code
-│   ├── index.ts                  # GitHub Actions entry point
+│   ├── index.ts                  # GitHub Actions entry point (mode routing)
 │   ├── parser.ts                 # MyST Markdown parser (section-based)
 │   ├── diff-detector.ts          # Change detection (ADD/MODIFY/DELETE)
-│   ├── translator.ts             # Claude API integration
+│   ├── translator.ts             # Claude API integration (sync mode)
+│   ├── reviewer.ts               # Claude API integration (review mode)
 │   ├── file-processor.ts         # Translation orchestration
 │   ├── heading-map.ts            # Heading-map system
 │   ├── language-config.ts        # Language-specific rules (v0.5.1)
@@ -278,7 +351,8 @@ npm run format
 │   └── inputs.ts                 # GitHub Actions input handling
 ├── docs/                         # Comprehensive documentation
 ├── glossary/                     # Built-in translation glossaries
-│   ├── zh-cn.json                # Simplified Chinese (355 terms)
+│   ├── zh-cn.json                # Simplified Chinese (357 terms)
+│   ├── fa.json                   # Persian/Farsi (357 terms)
 │   └── README.md                 # Glossary format and contribution guide
 ├── tool-bulk-translator/         # Standalone CLI for bulk translation
 │   ├── src/bulk-translate.ts     # Main CLI implementation
@@ -287,7 +361,7 @@ npm run format
 ├── tool-test-action-on-github/   # GitHub integration testing
 │   ├── test-action-on-github.sh  # Test script (24 scenarios)
 │   ├── test-action-on-github-data/  # Test fixtures
-│   └── reports/                  # Opus 4.5 evaluation reports
+│   └── reports/                  # Quality evaluation reports
 ├── examples/                     # Example workflow configurations
 ├── action.yml                    # GitHub Action metadata
 └── package.json                  # Dependencies and scripts

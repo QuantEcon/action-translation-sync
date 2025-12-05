@@ -1,17 +1,106 @@
 import * as core from '@actions/core';
 import * as github from '@actions/github';
-import { getInputs, validatePREvent } from './inputs';
+import { getMode, getInputs, getReviewInputs, validatePREvent, validateReviewPREvent } from './inputs';
 import { TranslationService } from './translator';
 import { FileProcessor } from './file-processor';
+import { TranslationReviewer } from './reviewer';
 import { Glossary, FileChange, SyncResult } from './types';
 import { promises as fs } from 'fs';
 import * as path from 'path';
 
 /**
  * Main entry point for the GitHub Action
+ * Routes to sync or review mode based on 'mode' input
  */
 async function run(): Promise<void> {
   try {
+    const mode = getMode();
+    core.info(`🚀 Running in ${mode.toUpperCase()} mode`);
+
+    if (mode === 'sync') {
+      await runSync();
+    } else {
+      await runReview();
+    }
+  } catch (error) {
+    core.setFailed(`Action failed: ${error instanceof Error ? error.message : String(error)}`);
+  }
+}
+
+/**
+ * Run the REVIEW mode - evaluate translation quality on a PR
+ */
+async function runReview(): Promise<void> {
+  // Get and validate inputs
+  core.info('Getting review mode inputs...');
+  const inputs = getReviewInputs();
+
+  // Validate this is a PR event
+  core.info('Validating PR event...');
+  const { prNumber } = validateReviewPREvent(github.context);
+
+  core.info(`📝 Reviewing translation PR #${prNumber}`);
+
+  // Initialize reviewer
+  const reviewer = new TranslationReviewer(
+    inputs.anthropicApiKey,
+    inputs.githubToken,
+    inputs.claudeModel,
+    inputs.maxSuggestions
+  );
+
+  // Load glossary
+  let glossaryTerms: string | undefined;
+  const targetLanguage = detectTargetLanguage();
+  if (targetLanguage) {
+    const builtInGlossaryPath = path.join(__dirname, '..', 'glossary', `${targetLanguage}.json`);
+    try {
+      const glossaryContent = await fs.readFile(builtInGlossaryPath, 'utf-8');
+      const glossary = JSON.parse(glossaryContent);
+      if (glossary && glossary.terms) {
+        glossaryTerms = glossary.terms
+          .map((t: { en: string; [key: string]: string | undefined; context?: string }) => 
+            `- "${t.en}" → "${t[targetLanguage] || ''}"${t.context ? ` (${t.context})` : ''}`)
+          .join('\n');
+        core.info(`✓ Loaded glossary for ${targetLanguage} with ${glossary.terms.length} terms`);
+      }
+    } catch (error) {
+      core.warning(`Could not load glossary for ${targetLanguage}: ${error}`);
+    }
+  }
+
+  // Run review
+  const result = await reviewer.reviewPR(
+    prNumber,
+    inputs.sourceRepo,
+    github.context.repo.owner,
+    github.context.repo.repo,
+    inputs.docsFolder,
+    glossaryTerms
+  );
+
+  // Set outputs
+  core.setOutput('review-verdict', result.verdict);
+  core.setOutput('translation-score', result.translationQuality.score.toString());
+  core.setOutput('diff-score', result.diffQuality.score.toString());
+
+  core.info(`✅ Review complete: ${result.verdict} (Translation: ${result.translationQuality.score}/10, Diff: ${result.diffQuality.score}/10)`);
+}
+
+/**
+ * Detect target language from repository name
+ * e.g., 'lecture-python.zh-cn' -> 'zh-cn'
+ */
+function detectTargetLanguage(): string | undefined {
+  const repoName = github.context.repo.repo;
+  const match = repoName.match(/\.([a-z]{2}(?:-[a-z]{2})?)$/);
+  return match ? match[1] : undefined;
+}
+
+/**
+ * Run the SYNC mode - create translation PRs
+ */
+async function runSync(): Promise<void> {
     // Get and validate inputs
     core.info('Getting action inputs...');
     const inputs = getInputs();
@@ -27,33 +116,17 @@ async function run(): Promise<void> {
 
     if (isTestMode) {
       core.info(`🧪 TEST MODE: Processing PR #${prNumber} (using head commit)`);
-    } else if (prNumber) {
+    } else {
       core.info(`Processing merged PR #${prNumber}`);
-    } else {
-      core.info('Processing manual workflow dispatch');
     }
 
-    // Get changed files
+    // Get changed files from PR
     const octokit = github.getOctokit(inputs.githubToken);
-    let files: any[];
-
-    if (prNumber) {
-      // Get files from PR
-      const { data: prFiles } = await octokit.rest.pulls.listFiles({
-        owner: github.context.repo.owner,
-        repo: github.context.repo.repo,
-        pull_number: prNumber,
-      });
-      files = prFiles;
-    } else {
-      // For workflow_dispatch, get files from the latest commit
-      const { data: commit } = await octokit.rest.repos.getCommit({
-        owner: github.context.repo.owner,
-        repo: github.context.repo.repo,
-        ref: github.context.sha,
-      });
-      files = commit.files || [];
-    }
+    const { data: files } = await octokit.rest.pulls.listFiles({
+      owner: github.context.repo.owner,
+      repo: github.context.repo.repo,
+      pull_number: prNumber,
+    });
 
     // Filter for renamed markdown files (need special handling)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -576,7 +649,7 @@ async function run(): Promise<void> {
 This PR contains automated translations from [${github.context.repo.owner}/${github.context.repo.repo}](https://github.com/${github.context.repo.owner}/${github.context.repo.repo}).
 
 ### Source PR
-${prNumber ? `**[#${prNumber}${sourcePrTitle ? ` - ${sourcePrTitle}` : ''}](https://github.com/${github.context.repo.owner}/${github.context.repo.repo}/pull/${prNumber})**` : '**Manual workflow dispatch**'}
+**[#${prNumber}${sourcePrTitle ? ` - ${sourcePrTitle}` : ''}](https://github.com/${github.context.repo.owner}/${github.context.repo.repo}/pull/${prNumber})**
 
 ${filesChangedSection}
 
@@ -586,7 +659,7 @@ ${filesChangedSection}
 - **Model**: ${inputs.claudeModel}
 
 ---
-*This PR was created automatically by the [translation-sync action](https://github.com/quantecon/action-translation-sync).*`;
+*This PR was created automatically by the [translation action](https://github.com/quantecon/action-translation).*`;
 
           // Create PR title - use source PR title if available, otherwise list files
           let prTitle: string;
@@ -618,7 +691,7 @@ ${filesChangedSection}
           core.info(`Created PR: ${pr.html_url}`);
           
           // Prepare labels:
-          // - Start with labels from pr-labels input (default: 'action-translation-sync,automated')
+          // - Start with labels from pr-labels input (default: 'action-translation,automated')
           // - Add labels from source PR (excluding source-specific labels like 'test-translation')
           const labelsToAdd = new Set<string>();
           
@@ -685,10 +758,6 @@ ${filesChangedSection}
         }
       }
     }
-
-  } catch (error) {
-    core.setFailed(`Action failed: ${error instanceof Error ? error.message : String(error)}`);
-  }
 }
 
 // Run the action

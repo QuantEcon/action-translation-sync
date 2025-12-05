@@ -5,6 +5,45 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0] - 2025-12-05
+
+### Added
+- **Repository Rename**: Renamed from `action-translation-sync` to `action-translation`
+  - Cleaner naming that reflects multi-mode functionality
+  - GitHub auto-redirects old URLs
+- **Review Mode**: New AI-powered translation quality assessment
+  - `mode` input is now **required** (`sync` or `review`)
+  - `source-repo` input to specify source repository for English content
+  - `max-suggestions` input to control number of suggestions (default: 5)
+  - Posts detailed review comments on translation PRs
+  - Evaluates translation quality (accuracy, fluency, terminology, formatting)
+  - Evaluates diff quality (scope, position, structure, heading-map)
+  - Returns verdict: PASS, WARN, or FAIL
+  - New outputs: `review-verdict`, `translation-score`, `diff-score`
+- **New Module**: `src/reviewer.ts` (~700 lines)
+  - `TranslationReviewer` class for PR review workflow
+  - `identifyChangedSections()` for change detection
+  - Parses source PR reference from translation PR body for accurate diff comparison
+  - Fetches actual English before/after from source PR (same approach as evaluator tool)
+  - Adapted from `tool-test-action-on-github/evaluate/` for action context
+- **New Test Suite**: `src/__tests__/reviewer.test.ts` (28 tests)
+  - Helper function tests
+  - Change detection tests (new/deleted/modified/renamed documents)
+  - Review formatting tests
+  - Integration scenarios with real-world content
+
+### Changed
+- **Action Name**: Changed from "Translation Sync" to "Translation Action"
+- **Package Name**: Changed from `action-translation-sync` to `action-translation`
+- **Input Requirements**: `target-repo` and `target-language` now only required for sync mode
+- **Test Count**: Increased from 155 to 183 tests
+
+### Removed
+- **workflow_dispatch Support**: Removed `workflow_dispatch` trigger from sync mode
+  - Use `test-translation` label on PRs for manual testing instead
+  - This ensures every translation PR has source PR metadata for accurate review
+  - Simplifies architecture: `prNumber` is now always available (never null)
+
 ## [Unreleased]
 
 ### Added
@@ -265,7 +304,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Basic translation workflow using Claude AI
 - GitHub Actions integration
 - Support for MyST Markdown documents
-
----
-
-For detailed release notes, see [docs/releases/](docs/releases/).

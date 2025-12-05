@@ -1,5 +1,5 @@
-name: 'Translation Sync'
-description: 'Automatically sync translations across repositories'
+name: 'Translation Action'
+description: 'Automatically sync and review translations across repositories'
 author: 'QuantEcon'
 
 branding:
@@ -7,12 +7,29 @@ branding:
   color: 'blue'
 
 inputs:
+  # Mode selection
+  mode:
+    description: 'Operation mode: sync (create translation PRs) or review (quality assessment)'
+    required: true
+  
+  # Sync mode inputs
   target-repo:
-    description: 'Target repository (owner/repo)'
-    required: true
+    description: 'Target repository for translations (owner/repo). Required for sync mode.'
+    required: false
   target-language:
-    description: 'Target language code (e.g., zh-cn)'
-    required: true
+    description: 'Target language code (e.g., zh-cn, fa). Required for sync mode.'
+    required: false
+  
+  # Review mode inputs
+  source-repo:
+    description: 'Source repository for English content (owner/repo). Required for review mode.'
+    required: false
+  max-suggestions:
+    description: 'Maximum number of improvement suggestions in review comment'
+    required: false
+    default: '5'
+  
+  # Shared inputs
   docs-folder:
     description: 'Documentation folder pattern (e.g., lectures/)'
     required: false
@@ -42,7 +59,7 @@ inputs:
   pr-labels:
     description: 'Comma-separated labels for created PRs'
     required: false
-    default: 'action-translation-sync,automated'
+    default: 'action-translation,automated'
   pr-reviewers:
     description: 'Comma-separated list of GitHub usernames to request as reviewers (e.g., user1,user2). Leave empty for no reviewers.'
     required: false
@@ -57,10 +74,19 @@ inputs:
     default: 'false'
 
 outputs:
+  # Sync mode outputs
   pr-url:
-    description: 'URL of the created pull request'
+    description: 'URL of the created pull request (sync mode)'
   files-synced:
-    description: 'Number of files synchronized'
+    description: 'Number of files synchronized (sync mode)'
+  
+  # Review mode outputs
+  review-verdict:
+    description: 'Review verdict: PASS, WARN, or FAIL (review mode)'
+  translation-score:
+    description: 'Overall translation quality score 1-10 (review mode)'
+  diff-score:
+    description: 'Diff quality score 1-10 (review mode)'
 
 runs:
   using: 'node20'
