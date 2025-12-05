@@ -98,6 +98,7 @@ The action includes **built-in glossaries** for consistent translation across al
 
 Current glossaries:
 - **`glossary/zh-cn.json`** - Simplified Chinese (357 terms) ✅
+- **`glossary/fa.json`** - Persian/Farsi (357 terms) ✅
 - **`glossary/ja.json`** - Japanese (planned)
 - **`glossary/es.json`** - Spanish (planned)
 
@@ -184,7 +185,7 @@ For comprehensive documentation, see the [`docs/`](docs/) directory:
 - **[Project Design](docs/PROJECT-DESIGN.md)** - Architecture and design decisions
 - **[Architecture](docs/ARCHITECTURE.md)** - System diagrams and data flow
 - **[Implementation](docs/IMPLEMENTATION.md)** - What's been built and how it works
-- **[Status Report](docs/STATUS-REPORT.md)** - Current project status and metrics
+- **[CHANGELOG](CHANGELOG.md)** - Version history and current status
 - **[Documentation Index](docs/INDEX.md)** - Complete documentation navigation
 
 ## Companion Tools

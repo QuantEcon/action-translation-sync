@@ -134,9 +134,9 @@ docs/
 - **Core Code**: ~2,700 lines across 7 modules
 - **Test Coverage**: 155 tests (100% passing)
 - **GitHub Tests**: 24 automated scenarios
-- **Glossary Terms**: 355 (Chinese)
+- **Glossary Terms**: 357 (Chinese), 357 (Persian)
 - **Bundle Size**: ~1.9MB
-- **Languages Supported**: English, Simplified Chinese (more planned)
+- **Languages Supported**: English, Simplified Chinese, Persian/Farsi (Japanese, Spanish planned)
 
 ---
 
@@ -147,7 +147,7 @@ docs/
 1. **Section-Based Translation**: Translates entire `## Section` blocks for better context
 2. **Position-Based Matching**: Matches sections by position (1st → 1st), not content
 3. **Recursive Structure**: Full support for nested headings (##-######)
-4. **Heading-Maps**: Language-independent mapping system (English ID → Chinese heading)
+4. **Heading-Maps**: Language-independent mapping system (English ID → translated heading)
 5. **Language Configuration**: Extensible system for language-specific rules (v0.5.1)
 
 See [PROJECT-DESIGN.md](PROJECT-DESIGN.md) for detailed explanations.

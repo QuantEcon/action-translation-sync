@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Persian (Farsi) Glossary**: Complete Persian glossary with 357 terms
+  - Economic terms (~160): تعادل, تولید ناخالص داخلی, سیاست مالی
+  - Mathematical terms (~100): ماتریس, بردار ویژه, همگرایی
+  - Statistical terms (~35): توزیع نرمال, رگرسیون, واریانس
+  - Economist names (~45): رابرت سولو, میلتون فریدمن
+  - Ready for production deployment on Persian translation repositories
 - **Persian (Farsi) Language Support**: Added full Persian language configuration
   - Persian (`fa`) language config with RTL punctuation rules
   - Language-specific prompt customization (formal/academic style)

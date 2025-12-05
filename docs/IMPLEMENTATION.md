@@ -1096,7 +1096,7 @@ core.debug(`Translation result: ${translation.substring(0, 200)}...`);
 - **[Heading Maps](HEADING-MAPS.md)** - Cross-language section matching
 - **[Testing Guide](TESTING.md)** - Test suite details
 - **[Quick Start](QUICKSTART.md)** - Getting started guide
-- **[Status Report](STATUS-REPORT.md)** - Current project status
+- **[CHANGELOG](../CHANGELOG.md)** - Version history and current status
 
 ---
 
