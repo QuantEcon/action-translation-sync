@@ -10,9 +10,19 @@ This document outlines potential future features for the `action-translation` sy
 
 ## Table of Contents
 
-1. [Resync Workflow / Tool](#1-resync-workflow--tool)
-2. [Multi-Language Hub-Spoke Architecture](#2-multi-language-hub-spoke-architecture)
-3. [Bidirectional Sync / Upstream Suggestions](#3-bidirectional-sync--upstream-suggestions)
+1. [Resync Workflow / Tool](#1-resync-workflow--tool)  
+   *Handle non-PR commits and detect translation divergence*
+   - [Special Case: Initial Alignment / Onboarding](#special-case-initial-alignment--onboarding)  
+     *Strategy for onboarding existing translations like lecture-intro*
+
+2. [Translation Quality Optimization (Benchmark Project)](#2-translation-quality-optimization-benchmark-project)  
+   *Use human translations to improve AI translation quality*
+
+3. [Multi-Language Hub-Spoke Architecture](#3-multi-language-hub-spoke-architecture)  
+   *Design for managing multiple translation repositories*
+
+4. [Bidirectional Sync / Upstream Suggestions](#4-bidirectional-sync--upstream-suggestions)  
+   *Enable translators to suggest improvements to English source*
 
 ---
 
@@ -483,9 +493,202 @@ jobs:
 - Example: Enable sync for 80% aligned files, handle rest manually
 - Solution: Phased rollout, not all-or-nothing
 
+#### Related: Translation Quality Benchmark
+
+Once alignment is complete, the same `lecture-intro` parallel corpus can be used to **benchmark and improve AI translation quality**. See [Section 2: Translation Quality Optimization](#2-translation-quality-optimization-benchmark-project) for details on using human translations as a gold standard.
+
 ---
 
-## 2. Multi-Language Hub-Spoke Architecture
+## 2. Translation Quality Optimization (Benchmark Project)
+
+### Problem Statement
+
+**Opportunity**: The `lecture-intro` series has both English and high-quality human-translated Chinese versions. This creates a **gold standard corpus** for translation quality optimization.
+
+**Goal**: Use existing human translations as a benchmark to improve AI translation quality through systematic comparison and analysis.
+
+### Use Cases
+
+1. **Prompt Engineering**: Test different prompts, compare AI output to human translations
+2. **Model Comparison**: Benchmark Claude Sonnet vs Opus vs GPT-4 vs others
+3. **Glossary Extraction**: Mine terminology from human translations
+4. **Style Analysis**: Learn translation patterns from human translators
+5. **Quality Metrics**: Develop automated quality scoring
+
+### Proposed Workflow
+
+This will be a **standalone CLI tool** (not a GitHub Action mode) for flexibility and local development:
+
+```bash
+# Run benchmark locally
+npm run benchmark -- \
+  --source lectures/python_by_example.md \
+  --reference lectures-zh-cn/python_by_example.md \
+  --models "sonnet-4-5,opus-4" \
+  --output reports/benchmark-report.md
+```
+
+Could also be wrapped in a GitHub workflow for CI integration:
+
+```yaml
+# .github/workflows/benchmark-quality.yml
+name: Translation Quality Benchmark
+
+on:
+  workflow_dispatch:
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+      - run: cd tool-benchmark-translations && npm ci && npm run benchmark
+```
+
+### Analysis Dimensions
+
+**1. Structural Fidelity**
+```markdown
+Metric: How well does AI preserve document structure?
+
+English: 12 sections, 8 code blocks, 15 math equations
+Human:   12 sections, 8 code blocks, 15 math equations ✓
+AI:      12 sections, 8 code blocks, 14 math equations ⚠️
+```
+
+**2. Terminology Consistency**
+```markdown
+Compare term translations:
+
+| English | Human Translation | AI Translation | Match? |
+|---------|-------------------|----------------|--------|
+| utility function | 效用函数 | 效用函数 | ✓ |
+| equilibrium | 均衡 | 平衡 | ✗ |
+| household | 家庭 | 家户 | ⚠️ |
+
+Extract discrepancies → Update glossary
+```
+
+**3. Semantic Equivalence**
+```markdown
+Use Claude/GPT to assess meaning preservation:
+
+Prompt: "Compare these two Chinese translations of the English text.
+Rate semantic equivalence on 1-10 scale."
+
+Section 1: Score 9/10 - Minor phrasing difference
+Section 2: Score 7/10 - AI translation too literal
+Section 3: Score 10/10 - Perfect equivalence
+```
+
+**4. Fluency & Naturalness**
+```markdown
+Human: Reads naturally, appropriate register for academic content
+AI: Sometimes too literal or awkward phrasing
+
+Example:
+Human: "这种方法在经济学中被广泛使用"
+AI: "这个方法在经济学中广泛地被使用"
+(AI adds unnecessary "地", sounds less natural)
+```
+
+**5. Localization Decisions**
+```markdown
+Human translators make contextual adaptations:
+
+- Cultural examples: Human replaces US examples with Chinese equivalents
+- Academic conventions: Citations formatted for Chinese readers
+- Pedagogical enhancements: Extra practice problems added
+
+AI typically does literal translation without these adaptations.
+```
+
+### Benchmark Output Example
+
+```markdown
+## Translation Quality Benchmark Report
+
+**Date**: 2025-01-15
+**Source**: lecture-intro/python_by_example.md
+**Models Tested**: Claude Sonnet 4.5, Claude Opus 4, GPT-4
+
+### Overall Scores (1-10 scale)
+
+| Model | Structure | Terminology | Semantics | Fluency | Overall |
+|-------|-----------|-------------|-----------|---------|---------|
+| Human (reference) | - | - | - | - | Baseline |
+| Claude Sonnet 4.5 | 10 | 8.5 | 8.8 | 7.2 | 8.6 |
+| Claude Opus 4 | 10 | 9.2 | 9.1 | 8.5 | 9.2 |
+| GPT-4 | 10 | 8.0 | 8.5 | 7.8 | 8.6 |
+
+### Key Findings
+
+**✅ Strengths**:
+- All models preserve structure perfectly
+- Technical terminology mostly accurate
+- Mathematical notation handled correctly
+
+**⚠️ Areas for Improvement**:
+- Fluency lags behind human (especially Sonnet)
+- Missing localization decisions
+- Some terminology inconsistencies
+
+**📝 Recommendations**:
+1. Use Opus 4 for better fluency (0.4 cost increase acceptable)
+2. Update glossary with 12 terms where AI diverged from human
+3. Add prompt instructions for natural phrasing
+4. Consider post-editing pass for fluency
+```
+
+### Implementation Plan
+
+**Phase 1: Data Collection**
+- Extract parallel corpus (English → Human Chinese) from lecture-intro
+- Organize into test set (representative samples)
+
+**Phase 2: Automated Benchmark**
+- Translate test set with different models/prompts
+- Compare outputs to human translations
+- Generate similarity scores
+
+**Phase 3: Analysis & Insights**
+- Identify patterns in discrepancies
+- Extract glossary terms from human translations
+- Document best practices from human work
+
+**Phase 4: Optimization**
+- Update prompts based on findings
+- Enhance glossary
+- Fine-tune language configuration
+- Re-run benchmarks to measure improvement
+
+### Integration with Main Action
+
+**Separate Tool**: This should be a standalone benchmarking tool, not part of the main sync action.
+
+**Location**: `tool-benchmark-translations/` (similar to `tool-bulk-translator/`)
+
+**Usage**:
+```bash
+npm run benchmark -- \
+  --source lecture-intro \
+  --reference lecture-intro.zh-cn \
+  --models "sonnet-4-5,opus-4,gpt-4" \
+  --output reports/benchmark-2025-01-15.md
+```
+
+**Benefits**:
+- Continuous quality improvement
+- Data-driven prompt engineering
+- Glossary enhancement from real translations
+- Model selection guidance (cost vs quality)
+
+**Future**: Could be integrated into CI/CD to automatically benchmark new releases.
+
+---
+
+## 3. Multi-Language Hub-Spoke Architecture
 
 ### Current Design
 
@@ -655,7 +858,7 @@ lecture-python/
 
 **When to reconsider**:
 - If QuantEcon expands to 10+ languages → consider Federated Hub
-- If language teams want shared ownership → still not Mesh, but add suggestion workflow (Section 3)
+- If language teams want shared ownership → still not Mesh, but add suggestion workflow (Section 4)
 
 ### Multi-Language Coordination Scenarios
 
@@ -787,7 +990,7 @@ Lecture: aiyagari.md
 
 ---
 
-## 3. Bidirectional Sync / Upstream Suggestions
+## 4. Bidirectional Sync / Upstream Suggestions
 
 ### Problem Statement
 
@@ -1093,31 +1296,40 @@ jobs:
 | Feature | Priority | Effort | Value | Status |
 |---------|----------|--------|-------|--------|
 | **Initial Alignment Agent** | **High** | **High** | **Critical** | **Planned** |
-| Multi-lang Documentation | High | Low | High | **Ready to implement** |
+| **Translation Quality Benchmark Tool** | **High** | **Medium** | **High** | **Planned** |
+| Hub-Spoke Setup Documentation | High | Low | High | **Ready to implement** |
 | Resync Monitoring | Medium | Low | Medium | Planned |
 | Upstream Suggestions (Manual) | Medium | Low | Medium | Planned |
 | Resync Auto-fix | Low | Medium | Medium | Future |
 | Upstream Suggestions (Automated) | Low | High | Medium | Future |
 
-**Note**: Initial Alignment Agent is HIGH priority for onboarding existing projects like `lecture-intro`.
+**Notes**:
+- **Initial Alignment Agent** is HIGH priority for onboarding existing projects like `lecture-intro`
+- **Translation Quality Benchmark Tool** will use `lecture-intro` human translations to optimize AI quality
+- Both tools leverage the same `lecture-intro` corpus but serve different purposes:
+  - Alignment Agent: One-time onboarding to enable automated sync
+  - Benchmark Tool: Ongoing quality improvement of AI translations
 
 ### Recommended Roadmap
 
 **v0.8.0** (Near-term)
-- [ ] Document multi-language hub-spoke setup
+- [ ] Document hub-spoke setup guide (Section 3)
 - [ ] Add workflow templates for new languages
-- [ ] Resync monitoring mode (report-only)
-- [ ] **Initial alignment agent (Phase 1: Structural scan)**
+- [ ] Resync monitoring mode (`mode: monitor`)
+- [ ] **Initial Alignment Agent (Phase 1: Structural scan)**
+- [ ] **Translation Quality Benchmark Tool (Phase 1: Data collection)**
 
 **v0.9.0** (Medium-term)
-- [ ] **Initial alignment agent (Phase 2-3: Sampling + Interactive)**
-- [ ] Label-triggered upstream suggestions
+- [ ] **Initial Alignment Agent (Phase 2-3: Sampling + Interactive)**
+- [ ] **Translation Quality Benchmark Tool (Phase 2-3: Automated comparison + Analysis)**
+- [ ] Label-triggered upstream suggestions (`mode: suggest`)
 - [ ] Suggestion PR creation and linking
-- [ ] Resync auto-fix mode
+- [ ] Resync auto-fix mode (`mode: resync`)
 
 **v1.0.0** (Future)
-- [ ] AI-assisted suggestion extraction
-- [ ] Cross-language consistency checking
+- [ ] **Translation Quality Benchmark Tool (Phase 4: Continuous optimization)**
+- [ ] AI-assisted suggestion extraction (`suggestion-format: freeform`)
+- [ ] Cross-language glossary consistency checking
 - [ ] Translation status dashboard
 
 ---
