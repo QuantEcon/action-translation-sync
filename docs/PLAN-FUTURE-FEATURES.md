@@ -178,6 +178,311 @@ function isFromMergedPR(commit: Commit): boolean {
 - **State tracking**: May need to track "last synced commit" per file
 - **Conflict handling**: What if target has local-only changes?
 
+### Special Case: Initial Alignment / Onboarding
+
+#### Problem Statement
+
+**Critical use case**: Onboarding existing translation projects that were developed independently.
+
+**Example**: `lecture-intro` series already exists in both English and Mandarin Chinese. The Chinese version has been manually translated, reviewed, and edited by human translators. Now we want to set up automated sync going forward.
+
+**Challenge**: Before enabling automated sync, we need to:
+1. Verify the translations are "close enough" to establish baseline
+2. Identify divergences (Chinese ahead/behind/different from English)
+3. Create initial heading-maps for all documents
+4. Establish a clean starting point for incremental sync
+
+**If we just enable sync without alignment**, the action will detect massive "changes" and create enormous PRs trying to "fix" manually-curated translations.
+
+#### Strategic Approaches
+
+##### Strategy 1: Bulk Translate & Compare (Similarity Analysis)
+
+**Concept**: Translate all English content fresh, compare with existing Chinese to measure alignment.
+
+```typescript
+// Pseudo-algorithm
+for each file in source:
+  freshTranslation = translateSection(englishContent, mode: NEW)
+  existingTranslation = readFile(targetRepo, samePath)
+  
+  similarity = compareSections(freshTranslation, existingTranslation)
+  
+  if (similarity > 90%):
+    status = "ALIGNED" - Safe to sync
+  else if (similarity > 70%):
+    status = "REVIEW" - Manual review needed
+  else:
+    status = "DIVERGED" - Significant differences
+```
+
+**Similarity Metrics**:
+- **Structural**: Section count, heading hierarchy, code blocks present
+- **Semantic**: Use Claude to assess if translations convey same meaning
+- **Heading-map**: Can we auto-generate valid heading-maps?
+
+**Output**: Alignment report
+```markdown
+## Alignment Report: lecture-intro (en → zh-cn)
+
+### ✅ Well-Aligned Files (Auto-sync ready)
+- `intro.md` - 95% similarity, 8/8 sections match
+- `python_by_example.md` - 92% similarity, 12/12 sections match
+
+### ⚠️ Review Needed (Manual check)
+- `oop_intro.md` - 78% similarity
+  - English: 6 sections | Chinese: 7 sections
+  - Extra section: "实践练习" (Practice Exercises) - Chinese only
+  - Recommendation: Keep Chinese extra section, add to heading-map
+
+### ❌ Significantly Diverged (Manual alignment required)
+- `functions.md` - 45% similarity
+  - English: Major restructure in v2.0 (2024-11)
+  - Chinese: Still based on v1.5 structure (2023-08)
+  - Recommendation: Retranslate or manual merge
+```
+
+**Pros**:
+- ✅ Objective similarity scores
+- ✅ Identifies which files are safe to auto-sync
+- ✅ Catches structural divergence
+- ✅ Can auto-generate initial heading-maps for aligned files
+
+**Cons**:
+- ❌ Expensive (translates entire corpus)
+- ❌ Fresh translation may not match human translation style
+- ❌ False negatives: Good human translation may score low vs. AI translation
+- ❌ Doesn't account for intentional localization (Chinese adds context)
+
+##### Strategy 2: Bidirectional Diff Analysis
+
+**Concept**: Detect direction and magnitude of divergence without translation.
+
+```typescript
+// Pseudo-algorithm
+for each file in both repos:
+  englishSections = parseSections(sourceFile)
+  chineseSections = parseSections(targetFile)
+  
+  // Structural comparison
+  if (englishSections.length > chineseSections.length):
+    status = "TARGET_BEHIND" - Chinese missing sections
+  else if (englishSections.length < chineseSections.length):
+    status = "TARGET_AHEAD" - Chinese has extra content
+  else if (englishSections.length == chineseSections.length):
+    // Check if content is substantively different
+    englishWordCount = countWords(englishSections)
+    chineseCharCount = countCharacters(chineseSections)
+    
+    expectedRatio = 0.6  // Chinese typically 60% length of English
+    actualRatio = chineseCharCount / englishWordCount
+    
+    if (abs(actualRatio - expectedRatio) < 0.2):
+      status = "LIKELY_ALIGNED"
+    else:
+      status = "CONTENT_DIVERGED"
+```
+
+**Git History Analysis** (if available):
+```typescript
+// Check if repos share common ancestor
+sourceCommits = getCommitHistory(sourceRepo, file)
+targetCommits = getCommitHistory(targetRepo, file)
+
+lastCommonCommit = findLastCommonCommit(sourceCommits, targetCommits)
+
+if (lastCommonCommit):
+  sourceChanges = getChangesSince(lastCommonCommit, sourceRepo)
+  targetChanges = getChangesSince(lastCommonCommit, targetRepo)
+  
+  divergenceMetric = {
+    sourceDrift: sourceChanges.length,
+    targetDrift: targetChanges.length,
+    commonAncestor: lastCommonCommit.date
+  }
+```
+
+**Output**: Divergence matrix
+```markdown
+## Divergence Analysis: lecture-intro
+
+| File | Sections (EN/ZH) | Status | Recommendation |
+|------|------------------|--------|----------------|
+| intro.md | 8/8 | ✅ ALIGNED | Auto-generate heading-map |
+| python_by_example.md | 12/13 | ⚠️ TARGET_AHEAD | Review extra section |
+| oop_intro.md | 10/8 | ⚠️ TARGET_BEHIND | Translate 2 new sections |
+| functions.md | 15/10 | ❌ MAJOR_DIVERGE | Manual merge required |
+
+### Git History Insights
+- `functions.md`: Source had major restructure (45 commits since fork)
+- `oop_intro.md`: Target has local improvements (8 commits)
+```
+
+**Pros**:
+- ✅ Fast (no translation needed)
+- ✅ Detects direction of divergence (ahead/behind)
+- ✅ Uses git history if available
+- ✅ Cheap (no API costs)
+
+**Cons**:
+- ❌ Heuristic-based (may be inaccurate)
+- ❌ Can't detect semantic divergence
+- ❌ Requires assumptions (character/word ratios)
+- ❌ Git history may not be available (different repo origins)
+
+##### Strategy 3: Hybrid Intelligent Alignment Agent
+
+**Concept**: Combine structural analysis + selective translation + human guidance.
+
+**Phase 1: Fast Structural Scan** (Strategy 2)
+- Identify obviously aligned files (same section count, reasonable length ratios)
+- Flag diverged files (different structure)
+
+**Phase 2: Selective Translation Sampling** (Strategy 1 variant)
+- For "uncertain" files, translate 2-3 representative sections
+- Compare sampled translations to assess human translation quality
+- Extrapolate to full document
+
+**Phase 3: Interactive Alignment**
+```yaml
+# Generated alignment config
+alignment:
+  intro.md:
+    status: auto-aligned
+    confidence: high
+    action: generate-heading-map
+  
+  python_by_example.md:
+    status: needs-review
+    confidence: medium
+    issue: target-has-extra-section
+    suggestion: |
+      Chinese version has additional section "实践练习" at end.
+      Options:
+      1. Keep as localization (mark in heading-map)
+      2. Add to English version
+      3. Remove from Chinese
+    action: human-decision-required
+  
+  functions.md:
+    status: diverged
+    confidence: high
+    issue: major-restructure
+    suggestion: |
+      English underwent major restructure (v1.5→v2.0).
+      Options:
+      1. Retranslate Chinese from scratch
+      2. Manual merge of improvements
+      3. Keep Chinese on old structure, document version
+    action: human-decision-required
+```
+
+**Workflow**:
+```
+1. Run alignment agent (generates alignment.yml)
+2. Human reviews alignment.yml, makes decisions
+3. Agent executes based on decisions:
+   - Auto-aligned: Generate heading-maps, enable sync
+   - Needs-review: Create issues with specific questions
+   - Diverged: Create manual alignment tasks
+4. Human completes manual tasks
+5. Re-run agent to verify alignment
+6. Enable automated sync
+```
+
+**Pros**:
+- ✅ Best of both worlds (fast + accurate)
+- ✅ Human-in-the-loop for ambiguous cases
+- ✅ Minimizes translation costs (selective sampling)
+- ✅ Creates clear action plan
+- ✅ Gradual rollout (align files incrementally)
+
+**Cons**:
+- ❌ More complex implementation
+- ❌ Requires interactive workflow
+- ❌ Longer time to full alignment
+
+#### Recommended Approach
+
+**For QuantEcon Use Case**: Use **Strategy 3 (Hybrid Agent)** because:
+
+1. **lecture-intro** has high-quality manual translations - don't want false alarms
+2. Some localization intentional (Chinese may have extra examples)
+3. English may have evolved since Chinese translation
+4. Need confidence before enabling automation
+
+**Implementation Plan**:
+
+```yaml
+# .github/workflows/alignment-check.yml
+name: Initial Alignment Check
+
+on:
+  workflow_dispatch:  # Manual trigger only
+    inputs:
+      source-repo:
+        required: true
+      target-repo:
+        required: true
+      target-language:
+        required: true
+
+jobs:
+  align:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: QuantEcon/action-translation@v0.8
+        with:
+          mode: align
+          source-repo: ${{ github.event.inputs.source-repo }}
+          target-repo: ${{ github.event.inputs.target-repo }}
+          target-language: ${{ github.event.inputs.target-language }}
+          # Phase 1: Fast scan
+          alignment-phase: structural-scan
+          # Phase 2: Selective sampling (if needed)
+          sample-size: 3  # sections per uncertain file
+          # Phase 3: Generate report
+          output: alignment-report.md
+```
+
+**Outputs**:
+1. **`alignment-report.md`** - Summary with recommendations
+2. **`alignment.yml`** - Machine-readable alignment config
+3. **GitHub Issues** - One per file needing human review
+4. **Auto-generated heading-maps** - For aligned files
+
+**Success Criteria**:
+- ✅ 80%+ files auto-aligned → Enable sync for those
+- ⚠️ 10-15% needs review → Create issues, handle incrementally  
+- ❌ 5-10% diverged → Manual alignment tasks, defer sync
+
+#### Edge Cases & Considerations
+
+**1. Target has valuable improvements**
+- Example: Chinese adds practice problems, better examples
+- Solution: Mark as "localization enhancements" in heading-map
+- Going forward: Sync English changes, preserve Chinese additions
+
+**2. Competing versions (English evolved significantly)**
+- Example: English v2.0, Chinese still v1.5
+- Solution: Options menu:
+  - Retranslate (lose Chinese improvements)
+  - Manual merge (preserve best of both)
+  - Dual versions (document divergence)
+
+**3. Translation style mismatch**
+- Example: Human translation is formal, AI translation is casual
+- Solution: Use human translation as reference, fine-tune prompts
+- Action: Extract glossary from human translations
+
+**4. No common history**
+- Example: Repos created independently
+- Solution: Pure content-based comparison (no git history)
+
+**5. Partial alignment acceptable**
+- Example: Enable sync for 80% aligned files, handle rest manually
+- Solution: Phased rollout, not all-or-nothing
+
 ---
 
 ## 2. Multi-Language Hub-Spoke Architecture
@@ -787,11 +1092,14 @@ jobs:
 
 | Feature | Priority | Effort | Value | Status |
 |---------|----------|--------|-------|--------|
-| Resync Monitoring | Medium | Low | Medium | Planned |
-| Resync Auto-fix | Low | Medium | Medium | Future |
+| **Initial Alignment Agent** | **High** | **High** | **Critical** | **Planned** |
 | Multi-lang Documentation | High | Low | High | **Ready to implement** |
+| Resync Monitoring | Medium | Low | Medium | Planned |
 | Upstream Suggestions (Manual) | Medium | Low | Medium | Planned |
+| Resync Auto-fix | Low | Medium | Medium | Future |
 | Upstream Suggestions (Automated) | Low | High | Medium | Future |
+
+**Note**: Initial Alignment Agent is HIGH priority for onboarding existing projects like `lecture-intro`.
 
 ### Recommended Roadmap
 
@@ -799,8 +1107,10 @@ jobs:
 - [ ] Document multi-language hub-spoke setup
 - [ ] Add workflow templates for new languages
 - [ ] Resync monitoring mode (report-only)
+- [ ] **Initial alignment agent (Phase 1: Structural scan)**
 
 **v0.9.0** (Medium-term)
+- [ ] **Initial alignment agent (Phase 2-3: Sampling + Interactive)**
 - [ ] Label-triggered upstream suggestions
 - [ ] Suggestion PR creation and linking
 - [ ] Resync auto-fix mode
@@ -813,6 +1123,35 @@ jobs:
 ---
 
 ## Appendix: Configuration Reference (Proposed)
+
+### Alignment Mode Inputs
+
+```yaml
+inputs:
+  mode:
+    description: 'align'
+  source-repo:
+    description: 'Source repository (owner/repo)'
+    required: true
+  target-repo:
+    description: 'Target repository (owner/repo)'
+    required: true
+  target-language:
+    description: 'Target language code'
+    required: true
+  alignment-phase:
+    description: 'structural-scan | selective-sample | full-analysis'
+    default: 'structural-scan'
+  sample-size:
+    description: 'Number of sections to sample per uncertain file'
+    default: 3
+  output-format:
+    description: 'markdown | yaml | json'
+    default: 'markdown'
+  create-issues:
+    description: 'Create GitHub issues for files needing review'
+    default: true
+```
 
 ### Resync Mode Inputs
 
