@@ -15,7 +15,7 @@ paginate: true
 
 # Translation Action
 
-**AI-Powered Translation Automation for Documentation**
+**AI-Powered Translation Automation for Lectures**
 
 GitHub Action • Claude Sonnet 4.5 • MyST Markdown
 
@@ -25,7 +25,7 @@ _QuantEcon Project_
 
 # What It Does
 
-**Automatically translates and reviews documentation when source content changes**
+**Automatically translates and reviews lectures when source content changes**
 
 Monitor merged PRs → Detect changes → Translate → Create PR → AI Review
 
