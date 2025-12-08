@@ -13,7 +13,7 @@ paginate: true
 
 <!-- _class: lead -->
 
-# Translation Sync Action
+# Translation Action
 
 **AI-Powered Translation Automation for Documentation**
 
@@ -25,18 +25,17 @@ _QuantEcon Project_
 
 # What It Does
 
-**Automatically translates documentation when source content changes**
+**Automatically translates and reviews documentation when source content changes**
 
-Monitor merged PRs → Detect changes → Translate → Create review PR
+Monitor merged PRs → Detect changes → Translate → Create PR → AI Review
 
 ## Key Capabilities
 
 ✓ **Smart Diff Translation** – Only translates modified sections
-✓ **Recursive Subsections** – Full support for nested headings (##-######)
-✓ **Language Configuration** – Extensible system for language-specific rules
 ✓ **MyST Markdown Aware** – Preserves code, math, directives
-✓ **Consistent Terminology** – Built-in glossaries (355+ terms for zh-cn)
-✓ **Review Workflow** – All translations go through PR review
+✓ **Consistent Terminology** – Built-in glossaries (357 terms)
+✓ **AI-Powered Review** – Automated quality assessment with scoring
+✓ **Language Extensible** – Configurable rules per target language
 
 ---
 
@@ -101,6 +100,37 @@ _(new sections)_
 
 ---
 
+# Two Operational Modes
+
+<div class="columns">
+<div>
+
+### 🔄 Sync Mode
+_(runs in SOURCE repo)_
+
+- Monitors merged PRs
+- Detects changed sections
+- Translates incrementally
+- Creates PR in target repo
+- Updates heading-maps
+
+</div>
+<div>
+
+### 📝 Review Mode
+_(runs in TARGET repo)_
+
+- Evaluates translation PRs
+- Scores: accuracy, fluency, terminology
+- Checks diff correctness
+- Posts review comments
+- PASS / WARN / FAIL verdicts
+
+</div>
+</div>
+
+---
+
 # Status & Getting Started
 
 <div class="columns">
@@ -108,36 +138,29 @@ _(new sections)_
 
 ## Current Status
 
-📦 **v0.5.1** – Testing and Development
-✨ **Language-Extensible Architecture**
-✅ 147 tests passing (100%)
+📦 **v0.7.0** – Testing & Development
+🔄 **Two Modes**: Sync + Review
+✅ 183 tests passing
 🧪 24 GitHub test scenarios
 
 ## Use Cases
 
 - Multi-language documentation
-- Educational content (QuantEcon lectures)
-- Technical documentation
+- Educational content
 - OSS localization
-- Academic papers
 
 </div>
 <div>
 
 ## Resources
 
-**GitHub**  
-quantecon/action-translation-sync
+**GitHub**: QuantEcon/action-translation
 
-**Docs**  
-10 comprehensive guides in `docs/`
+**Docs**: 11 guides in `docs/`
 
-**Tools**
-- Bulk translator for initial setup
-- GitHub testing framework
+**Tools**: Bulk translator, test framework
 
-**License**  
-MIT
+**License**: MIT
 
 </div>
 </div>
