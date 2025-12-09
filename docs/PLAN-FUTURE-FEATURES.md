@@ -16,7 +16,8 @@ This document outlines potential future features for the `action-translation` sy
      *Strategy for onboarding existing translations like lecture-intro*
 
 2. [Translation Quality Optimization (Benchmark Project)](#2-translation-quality-optimization-benchmark-project)  
-   *Use human translations to improve AI translation quality*
+   *Use human translations to improve AI translation quality*  
+   → **Now a separate project**: See [PROJECT-BENCHMARK.md](projects/PROJECT-BENCHMARK.md)
 
 3. [Multi-Language Hub-Spoke Architecture](#3-multi-language-hub-spoke-architecture)  
    *Design for managing multiple translation repositories*
@@ -495,11 +496,22 @@ jobs:
 
 #### Related: Translation Quality Benchmark
 
-Once alignment is complete, the same `lecture-intro` parallel corpus can be used to **benchmark and improve AI translation quality**. See [Section 2: Translation Quality Optimization](#2-translation-quality-optimization-benchmark-project) for details on using human translations as a gold standard.
+Once alignment is complete, the same `lecture-intro` parallel corpus can be used to **benchmark and improve AI translation quality**. See the dedicated project plan: [PROJECT-BENCHMARK.md](projects/PROJECT-BENCHMARK.md).
 
 ---
 
 ## 2. Translation Quality Optimization (Benchmark Project)
+
+> **📋 This feature has been elevated to a standalone project.**
+> 
+> See: **[PROJECT-BENCHMARK.md](projects/PROJECT-BENCHMARK.md)** for the comprehensive plan including:
+> - Dataset specification (terms, sentences, paragraphs)
+> - Multi-model benchmarking infrastructure
+> - RA team coordination (Xiamen University)
+> - GitHub Pages dashboard
+> - Integration with existing benchmarks (WMT, COMET, XTREME)
+>
+> The section below is retained for historical context and original design thinking.
 
 ### Problem Statement
 
@@ -1296,17 +1308,33 @@ jobs:
 | Feature | Priority | Effort | Value | Status |
 |---------|----------|--------|-------|--------|
 | **Initial Alignment Agent** | **High** | **High** | **Critical** | **Planned** |
-| **Translation Quality Benchmark Tool** | **High** | **Medium** | **High** | **Planned** |
 | Hub-Spoke Setup Documentation | High | Low | High | **Ready to implement** |
 | Resync Monitoring | Medium | Low | Medium | Planned |
 | Upstream Suggestions (Manual) | Medium | Low | Medium | Planned |
 | Resync Auto-fix | Low | Medium | Medium | Future |
 | Upstream Suggestions (Automated) | Low | High | Medium | Future |
 
+### Separate Project: Translation Quality Benchmark
+
+The **Translation Quality Benchmark Tool** has been elevated to a standalone project with its own comprehensive plan:
+
+📊 **[PROJECT-BENCHMARK.md](projects/PROJECT-BENCHMARK.md)**
+
+**Scope**: 
+- Gold-standard EN-ZH dataset (1000+ terms, 500+ sentences, 100+ paragraphs)
+- Multi-model benchmarking (Claude, GPT, Gemini)
+- GitHub Pages dashboard for visualization
+- Integration with `lecture-intro` human translations
+- Collaboration with Xiamen University RA Group
+
+This is now tracked separately from the core `action-translation` features.
+
+---
+
 **Notes**:
 - **Initial Alignment Agent** is HIGH priority for onboarding existing projects like `lecture-intro`
-- **Translation Quality Benchmark Tool** will use `lecture-intro` human translations to optimize AI quality
-- Both tools leverage the same `lecture-intro` corpus but serve different purposes:
+- The benchmark project will use `lecture-intro` human translations to optimize AI quality
+- Both leverage the same corpus but serve different purposes:
   - Alignment Agent: One-time onboarding to enable automated sync
   - Benchmark Tool: Ongoing quality improvement of AI translations
 
