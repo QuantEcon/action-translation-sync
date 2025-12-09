@@ -309,6 +309,29 @@ This project includes two standalone tools for different stages of the translati
 
 **Use case**: Validating changes to the action before deployment
 
+### 3. Translation Benchmark Tool (Planned)
+
+**Purpose**: Multi-model translation quality benchmarking and dataset development
+
+📊 **[tool-benchmark/](tool-benchmark/)** - *Planned*
+
+**Project Plan**: See [docs/projects/PROJECT-BENCHMARK.md](docs/projects/PROJECT-BENCHMARK.md)
+
+**Goals**:
+- Build gold-standard EN-ZH translation dataset (1000+ terms, 500+ sentences, 100+ paragraphs)
+- Benchmark translation quality across LLM providers (Claude, GPT, Gemini)
+- Use automatic metrics (COMET, XCOMET, BLEU) alongside human evaluation
+- Create GitHub Pages dashboard for benchmark visualization
+- Feed insights back into action-translation prompt optimization
+
+**Collaboration**: Xiamen University RA Group
+
+**Differentiation from existing benchmarks** (WMT, XTREME, OPUS):
+- Domain-specific: Economics + mathematics terminology
+- Format-aware: MyST Markdown with code/math preservation
+- Expert-validated: Economics PhD/graduate students
+- Integration: Direct feedback loop to improve this action
+
 ## Development
 
 ### Prerequisites
