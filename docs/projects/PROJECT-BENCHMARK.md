@@ -15,6 +15,58 @@ Build a gold-standard English-Chinese translation benchmark dataset and multi-mo
 
 ---
 
+## Existing Benchmarks & Our Differentiation
+
+### Available Multilingual Benchmarks
+
+| Benchmark | Focus | EN-ZH? | Domain | Limitations for Our Use |
+|-----------|-------|--------|--------|------------------------|
+| **WMT** (Workshop on MT) | General MT evaluation | ✅ | News, general | Not economics-specific; no academic terminology |
+| **XTREME** (Google) | Cross-lingual NLU | ✅ | 40 languages, 9 tasks | Focus on NLU, not translation quality |
+| **OPUS** | Parallel corpora | ✅ | 1000+ languages | Raw data, no quality scoring; not domain-specific |
+| **FLORES+** | Low-resource MT | ✅ | 200 languages | General domain; no technical terminology |
+| **Tatoeba** | Sentence retrieval | ✅ | Conversational | Short sentences; no academic content |
+
+### Evaluation Metrics Available
+
+| Tool | Type | What It Measures | Notes |
+|------|------|------------------|-------|
+| **BLEU** | N-gram overlap | Surface similarity | Industry standard; correlates poorly with human judgment |
+| **COMET** | Neural metric | Learned quality | Best correlation with human scores; requires reference |
+| **XCOMET** | Explainable neural | Quality + error spans | Identifies minor/major/critical errors |
+| **CometKiwi** | Reference-free | Quality without reference | Good for production; newer approach |
+| **TER** | Edit distance | Translation error rate | Complements BLEU |
+
+### Why Build Our Own?
+
+**Gap**: No existing benchmark covers **academic economics + mathematics** with:
+- Technical terminology (贝尔曼方程, 拉格朗日乘数)
+- Mathematical notation in context
+- MyST Markdown formatting preservation
+- Human expert validation specific to economics education
+
+**Our Differentiation**:
+
+| Aspect | Existing Benchmarks | Our Benchmark |
+|--------|---------------------|---------------|
+| **Domain** | General/News | Economics + Mathematics |
+| **Terminology** | Generic | Expert-curated glossary (357→1000+) |
+| **Format** | Plain text | MyST Markdown with code/math |
+| **Validation** | Crowdsourced | Economics PhD/grad students |
+| **Purpose** | Model comparison | Model comparison + prompt optimization |
+| **Integration** | Standalone | Feeds back into action-translation |
+
+### Leveraging Existing Resources
+
+We can **build on** rather than duplicate:
+
+1. **COMET/XCOMET**: Use as automatic evaluation metric alongside human scores
+2. **OPUS**: Mine parallel economics texts for initial dataset seeds
+3. **WMT methodology**: Adopt their evaluation protocols and statistical significance testing
+4. **Hugging Face Datasets**: Publish our dataset for community use
+
+---
+
 ## Project Components
 
 | Component | Description | Location | Priority |
@@ -227,9 +279,16 @@ interface TranslateOptions {
 |--------|------|-------------|
 | **BLEU** | Automatic | N-gram overlap (industry standard) |
 | **TER** | Automatic | Translation Error Rate |
-| **COMET** | Neural | Learned quality estimation |
+| **COMET** | Neural | Learned quality estimation ([Unbabel/COMET](https://github.com/Unbabel/COMET)) |
+| **XCOMET** | Explainable | Quality + error span detection |
 | **Glossary Compliance** | Custom | % of key terms correctly translated |
 | **Formatting Accuracy** | Custom | MyST/Markdown preservation |
+
+**Implementation Note**: Use `unbabel-comet` Python package for COMET/XCOMET metrics:
+```bash
+pip install unbabel-comet
+comet-score -s src.txt -t hyp.txt -r ref.txt --model Unbabel/XCOMET-XL
+```
 
 ### 2.5 Output Format
 
@@ -684,6 +743,7 @@ statistics/
 
 ## Appendix B: Related Documents
 
+**Internal**:
 - [ARCHITECTURE.md](../ARCHITECTURE.md) - action-translation architecture
 - [TESTING.md](../TESTING.md) - Current testing approach
 - [CLAUDE-MODELS.md](../CLAUDE-MODELS.md) - Model information
@@ -691,6 +751,36 @@ statistics/
 
 ---
 
-**Document Version**: 1.0  
+## Appendix C: External Resources
+
+### Existing Benchmarks & Datasets
+
+| Resource | URL | Use For |
+|----------|-----|---------|
+| **WMT Conference** | [statmt.org/wmt24](http://www2.statmt.org/wmt24/) | Evaluation methodology, metrics shared task |
+| **XTREME** | [github.com/google-research/xtreme](https://github.com/google-research/xtreme) | Cross-lingual benchmark reference |
+| **OPUS** | [opus.nlpl.eu](https://opus.nlpl.eu/) | Parallel corpora mining |
+| **Hugging Face Datasets** | [huggingface.co/datasets](https://huggingface.co/datasets?task_categories=task_categories:translation) | Dataset hosting, community standards |
+| **FLORES+** | [huggingface.co/datasets/openlanguagedata/flores_plus](https://huggingface.co/datasets/openlanguagedata/flores_plus) | Multi-language evaluation sets |
+
+### Evaluation Tools
+
+| Tool | URL | Purpose |
+|------|-----|---------|
+| **COMET** | [github.com/Unbabel/COMET](https://github.com/Unbabel/COMET) | Neural MT evaluation metric |
+| **XCOMET** | [huggingface.co/Unbabel/XCOMET-XL](https://huggingface.co/Unbabel/XCOMET-XL) | Explainable quality + error detection |
+| **SacreBLEU** | [github.com/mjpost/sacrebleu](https://github.com/mjpost/sacrebleu) | Reproducible BLEU scoring |
+| **BERTScore** | [github.com/Tiiiger/bert_score](https://github.com/Tiiiger/bert_score) | Semantic similarity metric |
+
+### Key Papers
+
+1. **COMET** - Rei et al. (2020) "COMET: A Neural Framework for MT Evaluation" - EMNLP
+2. **XCOMET** - Guerreiro et al. (2023) "xCOMET: Transparent MT Evaluation through Fine-grained Error Detection"
+3. **WMT Metrics** - Kocmi et al. (2024) "Findings of the WMT 2024 Shared Task on Machine Translation"
+4. **XTREME** - Hu et al. (2020) "XTREME: A Massively Multilingual Multi-task Benchmark"
+
+---
+
+**Document Version**: 1.1  
 **Last Updated**: December 2025  
 **Author**: QuantEcon Team
