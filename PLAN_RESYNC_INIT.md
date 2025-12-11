@@ -1,14 +1,56 @@
 # Resync & Initial Alignment: Implementation Plan
 
-**Document Status**: Implementation Planning  
-**Last Updated**: December 2025  
-**Version**: Draft v0.1
+**Document Status**: Phase 1 Complete  
+**Last Updated**: 11 December 2025  
+**Version**: v0.4
 
 This document provides a focused implementation plan for two related features:
 1. **Initial Alignment** - Onboard existing translation repos (one-time setup)
 2. **Resync** - Detect and fix divergence over time (periodic maintenance)
 
 **Design Principle**: Simple, low-complexity approach with clear phases.
+
+---
+
+## Implementation Status
+
+| Phase | Status | Description |
+|-------|--------|-------------|
+| **Phase 1** | ✅ Complete | Structural Diagnostics - CLI tool with reports |
+| **Phase 2** | 🔲 Not Started | Heading-Map Generator |
+| **Phase 3** | 🔲 Not Started | Interactive Alignment PR |
+| **Phase 4** | 🔲 Not Started | GitHub Action Integration |
+
+### Phase 1 Results (11 Dec 2025)
+
+**Tool**: `tool-alignment/` CLI  
+**Tests**: 21 passing across 13 test fixtures  
+**Real-world validation**: `lecture-python-intro` → `lecture-intro.zh-cn`
+
+| Metric | Result |
+|--------|--------|
+| Files analyzed | 52 |
+| ✅ Aligned | 37 (71%) |
+| 🟡 Likely aligned | 8 (15%) |
+| ⚠️ Needs review | 1 (2%) |
+| ❌ Diverged | 3 (6%) |
+| 📄 Missing | 2 (4%) |
+| ➕ Extra | 1 (2%) |
+
+**Key Finding**: 86% of files are structurally aligned and ready for heading-map generation.
+
+---
+
+## Key Decisions (v0.4)
+
+| Decision | Choice | Rationale |
+|----------|--------|----------|
+| Diagnostics approach | Structural first | Zero cost, instant feedback; add translation comparison later if needed |
+| Tool location | `tool-alignment/` | Single tool for alignment + resync (keeps related functionality together) |
+| Testing strategy | Local fixtures + real repos | 13 test fixtures + validation against `lecture-intro` repos |
+| File scope | `.md` + `_toc.yml` + `_config.yml` + `environment.yml` | Include all Jupyter Book structure files |
+| Alignment workflow | Interactive PR | PR with quality table + checkboxes for selective re-translation |
+| Development approach | CLI-first | Local testing and reports first; GitHub Action integration later |
 
 ---
 
@@ -246,55 +288,78 @@ This keeps complexity low while ensuring quality where it matters most (initial 
 
 ## 5. Implementation Plan
 
-### Phase 1: Diagnostics Tool
+### Development Approach: CLI-First
 
-#### Milestone 1.1: Structural Analyzer
+Build as a standalone CLI tool in `tool-alignment/` for local development and testing:
+
+```bash
+# Example usage
+cd tool-alignment
+
+# Run structural diagnostics
+npm run diagnose -- \
+  --source ../test-translation-sync \
+  --target ../test-translation-sync.zh-cn \
+  --output reports/diagnostic-report.md
+
+# Or with local paths
+npm run diagnose -- \
+  --source /path/to/lecture-intro \
+  --target /path/to/lecture-intro.zh-cn \
+  --output reports/alignment-report.md
+```
+
+**Benefits**:
+- Fast iteration during development
+- Easy local testing with test repos
+- Reports viewable locally before any GitHub operations
+- GitHub Action integration can come later (Phase 4)
+
+---
+
+### Phase 1: Structural Diagnostics (No API Cost) ✅ COMPLETE
+
+**Goal**: Understand divergence without translation API calls.
+
+**Completed**: 11 December 2025
+
+#### Milestone 1.1: Structural Analyzer ✅
 
 **Goal**: Parse and compare document structure across repos.
 
 **Deliverables**:
-- [ ] `analyzeStructure(sourceContent, targetContent)` function
-- [ ] Section count comparison
-- [ ] Heading hierarchy comparison  
-- [ ] Code/math block counting
-- [ ] Content length ratio calculation
+- [x] `analyzeMarkdownFile(source, target, file)` function
+- [x] Section count comparison
+- [x] Subsection count comparison
+- [x] Heading hierarchy comparison  
+- [x] Code/math block counting
+- [x] Heading-map detection
+- [x] Config file analysis (`_toc.yml`, `_config.yml`, `environment.yml`)
 
-**Output Type**:
-```typescript
-interface StructuralAnalysis {
-  file: string;
-  source: {
-    sections: number;
-    subsections: number;
-    codeBlocks: number;
-    mathBlocks: number;
-    wordCount: number;
-  };
-  target: {
-    sections: number;
-    subsections: number;
-    codeBlocks: number;
-    mathBlocks: number;
-    charCount: number;
-  };
-  comparison: {
-    sectionMatch: boolean;
-    structureScore: number;  // 0-100
-    contentRatio: number;    // target chars / source words
-    hasHeadingMap: boolean;
-  };
-  classification: 'aligned' | 'likely-aligned' | 'needs-review' | 'diverged' | 'missing';
-}
+**Scoring Formula** (documented in reports):
+```
+Base Score = 100
+
+Penalties:
+  - Section count mismatch:     -20 per missing/extra section
+  - Subsection count mismatch:  -10 per missing/extra subsection
+  - Code block count mismatch:  -15 (if counts differ)
+  - Math block count mismatch:  -15 (if counts differ)
+
+Classification:
+  - aligned:        100% (perfect match)
+  - likely-aligned: 85-99% (minor differences, e.g., code blocks)
+  - needs-review:   55-84% (structural differences need attention)
+  - diverged:       <55% OR section ratio <50%
 ```
 
-**Reusable Code**:
-- `parser.ts:parseSections()` - Parse both repos
-- `parser.ts:parseDocumentComponents()` - Get structure breakdown
-- `heading-map.ts:extractHeadingMap()` - Check if map exists
+**Output Types**: See `tool-alignment/src/types.ts` for `MarkdownAnalysis` and `ConfigAnalysis` interfaces.
 
 ---
 
-#### Milestone 1.2: Translation Comparator
+#### Milestone 1.2: Translation Comparator ⏸️ DEFERRED
+
+> **Note**: Deferred to Phase 2. Structural diagnostics proved sufficient for confident alignment decisions (86% of files aligned).
 
 **Goal**: Compare existing translation with fresh AI translation, section-by-section. Assess quality objectively.
 
@@ -334,74 +399,23 @@ interface TranslationComparison {
 
 ---
 
-#### Milestone 1.3: Report Generator
+#### Milestone 1.3: Report Generator ✅
 
 **Goal**: Generate actionable reports from analysis.
 
 **Deliverables**:
-- [ ] Markdown report generator
-- [ ] JSON data output
-- [ ] Summary statistics
-- [ ] Per-file recommendations
-- [ ] Quality assessment summary
+- [x] Markdown report generator
+- [x] JSON data output
+- [x] Summary statistics
+- [x] Per-file recommendations
+- [x] Scoring methodology documentation
+- [x] Code/math block details in tables
 
-**Report Structure**:
-```markdown
-# Alignment Diagnostic Report
-
-**Source**: QuantEcon/lecture-intro  
-**Target**: QuantEcon/lecture-intro.zh-cn  
-**Date**: 2025-01-15  
-**Files Analyzed**: 12
-
-## Summary
-
-### Alignment Status
-| Status | Count | Percentage |
-|--------|-------|------------|
-| ✅ Aligned | 8 | 67% |
-| ⚠️ Needs Review | 3 | 25% |
-| ❌ Diverged | 1 | 8% |
-
-### Translation Quality
-| Quality | Count | Percentage |
-|---------|-------|------------|
-| 🟢 High | 5 | 42% |
-| 🟡 Acceptable | 4 | 33% |
-| 🟠 Needs Improvement | 2 | 17% |
-| 🔴 Poor | 1 | 8% |
-
-## Aligned Files (Ready for Sync)
-
-| File | Sections | Structure | Quality | Action |
-|------|----------|-----------|---------|--------|
-| intro.md | 8/8 | 95% | 🟢 High (92%) | Generate heading-map |
-| python_by_example.md | 12/12 | 98% | 🟡 Acceptable (78%) | Generate heading-map |
-
-## Files Needing Review
-
-| File | Issue | Quality | Recommendation |
-|------|-------|---------|----------------|
-| oop_intro.md | Target has 1 extra section | 🟢 High | Review localization |
-| functions.md | 5 sections missing | 🟠 Needs work | Translate missing sections |
-
-## Quality Issues Found
-
-| File | Section | Issue Type | Details |
-|------|---------|------------|---------|
-| functions.md | loops | Error | Incorrect terminology |
-| advanced.md | intro | Omission | Missing code explanation |
-
-## Diverged Files
-
-| File | Issue | Recommendation |
-|------|-------|----------------|
-| advanced.md | Major structure mismatch (15 vs 8) | Manual merge required |
-```
+**Sample Output**: See `tool-alignment/reports/lecture-intro-diagnostic.md`
 
 ---
 
-### Phase 2: Sync Strategies
+### Phase 2: Heading-Map Generator 🔲 NOT STARTED
 
 #### Milestone 2.1: Heading-Map Generator
 
@@ -452,35 +466,148 @@ For aligned files (same section count):
 
 ---
 
-### Phase 3: CLI & Integration
+### Phase 3: Interactive Alignment PR
 
-#### Milestone 3.1: Standalone CLI Tool
+#### Milestone 3.1: Alignment PR Generator
 
-**Goal**: `tool-alignment/` for local diagnostics and testing.
+**Goal**: Create PR in target repo with heading-maps and quality assessment table.
 
-```bash
-# Run diagnostics only
-npm run diagnose -- \
-  --source QuantEcon/lecture-intro \
-  --target QuantEcon/lecture-intro.zh-cn \
-  --output reports/alignment-report.md
+**PR Structure**:
+```markdown
+## Alignment PR: `intro.md`
 
-# Run diagnostics + translation comparison
-npm run diagnose -- \
-  --source QuantEcon/lecture-intro \
-  --target QuantEcon/lecture-intro.zh-cn \
-  --compare-translations \
-  --output reports/alignment-report.md
+### Summary
+- **Structure Match**: ✅ 8/8 sections aligned
+- **Overall Quality**: 🟡 78% (Acceptable)
+- **Heading-map**: Generated and ready
 
-# Apply alignment (generate heading-maps)
-npm run align -- \
-  --config alignment.json \
-  --apply
+### Section Quality Assessment
+
+| # | Section | Quality | Action |
+|---|---------|---------|--------|
+| 1 | Introduction | 🟢 92% | - [ ] Re-translate |
+| 2 | Getting Started | 🟢 88% | - [ ] Re-translate |
+| 3 | Basic Concepts | 🟡 72% | - [x] Re-translate |
+| 4 | Advanced Topics | 🟡 68% | - [x] Re-translate |
+| 5 | Examples | 🟢 85% | - [ ] Re-translate |
+| 6 | Best Practices | 🔴 45% | - [x] Re-translate |
+| 7 | FAQ | 🟢 90% | - [ ] Re-translate |
+| 8 | Conclusion | 🟢 95% | - [ ] Re-translate |
+
+### Actions
+
+To re-translate selected sections, comment: `/update-translations`
+
+---
+*Generated by action-translation alignment tool*
 ```
+
+**Deliverables**:
+- [ ] PR creation with heading-map changes
+- [ ] Quality assessment table generation
+- [ ] Pre-check low-quality sections (< 70%)
+- [ ] Section-level quality indicators
 
 ---
 
-#### Milestone 3.2: GitHub Action Modes (Future)
+#### Milestone 3.2: Interactive Re-translation Workflow
+
+**Goal**: Allow selective re-translation via PR comment trigger.
+
+**Workflow**:
+```
+┌─────────────────────────────────────────────────────────────┐
+│  1. Alignment PR Created                                    │
+│     - Heading-maps added to target files                    │
+│     - Quality table with checkboxes in PR body              │
+│     - Low-quality sections pre-checked                      │
+└─────────────────────────────────────────────────────────────┘
+                            │
+                            ▼
+┌─────────────────────────────────────────────────────────────┐
+│  2. Human Review                                            │
+│     - Review quality scores                                 │
+│     - Check/uncheck sections to re-translate                │
+│     - Comment: /update-translations                         │
+└─────────────────────────────────────────────────────────────┘
+                            │
+                            ▼
+┌─────────────────────────────────────────────────────────────┐
+│  3. Re-translation Workflow Triggered                       │
+│     - Parse checked sections from PR body                   │
+│     - Re-translate selected sections via Claude             │
+│     - Commit updates to PR branch                           │
+│     - Re-assess quality, update PR body                     │
+└─────────────────────────────────────────────────────────────┘
+                            │
+                            ▼
+┌─────────────────────────────────────────────────────────────┐
+│  4. Iterate Until Satisfied                                 │
+│     - Review new translations                               │
+│     - Adjust checkboxes if needed                           │
+│     - Repeat /update-translations or merge                  │
+└─────────────────────────────────────────────────────────────┘
+                            │
+                            ▼
+┌─────────────────────────────────────────────────────────────┐
+│  5. Merge When Ready                                        │
+│     - All sections at acceptable quality                    │
+│     - Heading-maps in place                                 │
+│     - Target repo ready for ongoing sync                    │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Technical Implementation**:
+```yaml
+# .github/workflows/update-translations.yml (in target repo)
+name: Update Selected Translations
+
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  update-translations:
+    if: |
+      github.event.issue.pull_request &&
+      contains(github.event.comment.body, '/update-translations')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.issue.pull_request.head.ref }}
+      
+      - name: Parse selected sections from PR body
+        id: parse
+        # Extract checked boxes: - [x] Re-translate
+        # Map to section IDs
+      
+      - name: Re-translate selected sections
+        uses: QuantEcon/action-translation@v0.9
+        with:
+          mode: retranslate
+          sections: ${{ steps.parse.outputs.sections }}
+      
+      - name: Commit to PR branch
+        # Push updated translations
+      
+      - name: Update PR body with new scores
+        # Re-assess and update quality table
+```
+
+**Deliverables**:
+- [ ] `/update-translations` comment trigger
+- [ ] PR body checkbox parser
+- [ ] Section re-translation logic
+- [ ] Quality re-assessment after translation
+- [ ] PR body update with new scores
+
+---
+
+### Phase 4: GitHub Action Modes
+
+#### Milestone 4.1: Align Mode
 
 **Goal**: Integrate into main action as `mode: align` and `mode: resync`.
 
@@ -702,13 +829,30 @@ inputs:
 
 ## Next Steps
 
-1. [ ] Review and finalize this plan
-2. [ ] Implement Milestone 1.1: Structural Analyzer
-3. [ ] Test on `lecture-intro` repos
-4. [ ] Implement Milestone 1.2: Translation Comparator
+### Phase 1: Structural Diagnostics (CLI)
+1. [x] Review and finalize this plan
+2. [ ] Set up `tool-alignment/` directory structure
+3. [ ] Implement Milestone 1.1: Structural Analyzer
+4. [ ] Test on `test-translation-sync` repos (local)
 5. [ ] Implement Milestone 1.3: Report Generator
-6. [ ] Run full diagnostic on `lecture-intro`
-7. [ ] Implement Phase 2 based on diagnostic results
+6. [ ] Run diagnostics on `lecture-intro` repos
+
+### Phase 2: Translation Quality Assessment
+7. [ ] Assess if structural diagnostics are sufficient
+8. [ ] Implement Milestone 1.2: Translation Comparator
+9. [ ] Per-section quality scoring
+
+### Phase 3: Interactive Alignment PR
+10. [ ] Implement Milestone 3.1: Alignment PR Generator
+11. [ ] Create PR with heading-maps + quality table
+12. [ ] Implement Milestone 3.2: Re-translation Workflow
+13. [ ] `/update-translations` comment trigger
+14. [ ] Test interactive workflow end-to-end
+
+### Phase 4: GitHub Action Integration
+15. [ ] Add `mode: align` to GitHub Action
+16. [ ] Add `mode: resync` to GitHub Action
+17. [ ] Add `mode: retranslate` for PR workflow
 
 ---
 

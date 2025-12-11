@@ -1,0 +1,227 @@
+{
+  "metadata": {
+    "sourcePath": "/Users/mmcky/work/quantecon/action-translation/tool-test-action-on-github/test-translation-sync",
+    "targetPath": "/Users/mmcky/work/quantecon/action-translation/tool-test-action-on-github/test-translation-sync.zh-cn",
+    "docsFolder": ".",
+    "generatedAt": "2025-12-11T01:25:35.248Z",
+    "version": "0.1.0"
+  },
+  "summary": {
+    "totalFiles": 3,
+    "markdownFiles": 2,
+    "configFiles": 1,
+    "aligned": 2,
+    "likelyAligned": 0,
+    "needsReview": 0,
+    "diverged": 0,
+    "missing": 0,
+    "extra": 0
+  },
+  "markdownAnalysis": [
+    {
+      "file": "lecture-minimal.md",
+      "fileType": "markdown",
+      "source": {
+        "exists": true,
+        "sections": 2,
+        "subsections": 0,
+        "codeBlocks": 0,
+        "mathBlocks": 0,
+        "wordCount": 143,
+        "headingHierarchy": [
+          {
+            "level": 2,
+            "id": "supply-and-demand",
+            "text": "Supply and Demand",
+            "subsections": []
+          },
+          {
+            "level": 2,
+            "id": "economic-models",
+            "text": "Economic Models",
+            "subsections": []
+          }
+        ]
+      },
+      "target": {
+        "exists": true,
+        "sections": 2,
+        "subsections": 0,
+        "codeBlocks": 0,
+        "mathBlocks": 0,
+        "charCount": 442,
+        "headingHierarchy": [
+          {
+            "level": 2,
+            "id": "",
+            "text": "供给与需求",
+            "subsections": []
+          },
+          {
+            "level": 2,
+            "id": "",
+            "text": "经济模型",
+            "subsections": []
+          }
+        ],
+        "hasHeadingMap": true
+      },
+      "comparison": {
+        "sectionMatch": true,
+        "subsectionMatch": true,
+        "structureScore": 100,
+        "codeBlockMatch": true,
+        "mathBlockMatch": true
+      },
+      "status": "aligned",
+      "issues": []
+    },
+    {
+      "file": "lecture.md",
+      "fileType": "markdown",
+      "source": {
+        "exists": true,
+        "sections": 3,
+        "subsections": 3,
+        "codeBlocks": 5,
+        "mathBlocks": 4,
+        "wordCount": 442,
+        "headingHierarchy": [
+          {
+            "level": 2,
+            "id": "vector-spaces",
+            "text": "Vector Spaces",
+            "subsections": [
+              {
+                "level": 3,
+                "id": "basic-properties",
+                "text": "Basic Properties",
+                "subsections": [
+                  {
+                    "level": 4,
+                    "id": "applications-in-economics",
+                    "text": "Applications in Economics",
+                    "subsections": []
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "level": 2,
+            "id": "matrix-operations",
+            "text": "Matrix Operations",
+            "subsections": [
+              {
+                "level": 3,
+                "id": "applications-in-economics",
+                "text": "Applications in Economics",
+                "subsections": []
+              }
+            ]
+          },
+          {
+            "level": 2,
+            "id": "eigenvalues-and-eigenvectors",
+            "text": "Eigenvalues and Eigenvectors",
+            "subsections": []
+          }
+        ]
+      },
+      "target": {
+        "exists": true,
+        "sections": 3,
+        "subsections": 3,
+        "codeBlocks": 5,
+        "mathBlocks": 4,
+        "charCount": 1476,
+        "headingHierarchy": [
+          {
+            "level": 2,
+            "id": "",
+            "text": "向量空间",
+            "subsections": [
+              {
+                "level": 3,
+                "id": "",
+                "text": "基本性质",
+                "subsections": [
+                  {
+                    "level": 4,
+                    "id": "",
+                    "text": "在经济学中的应用",
+                    "subsections": []
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "level": 2,
+            "id": "",
+            "text": "矩阵运算",
+            "subsections": [
+              {
+                "level": 3,
+                "id": "",
+                "text": "经济学应用",
+                "subsections": []
+              }
+            ]
+          },
+          {
+            "level": 2,
+            "id": "",
+            "text": "特征值与特征向量",
+            "subsections": []
+          }
+        ],
+        "hasHeadingMap": true
+      },
+      "comparison": {
+        "sectionMatch": true,
+        "subsectionMatch": true,
+        "structureScore": 100,
+        "codeBlockMatch": true,
+        "mathBlockMatch": true
+      },
+      "status": "aligned",
+      "issues": []
+    }
+  ],
+  "configAnalysis": [
+    {
+      "file": "_toc.yml",
+      "fileType": "toc",
+      "source": {
+        "exists": true,
+        "entries": 2
+      },
+      "target": {
+        "exists": true,
+        "entries": 2
+      },
+      "comparison": {
+        "identical": true,
+        "structureMatch": true,
+        "differences": []
+      },
+      "status": "identical",
+      "issues": []
+    }
+  ],
+  "recommendations": [
+    {
+      "file": "lecture-minimal.md",
+      "status": "aligned",
+      "action": "ready-for-sync",
+      "details": "Ready for automated sync"
+    },
+    {
+      "file": "lecture.md",
+      "status": "aligned",
+      "action": "ready-for-sync",
+      "details": "Ready for automated sync"
+    }
+  ]
+}
