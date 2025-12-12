@@ -1,8 +1,8 @@
 # Resync & Initial Alignment: Implementation Plan
 
-**Document Status**: Phase 1 Complete  
-**Last Updated**: 11 December 2025  
-**Version**: v0.4
+**Document Status**: Phase 1 Complete, Phase 1b + 2 Planned  
+**Last Updated**: 13 December 2025  
+**Version**: v0.5
 
 This document provides a focused implementation plan for two related features:
 1. **Initial Alignment** - Onboard existing translation repos (one-time setup)
@@ -17,9 +17,17 @@ This document provides a focused implementation plan for two related features:
 | Phase | Status | Description |
 |-------|--------|-------------|
 | **Phase 1** | ✅ Complete | Structural Diagnostics - CLI tool with reports |
-| **Phase 2** | 🔲 Not Started | Heading-Map Generator |
-| **Phase 3** | 🔲 Not Started | Interactive Alignment PR |
-| **Phase 4** | 🔲 Not Started | GitHub Action Integration |
+| **Phase 1b** | 🔲 Next | Code Block Integrity Check (zero-cost enhancement) |
+| **Phase 2** | 🔲 Next | Haiku Quality Scoring (per-section assessment) |
+| **Phase 3** | 🔲 Planned | Heading-Map Generator |
+| **Phase 4** | 🔲 Planned | Interactive Alignment PR |
+| **Phase 5** | 🔲 Planned | GitHub Action Integration |
+
+### Next Development Actions
+
+1. **Phase 1b: Code Block Integrity Check** - Compare code blocks between source/target (strip comments, exact match). Different signal from quality (integrity vs translation). Zero cost, definitive results.
+
+2. **Phase 2: Haiku Quality Scoring** - Per-section translation quality assessment using Claude Haiku (~$0.10 for full repo). Replaces complex heuristics with simple, accurate LLM scoring.
 
 ### Phase 1 Results (11 Dec 2025)
 
@@ -41,15 +49,76 @@ This document provides a focused implementation plan for two related features:
 
 ---
 
-## Key Decisions (v0.4)
+## Quality Assessment Strategy (v0.5)
+
+### Decision: Skip Heuristics, Use Haiku Directly
+
+We evaluated building Level 0 heuristics (character ratio, glossary checks, sentence counts) before LLM quality scoring. **Decision: Skip heuristics layer.**
+
+**Rationale**:
+- Haiku cost is negligible (~$0.10 for 400 sections)
+- Heuristics have high false positive rates (translation length varies naturally)
+- Haiku provides better accuracy with context awareness
+- Reduces codebase complexity
+
+### Exception: Code Block Comparison
+
+**Keep code block comparison as separate check.**
+
+| Aspect | Rationale |
+|--------|-----------|
+| Different signal | Integrity (is code unchanged?) vs Quality (is translation good?) |
+| Definitive | Code either matches or doesn't - no ambiguity |
+| Haiku blind spot | LLMs sometimes gloss over subtle code differences |
+| Zero cost | Can run on every commit without budget concerns |
+| Useful for resync | Quick check if code drifted during manual edits |
+
+### Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Phase 1 + 1b: Structural + Code Integrity           FREE  │
+│  ├── Section/subsection structure comparison               │
+│  ├── Code block exact match (strip comments)               │
+│  └── Output: Structure Score + Code Integrity Score        │
+└─────────────────────────────────────────────────────────────┘
+                           │
+                           ▼
+┌─────────────────────────────────────────────────────────────┐
+│  Phase 2: Haiku Quality Assessment                  ~$0.10 │
+│  ├── Per-section scoring (0-100)                           │
+│  ├── Flag issues: accuracy, fluency, terminology           │
+│  └── Output: Quality Score per section                     │
+└─────────────────────────────────────────────────────────────┘
+                           │
+                           ▼ (optional, only if needed)
+┌─────────────────────────────────────────────────────────────┐
+│  Phase 2b: Sonnet Detailed Analysis (optional)      ~$0.50 │
+│  └── Deep comparison for flagged sections                  │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Cost Estimate (lecture-intro: 52 files, ~400 sections)
+
+| Phase | Cost | Notes |
+|-------|------|-------|
+| Phase 1 + 1b | $0 | Structural + code integrity |
+| Phase 2 | ~$0.10 | Haiku scoring all sections |
+| Phase 2b | ~$0.50 | Sonnet on ~10 flagged sections (if needed) |
+| **Total** | **~$0.60** | vs $25+ for brute-force full translation |
+
+---
+
+## Key Decisions (v0.5)
 
 | Decision | Choice | Rationale |
 |----------|--------|----------|
-| Diagnostics approach | Structural first | Zero cost, instant feedback; add translation comparison later if needed |
-| Tool location | `tool-alignment/` | Single tool for alignment + resync (keeps related functionality together) |
+| Diagnostics approach | Structural first | Zero cost, instant feedback |
+| Quality assessment | Haiku direct | Skip heuristics - Haiku is cheap (~$0.10/repo) and more accurate |
+| Code integrity | Separate check | Different signal (integrity vs quality), zero cost, definitive |
+| Tool location | `tool-alignment/` | Single tool for alignment + resync |
 | Testing strategy | Local fixtures + real repos | 13 test fixtures + validation against `lecture-intro` repos |
 | File scope | `.md` + `_toc.yml` + `_config.yml` + `environment.yml` | Include all Jupyter Book structure files |
-| Alignment workflow | Interactive PR | PR with quality table + checkboxes for selective re-translation |
 | Development approach | CLI-first | Local testing and reports first; GitHub Action integration later |
 
 ---
