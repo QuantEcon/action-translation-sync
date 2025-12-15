@@ -44,6 +44,12 @@ Each test case is a numbered directory containing:
 | 12 | `code-math-blocks` | Code and math block counting | Block detection |
 | 13 | `multi-file-mixed` | Multiple files with mixed status | Full report |
 
+### Code Integrity Tests (Phase 1b)
+
+| # | Name | Description | Tests |
+|---|------|-------------|-------|
+| 14 | `code-integrity` | Code block content comparison | Identical, normalized-match, modified, missing blocks |
+
 ## Running Tests
 
 ```bash

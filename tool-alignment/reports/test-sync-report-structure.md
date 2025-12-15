@@ -1,9 +1,9 @@
-# Alignment Diagnostic Report
+# Structure Alignment Report
 
 **Source**: `/Users/mmcky/work/quantecon/action-translation/tool-test-action-on-github/test-translation-sync`  
 **Target**: `/Users/mmcky/work/quantecon/action-translation/tool-test-action-on-github/test-translation-sync.zh-cn`  
 **Docs Folder**: `.`  
-**Generated**: 2025-12-15T01:09:09.371Z  
+**Generated**: 2025-12-15T03:11:56.088Z  
 **Tool Version**: 0.1.0
 
 ## Summary
@@ -39,14 +39,6 @@ Classification:
   - diverged:       <55% OR section ratio <50%
 ```
 
-### Code Block Integrity Issues
-
-Files where code blocks have been modified (may indicate drift):
-
-| File | Total Blocks | Matched | Modified | Missing | Score |
-|------|--------------|---------|----------|---------|-------|
-| `lecture.md` | 5 | 2 | 3 | 0 | ⚠️ 40% |
-
 ### Config Files
 
 | File | Status | Issues |
@@ -55,10 +47,10 @@ Files where code blocks have been modified (may indicate drift):
 
 ## Aligned Files (Ready for Sync)
 
-| File | Sections | Subsections | Code | Math | Structure | Code Integrity | Heading Map |
-|------|----------|-------------|------|------|-----------|----------------|-------------|
-| ✅ `lecture-minimal.md` | 2/2 | 0/0 | 0/0 | 0/0 | 100% | ✅ 100% | ✅ |
-| ✅ `lecture.md` | 3/3 | 3/3 | 5/5 | 4/4 | 100% | ⚠️ 40% | ✅ |
+| File | Sections | Subsections | Code Blocks | Math Blocks | Structure | Heading Map |
+|------|----------|-------------|-------------|-------------|-----------|-------------|
+| ✅ `lecture-minimal.md` | 2/2 | 0/0 | 0/0 | 0/0 | 100% | ✅ |
+| ✅ `lecture.md` | 3/3 | 3/3 | 5/5 | 4/4 | 100% | ✅ |
 
 ## Recommendations
 

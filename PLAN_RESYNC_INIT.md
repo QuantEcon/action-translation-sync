@@ -1,8 +1,8 @@
 # Resync & Initial Alignment: Implementation Plan
 
-**Document Status**: Phase 1 Complete, Phase 1b + 2 Planned  
-**Last Updated**: 13 December 2025  
-**Version**: v0.5
+**Document Status**: Phase 1 + 1b Complete, Phase 2 Planned  
+**Last Updated**: 15 December 2025  
+**Version**: v0.6
 
 This document provides a focused implementation plan for two related features:
 1. **Initial Alignment** - Onboard existing translation repos (one-time setup)
@@ -17,7 +17,7 @@ This document provides a focused implementation plan for two related features:
 | Phase | Status | Description |
 |-------|--------|-------------|
 | **Phase 1** | ✅ Complete | Structural Diagnostics - CLI tool with reports |
-| **Phase 1b** | 🔲 Next | Code Block Integrity Check (zero-cost enhancement) |
+| **Phase 1b** | ✅ Complete | Code Block Integrity Check (zero-cost enhancement) |
 | **Phase 2** | 🔲 Next | Haiku Quality Scoring (per-section assessment) |
 | **Phase 3** | 🔲 Planned | Heading-Map Generator |
 | **Phase 4** | 🔲 Planned | Interactive Alignment PR |
@@ -25,9 +25,67 @@ This document provides a focused implementation plan for two related features:
 
 ### Next Development Actions
 
-1. **Phase 1b: Code Block Integrity Check** - Compare code blocks between source/target (strip comments, exact match). Different signal from quality (integrity vs translation). Zero cost, definitive results.
+1. **Phase 2: Haiku Quality Scoring** - Per-section translation quality assessment using Claude Haiku (~$0.10 for full repo). Replaces complex heuristics with simple, accurate LLM scoring.
 
-2. **Phase 2: Haiku Quality Scoring** - Per-section translation quality assessment using Claude Haiku (~$0.10 for full repo). Replaces complex heuristics with simple, accurate LLM scoring.
+### Phase 1b Results (15 Dec 2025)
+
+**Feature**: Code Block Integrity Check  
+**Tests**: 51 new tests (88 total in tool-alignment)
+
+| Feature | Implementation |
+|---------|----------------|
+| Code extraction | `{code-cell}` directives + standard markdown code blocks with language |
+| String normalization | `"<< STRING >>"` placeholder (handles translated labels) |
+| Comment normalization | `# << COMMENT >>` placeholder (preserves structure) |
+| Caption normalization | `caption: << CAPTION >>` placeholder (handles translated captions) |
+| Exact matching | Detects identical code blocks |
+| Normalized matching | Detects blocks differing only in strings/comments/whitespace |
+| Modified detection | Identifies blocks with actual logic changes |
+| Missing/extra | Detects blocks present in only one file |
+| Integrity score | 0-100% based on matched vs total blocks |
+| Localization detection | Flags CJK font config patterns with 📍 i18n note |
+| LCS diff algorithm | Accurate line-by-line diff showing only code logic changes |
+
+**Normalization Strategy** (compares logical code structure):
+1. String literals → `"<< STRING >>"` (handles `label="estimate"` → `label="估计值"`)
+2. Comments → `# << COMMENT >>` (handles `# text` → `# 中文`)
+3. Captions → `caption: << CAPTION >>` (handles translated figure captions)
+4. Whitespace → trimmed, multiple spaces collapsed, blank lines collapsed
+
+**Score Display** (5-tier color scheme):
+- ✅ 100% - Perfect match
+- 🟨 90-99% - Minor differences
+- 🟡 80-89% - Some modifications
+- 🟠 60-79% - Significant differences
+- 🔴 <60% - Major divergence
+
+**Localization Patterns Detected**:
+- `plt.rcParams['font.sans-serif']` - CJK font configuration  
+- `SimHei`, `SimSun`, etc. - CJK font families
+- `axes.unicode_minus` - Unicode minus handling
+
+**Reports Generated**:
+- `*-structure.md` - Structural alignment (sections, headings, config)
+- `*-code.md` - Code block integrity with diffs
+
+**Impact** (lecture-intro diagnostic):
+| Metric | Value |
+|--------|-------|
+| Overall Score | 79% (717/906 blocks matched) |
+| Modified Blocks | 186 |
+| Missing Blocks | 3 |
+| Extra Blocks | 4 |
+
+| File Example | Score | Notes |
+|------|-------|-------|
+| greek_square.md | 🟨 92% | Minor differences |
+| input_output.md | 🟨 94% | Minor differences |
+| cobweb.md | 🟡 89% | i18n patterns |
+| mle.md | 50% | 71% | +21% |
+| input_output.md | 44% | 61% | +17% |
+| ar1_processes.md | 40% | 53% | +13% + i18n note |
+
+**New Test Fixture**: `14-code-integrity/` covering all scenarios
 
 ### Phase 1 Results (11 Dec 2025)
 

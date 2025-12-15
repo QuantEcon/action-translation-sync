@@ -20,6 +20,10 @@ import {
   AlignmentStatus,
   ConfigStatus,
   Section,
+  CodeBlock,
+  CodeBlockComparison,
+  CodeIntegrity,
+  DiffLine,
 } from './types';
 
 export class StructuralAnalyzer {
@@ -49,6 +53,7 @@ export class StructuralAnalyzer {
       source: null,
       target: null,
       comparison: null,
+      codeIntegrity: null,
       status: 'missing',
       issues: [],
     };
@@ -139,6 +144,22 @@ export class StructuralAnalyzer {
       }
       if (!analysis.target.hasHeadingMap) {
         analysis.issues.push('Target file is missing heading-map');
+      }
+
+      // Phase 1b: Code block integrity check
+      const sourceContent = fs.readFileSync(sourcePath, 'utf-8');
+      const targetContent = fs.readFileSync(targetPath, 'utf-8');
+      analysis.codeIntegrity = this.analyzeCodeIntegrity(sourceContent, targetContent);
+      
+      // Add code integrity issues
+      if (analysis.codeIntegrity.modifiedBlocks > 0) {
+        analysis.issues.push(`${analysis.codeIntegrity.modifiedBlocks} code block(s) have been modified`);
+      }
+      if (analysis.codeIntegrity.missingBlocks > 0) {
+        analysis.issues.push(`${analysis.codeIntegrity.missingBlocks} code block(s) missing in target`);
+      }
+      if (analysis.codeIntegrity.extraBlocks > 0) {
+        analysis.issues.push(`${analysis.codeIntegrity.extraBlocks} extra code block(s) in target`);
       }
     } else if (analysis.source && !analysis.target) {
       analysis.status = 'missing';
@@ -461,5 +482,450 @@ export class StructuralAnalyzer {
         callback(fullPath);
       }
     }
+  }
+
+  // ============================================================================
+  // CODE BLOCK INTEGRITY (Phase 1b)
+  // ============================================================================
+
+  /**
+   * Analyze code block integrity between source and target
+   */
+
+
+  analyzeCodeIntegrity(sourceContent: string, targetContent: string): CodeIntegrity {
+    // Extract only actual code blocks (code-cell directives and standard markdown code blocks)
+    const sourceBlocks = this.extractCodeBlocks(sourceContent);
+    const targetBlocks = this.extractCodeBlocks(targetContent);
+    
+    const comparisons: CodeBlockComparison[] = [];
+    let matchedBlocks = 0;
+    let modifiedBlocks = 0;
+    let missingBlocks = 0;
+    let extraBlocks = 0;
+    const issues: string[] = [];
+
+    // Compare blocks by position
+    const maxBlocks = Math.max(sourceBlocks.length, targetBlocks.length);
+    
+    for (let i = 0; i < maxBlocks; i++) {
+      const sourceBlock = sourceBlocks[i];
+      const targetBlock = targetBlocks[i];
+      
+      if (sourceBlock && targetBlock) {
+        const comparison = this.compareCodeBlock(sourceBlock, targetBlock, i);
+        comparisons.push(comparison);
+        
+        if (comparison.match === 'identical' || comparison.match === 'normalized-match') {
+          matchedBlocks++;
+        } else {
+          modifiedBlocks++;
+          issues.push(`Code block ${i + 1} (${sourceBlock.language || 'unknown'}): modified`);
+        }
+      } else if (sourceBlock && !targetBlock) {
+        missingBlocks++;
+        comparisons.push({
+          index: i,
+          language: sourceBlock.language,
+          sourceContent: sourceBlock.content,
+          targetContent: '',
+          sourceNormalized: sourceBlock.contentNormalized,
+          targetNormalized: '',
+          match: 'missing',
+          differences: ['Block missing in target'],
+        });
+        issues.push(`Code block ${i + 1} (${sourceBlock.language || 'unknown'}): missing in target`);
+      } else if (!sourceBlock && targetBlock) {
+        extraBlocks++;
+        comparisons.push({
+          index: i,
+          language: targetBlock.language,
+          sourceContent: '',
+          targetContent: targetBlock.content,
+          sourceNormalized: '',
+          targetNormalized: targetBlock.contentNormalized,
+          match: 'extra',
+          differences: ['Extra block in target'],
+        });
+        issues.push(`Code block ${i + 1} (${targetBlock.language || 'unknown'}): extra in target`);
+      }
+    }
+    
+    // Calculate score: 100% if all blocks match, decreases with modifications
+    const score = sourceBlocks.length > 0 
+      ? Math.round((matchedBlocks / sourceBlocks.length) * 100) 
+      : 100;
+
+    // Check for localization patterns that might explain score differences
+    const localizationNote = this.detectLocalizationPatterns(targetBlocks, comparisons);
+
+    return {
+      sourceBlocks: sourceBlocks.length,
+      targetBlocks: targetBlocks.length,
+      matchedBlocks,
+      modifiedBlocks,
+      missingBlocks,
+      extraBlocks,
+      score,
+      comparisons,
+      issues,
+      localizationNote,
+    };
+  }
+
+  /**
+   * Detect common localization patterns in target code blocks
+   * Returns a note explaining potential score impact
+   */
+  private detectLocalizationPatterns(
+    targetBlocks: CodeBlock[],
+    comparisons: CodeBlockComparison[]
+  ): string | undefined {
+    const patterns: string[] = [];
+    
+    // Known localization patterns
+    const LOCALIZATION_PATTERNS = [
+      { pattern: /plt\.rcParams\['font\./i, name: 'Chinese/CJK font configuration' },
+      { pattern: /matplotlib\.rc\('font'/i, name: 'matplotlib font settings' },
+      { pattern: /rcParams\['axes\.unicode_minus'\]/i, name: 'Unicode minus handling' },
+      { pattern: /SimHei|SimSun|Microsoft YaHei|STHeiti|PingFang/i, name: 'CJK font family' },
+      { pattern: /font\.sans-serif.*=.*\[/i, name: 'font fallback list' },
+    ];
+    
+    // Check target blocks for localization patterns
+    for (const block of targetBlocks) {
+      for (const { pattern, name } of LOCALIZATION_PATTERNS) {
+        if (pattern.test(block.content)) {
+          if (!patterns.includes(name)) {
+            patterns.push(name);
+          }
+        }
+      }
+    }
+    
+    // Check if any modified blocks have extra lines (additions vs modifications)
+    const blocksWithAdditions = comparisons.filter(c => {
+      if (c.match !== 'modified' || !c.targetContent) return false;
+      const sourceLines = c.sourceContent.split('\n').length;
+      const targetLines = c.targetContent.split('\n').length;
+      return targetLines > sourceLines;
+    });
+    
+    // Only generate note if localization patterns are detected
+    if (patterns.length > 0) {
+      const notes: string[] = [];
+      notes.push(`Localization patterns detected: ${patterns.join(', ')}`);
+      
+      if (blocksWithAdditions.length > 0) {
+        notes.push(`${blocksWithAdditions.length} block(s) have localization additions`);
+      }
+      
+      return notes.join('. ');
+    }
+    
+    return undefined;
+  }
+
+  /**
+   * Extract code blocks from content.
+   * Only extracts:
+   * 1. {code-cell} directives: ```{code-cell} python3
+   * 2. Standard markdown code blocks with language: ```python
+   */
+  extractCodeBlocks(content: string): CodeBlock[] {
+    const blocks: CodeBlock[] = [];
+    const lines = content.split('\n');
+    
+    let inCodeBlock = false;
+    let isCodeBlock = false;  // True if this is a code-cell or standard code block
+    let currentLanguage = '';
+    let blockContent: string[] = [];
+    let startLine = 0;
+    let blockIndex = 0;
+    
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      
+      // Check for fence start (``` or ~~~)
+      if (!inCodeBlock && (line.startsWith('```') || line.startsWith('~~~'))) {
+        inCodeBlock = true;
+        startLine = i + 1;
+        blockContent = [];
+        
+        // Check for {code-cell} directive: ```{code-cell} python3
+        const codeCellMatch = line.match(/^(?:```|~~~)\{code-cell\}\s*(\w*)/i);
+        if (codeCellMatch) {
+          isCodeBlock = true;
+          currentLanguage = codeCellMatch[1] || 'python';  // Default to python if not specified
+          continue;
+        }
+        
+        // Check for standard markdown code block: ```python
+        const standardMatch = line.match(/^(?:```|~~~)(\w+)/);
+        if (standardMatch && standardMatch[1]) {
+          isCodeBlock = true;
+          currentLanguage = standardMatch[1];
+          continue;
+        }
+        
+        // Other directive or no language - not a code block we care about
+        isCodeBlock = false;
+        currentLanguage = '';
+        
+      } else if (inCodeBlock && (line.startsWith('```') || line.startsWith('~~~'))) {
+        // End of block
+        if (isCodeBlock) {
+          const rawContent = blockContent.join('\n');
+          blocks.push({
+            index: blockIndex,
+            language: currentLanguage,
+            content: rawContent,
+            contentNormalized: this.normalizeCodeContent(rawContent, currentLanguage),
+            startLine: startLine,
+          });
+          blockIndex++;
+        }
+        
+        inCodeBlock = false;
+        isCodeBlock = false;
+        currentLanguage = '';
+        blockContent = [];
+        
+      } else if (inCodeBlock) {
+        blockContent.push(line);
+      }
+    }
+    
+    return blocks;
+  }
+
+  /**
+   * Normalize code content by removing comments and extra whitespace
+   * This allows matching code that differs only in comments
+   */
+  private normalizeCodeContent(content: string, language: string): string {
+    let normalized = content;
+    
+    // Step 1: Normalize strings to << STRING >> placeholders (before comment handling)
+    // This handles translated labels like label="estimate" → label="<< STRING >>"
+    // Triple-quoted strings first (Python docstrings)
+    normalized = normalized.replace(/"""[\s\S]*?"""/g, '"""<< STRING >>"""');
+    normalized = normalized.replace(/'''[\s\S]*?'''/g, "'''<< STRING >>'''");
+    // f-strings (Python) - keep structure, placeholder content
+    normalized = normalized.replace(/f"[^"]*"/g, 'f"<< STRING >>"');
+    normalized = normalized.replace(/f'[^']*'/g, "f'<< STRING >>'");
+    // Regular double-quoted strings
+    normalized = normalized.replace(/"[^"\\]*(?:\\.[^"\\]*)*"/g, '"<< STRING >>"');
+    // Regular single-quoted strings
+    normalized = normalized.replace(/'[^'\\]*(?:\\.[^'\\]*)*'/g, "'<< STRING >>'");
+    
+    // Step 2: Normalize MyST frontmatter captions (translated figure captions)
+    // Matches: caption: "..." or caption: '...' or caption: bare text
+    normalized = normalized.replace(/^(\s*caption:\s*).*$/gm, '$1<< CAPTION >>');
+    
+    // Step 3: Replace comments with COMMENT placeholder (preserves line structure)
+    // Determine comment style based on language patterns
+    const lang = language.toLowerCase();
+    const useHashComments = lang.startsWith('python') || lang.startsWith('ipython') || 
+                            lang.startsWith('julia') || lang.startsWith('r') ||
+                            ['py', 'jl', 'rb', 'ruby', 'sh', 'bash', 'shell', 'zsh'].includes(lang);
+    const useSlashComments = lang.startsWith('javascript') || lang.startsWith('typescript') ||
+                             ['js', 'ts', 'java', 'c', 'cpp', 'cs', 'go', 'rust', 'rs'].includes(lang);
+    
+    if (useHashComments) {
+      // Replace # comments (both full-line and inline) with placeholder
+      normalized = normalized.replace(/^(\s*)#.*$/gm, '$1# << COMMENT >>');
+      normalized = normalized.replace(/([^#])#(?!\s*<< COMMENT >>).*$/gm, '$1# << COMMENT >>');
+    } else if (useSlashComments) {
+      // Replace // and /* */ comments with placeholder
+      normalized = normalized.replace(/^(\s*)\/\/.*$/gm, '$1// << COMMENT >>');
+      normalized = normalized.replace(/([^/])\/\/(?!\s*<< COMMENT >>).*$/gm, '$1// << COMMENT >>');
+      normalized = normalized.replace(/\/\*[\s\S]*?\*\//g, '/* << COMMENT >> */');
+    }
+    // For unknown languages, don't strip comments - compare raw
+    
+    // Step 4: Normalize whitespace (trim lines, collapse multiple spaces, collapse multiple blank lines)
+    normalized = normalized
+      .split('\n')
+      .map(line => line.trim().replace(/\s+/g, ' '))  // Trim and collapse multiple spaces to single
+      .filter((line, i, arr) => {
+        // Keep non-empty lines and at most one blank line in a row
+        if (line !== '') return true;
+        if (i === 0) return false;
+        return arr[i - 1] !== '';
+      })
+      .join('\n')
+      .trim();
+    
+    return normalized;
+  }
+
+  /**
+   * Compare two code blocks
+   */
+  private compareCodeBlock(source: CodeBlock, target: CodeBlock, index: number): CodeBlockComparison {
+    const differences: string[] = [];
+    
+    // Check for exact match first
+    if (source.content === target.content) {
+      return {
+        index,
+        language: source.language,
+        sourceContent: source.content,
+        targetContent: target.content,
+        sourceNormalized: source.contentNormalized,
+        targetNormalized: target.contentNormalized,
+        match: 'identical',
+      };
+    }
+    
+    // Check for normalized match (same code, different comments/whitespace)
+    if (source.contentNormalized === target.contentNormalized) {
+      differences.push('Differs only in comments or whitespace');
+      return {
+        index,
+        language: source.language,
+        sourceContent: source.content,
+        targetContent: target.content,
+        sourceNormalized: source.contentNormalized,
+        targetNormalized: target.contentNormalized,
+        match: 'normalized-match',
+        differences,
+      };
+    }
+    
+    // Code is different - generate human-readable differences
+    if (source.language !== target.language) {
+      differences.push(`Language changed: ${source.language || 'none'} → ${target.language || 'none'}`);
+    }
+    
+    const sourceLines = source.content.split('\n').length;
+    const targetLines = target.content.split('\n').length;
+    if (sourceLines !== targetLines) {
+      differences.push(`Line count changed: ${sourceLines} → ${targetLines}`);
+    }
+    
+    // Check for common modifications
+    if (source.content.includes('print') !== target.content.includes('print')) {
+      differences.push('Print statement changes detected');
+    }
+    
+    if (differences.length === 0) {
+      differences.push('Code content differs');
+    }
+    
+    // Generate diff lines from NORMALIZED content to filter out translation differences
+    // This shows only actual code logic changes (comments/strings are normalized)
+    const diffLines = this.generateDiffLines(source.contentNormalized, target.contentNormalized);
+    
+    return {
+      index,
+      language: source.language,
+      sourceContent: source.content,
+      targetContent: target.content,
+      sourceNormalized: source.contentNormalized,
+      targetNormalized: target.contentNormalized,
+      match: 'modified',
+      differences,
+      diffLines,
+    };
+  }
+
+  /**
+   * Generate diff lines between source and target content.
+   * Uses LCS (Longest Common Subsequence) algorithm for accurate diff.
+   */
+  private generateDiffLines(sourceContent: string, targetContent: string): DiffLine[] {
+    const sourceLines = sourceContent.split('\n');
+    const targetLines = targetContent.split('\n');
+    
+    // Use LCS (Longest Common Subsequence) algorithm for proper diff
+    // This handles insertions/deletions correctly without false positives
+    const lcs = this.computeLCS(sourceLines, targetLines);
+    
+    const diffLines: DiffLine[] = [];
+    let srcIdx = 0;
+    let tgtIdx = 0;
+    let lcsIdx = 0;
+    
+    while (srcIdx < sourceLines.length || tgtIdx < targetLines.length) {
+      // Check if current lines are part of LCS (unchanged)
+      if (lcsIdx < lcs.length && 
+          srcIdx < sourceLines.length && 
+          tgtIdx < targetLines.length &&
+          sourceLines[srcIdx] === lcs[lcsIdx] && 
+          targetLines[tgtIdx] === lcs[lcsIdx]) {
+        diffLines.push({
+          type: 'unchanged',
+          content: sourceLines[srcIdx],
+          lineNumber: srcIdx + 1,
+        });
+        srcIdx++;
+        tgtIdx++;
+        lcsIdx++;
+      } else {
+        // Handle removed lines (in source but not matching LCS)
+        if (srcIdx < sourceLines.length && 
+            (lcsIdx >= lcs.length || sourceLines[srcIdx] !== lcs[lcsIdx])) {
+          diffLines.push({
+            type: 'removed',
+            content: sourceLines[srcIdx],
+            lineNumber: srcIdx + 1,
+          });
+          srcIdx++;
+        }
+        // Handle added lines (in target but not matching LCS)
+        else if (tgtIdx < targetLines.length && 
+                 (lcsIdx >= lcs.length || targetLines[tgtIdx] !== lcs[lcsIdx])) {
+          diffLines.push({
+            type: 'added',
+            content: targetLines[tgtIdx],
+            lineNumber: tgtIdx + 1,
+          });
+          tgtIdx++;
+        }
+      }
+    }
+    
+    return diffLines;
+  }
+
+  /**
+   * Compute Longest Common Subsequence of two string arrays.
+   * Used for generating accurate diffs.
+   */
+  private computeLCS(a: string[], b: string[]): string[] {
+    const m = a.length;
+    const n = b.length;
+    
+    // Build LCS length table
+    const dp: number[][] = Array(m + 1).fill(null).map(() => Array(n + 1).fill(0));
+    
+    for (let i = 1; i <= m; i++) {
+      for (let j = 1; j <= n; j++) {
+        if (a[i - 1] === b[j - 1]) {
+          dp[i][j] = dp[i - 1][j - 1] + 1;
+        } else {
+          dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
+        }
+      }
+    }
+    
+    // Backtrack to find LCS
+    const lcs: string[] = [];
+    let i = m, j = n;
+    while (i > 0 && j > 0) {
+      if (a[i - 1] === b[j - 1]) {
+        lcs.unshift(a[i - 1]);
+        i--;
+        j--;
+      } else if (dp[i - 1][j] > dp[i][j - 1]) {
+        i--;
+      } else {
+        j--;
+      }
+    }
+    
+    return lcs;
   }
 }

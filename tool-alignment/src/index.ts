@@ -14,6 +14,7 @@ import * as path from 'path';
 import chalk from 'chalk';
 import { StructuralAnalyzer } from './structural-analyzer';
 import { ReportGenerator } from './report-generator';
+import { CodeReportGenerator } from './code-report-generator';
 import { DiagnoseOptions, MarkdownAnalysis, ConfigAnalysis } from './types';
 
 const VERSION = '0.1.0';
@@ -23,10 +24,14 @@ async function runDiagnose(options: DiagnoseOptions): Promise<void> {
   console.log(chalk.gray(`Source: ${options.source}`));
   console.log(chalk.gray(`Target: ${options.target}`));
   console.log(chalk.gray(`Docs Folder: ${options.docsFolder}`));
+  console.log(chalk.gray(`Report: ${options.report}`));
   console.log('');
 
   const analyzer = new StructuralAnalyzer();
-  const reportGenerator = new ReportGenerator();
+  const structureReportGenerator = new ReportGenerator();
+  const codeReportGenerator = new CodeReportGenerator({
+    maxDiffLines: options.maxDiffLines,
+  });
 
   // Resolve paths
   const sourceRoot = path.resolve(options.source);
@@ -93,7 +98,7 @@ async function runDiagnose(options: DiagnoseOptions): Promise<void> {
   // 4. Generate report
   console.log(chalk.yellow('\n📝 Generating report...'));
   
-  const report = reportGenerator.generateReport(
+  const report = structureReportGenerator.generateReport(
     sourceRoot,
     targetRoot,
     options.docsFolder,
@@ -101,9 +106,19 @@ async function runDiagnose(options: DiagnoseOptions): Promise<void> {
     configAnalysis
   );
 
-  // 5. Write report
+  // 5. Write reports based on --report option
   const outputPath = path.resolve(options.output);
-  const writtenFiles = reportGenerator.writeReport(report, outputPath, options.format);
+  const writtenFiles: string[] = [];
+
+  if (options.report === 'all' || options.report === 'structure') {
+    const files = structureReportGenerator.writeReport(report, outputPath, options.format);
+    writtenFiles.push(...files);
+  }
+
+  if (options.report === 'all' || options.report === 'code') {
+    const codeReportPath = codeReportGenerator.writeReport(report, outputPath);
+    writtenFiles.push(codeReportPath);
+  }
   
   for (const file of writtenFiles) {
     console.log(chalk.green(`   ✅ Written: ${file}`));
@@ -169,9 +184,11 @@ program
   .description('Analyze alignment between source and target repositories')
   .requiredOption('-s, --source <path>', 'Path to source repository')
   .requiredOption('-t, --target <path>', 'Path to target repository')
-  .option('-o, --output <path>', 'Output file path', './reports/diagnostic-report')
+  .option('-o, --output <path>', 'Output file path (base name)', './reports/diagnostic-report')
   .option('-f, --format <format>', 'Output format: markdown, json, both', 'markdown')
   .option('-d, --docs-folder <folder>', 'Subdirectory containing docs', '.')
+  .option('-r, --report <type>', 'Report type: all, structure, code', 'all')
+  .option('--max-diff-lines <n>', 'Max lines to show in code diffs', '50')
   .action(async (options) => {
     try {
       await runDiagnose({
@@ -180,6 +197,8 @@ program
         output: options.output,
         format: options.format as 'markdown' | 'json' | 'both',
         docsFolder: options.docsFolder,
+        report: options.report as 'all' | 'structure' | 'code',
+        maxDiffLines: parseInt(options.maxDiffLines, 10),
       });
     } catch (error) {
       console.error(chalk.red('\n❌ Error:'), error instanceof Error ? error.message : error);

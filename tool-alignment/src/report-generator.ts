@@ -1,8 +1,10 @@
 /**
- * Report Generator for Alignment Diagnostics
+ * Structure Report Generator for Alignment Diagnostics
  * 
  * Generates human-readable markdown reports and machine-readable JSON
- * from diagnostic analysis results.
+ * for structural alignment (sections, subsections, heading maps).
+ * 
+ * Code block comparison is handled by CodeReportGenerator.
  */
 
 import * as fs from 'fs';
@@ -59,13 +61,13 @@ export class ReportGenerator {
   }
 
   /**
-   * Generate markdown report
+   * Generate markdown report (structure-focused)
    */
   toMarkdown(report: DiagnosticReport): string {
     const lines: string[] = [];
 
     // Header
-    lines.push('# Alignment Diagnostic Report');
+    lines.push('# Structure Alignment Report');
     lines.push('');
     lines.push(`**Source**: \`${report.metadata.sourcePath}\`  `);
     lines.push(`**Target**: \`${report.metadata.targetPath}\`  `);
@@ -138,8 +140,8 @@ export class ReportGenerator {
     if (aligned.length > 0) {
       lines.push('## Aligned Files (Ready for Sync)');
       lines.push('');
-      lines.push('| File | Sections | Subsections | Code | Math | Score | Heading Map |');
-      lines.push('|------|----------|-------------|------|------|-------|-------------|');
+      lines.push('| File | Sections | Subsections | Code Blocks | Math Blocks | Structure | Heading Map |');
+      lines.push('|------|----------|-------------|-------------|-------------|-----------|-------------|');
       
       for (const file of aligned) {
         const sections = file.source && file.target 
@@ -277,7 +279,7 @@ export class ReportGenerator {
     }
 
     if (format === 'markdown' || format === 'both') {
-      const mdPath = path.join(dir, `${baseName}.md`);
+      const mdPath = path.join(dir, `${baseName}-structure.md`);
       fs.writeFileSync(mdPath, this.toMarkdown(report));
       written.push(mdPath);
     }

@@ -15,6 +15,7 @@
  * - 11-subsections-nested: Deep nested subsections
  * - 12-code-math-blocks: Code and math block counting
  * - 13-multi-file-mixed: Multiple files with mixed status
+ * - 14-code-integrity: Code block integrity checking (Phase 1b)
  */
 
 import * as path from 'path';
@@ -292,6 +293,221 @@ describe('StructuralAnalyzer', () => {
       expect(files).toContain('diverged.md');
       expect(files).toContain('new.md');
       expect(files.length).toBe(3);
+    });
+  });
+
+  // ============================================================================
+  // PHASE 1b: CODE BLOCK INTEGRITY TESTS
+  // ============================================================================
+
+  describe('14-code-integrity', () => {
+    const fixtureDir = path.join(FIXTURES_DIR, '14-code-integrity');
+    const sourceDir = path.join(fixtureDir, 'source');
+    const targetDir = path.join(fixtureDir, 'target');
+
+    it('should analyze code block integrity', async () => {
+      const analysis = await analyzer.analyzeMarkdownFile(sourceDir, targetDir, 'code-integrity.md');
+
+      expect(analysis.codeIntegrity).not.toBeNull();
+      expect(analysis.codeIntegrity?.sourceBlocks).toBe(5);
+    });
+
+    it('should detect identical code blocks', async () => {
+      const analysis = await analyzer.analyzeMarkdownFile(sourceDir, targetDir, 'code-integrity.md');
+
+      // First code block should be identical
+      const firstBlock = analysis.codeIntegrity?.comparisons[0];
+      expect(firstBlock?.match).toBe('identical');
+    });
+
+    it('should detect normalized matches (same code, different comments)', async () => {
+      const analysis = await analyzer.analyzeMarkdownFile(sourceDir, targetDir, 'code-integrity.md');
+
+      // Second code block has different comments but same code
+      const secondBlock = analysis.codeIntegrity?.comparisons[1];
+      expect(secondBlock?.match).toBe('normalized-match');
+    });
+
+    it('should detect modified code blocks', async () => {
+      const analysis = await analyzer.analyzeMarkdownFile(sourceDir, targetDir, 'code-integrity.md');
+
+      // Fourth code block is modified
+      const fourthBlock = analysis.codeIntegrity?.comparisons[3];
+      expect(fourthBlock?.match).toBe('modified');
+    });
+
+    it('should detect missing code blocks', async () => {
+      const analysis = await analyzer.analyzeMarkdownFile(sourceDir, targetDir, 'code-integrity.md');
+
+      expect(analysis.codeIntegrity?.missingBlocks).toBe(1);
+    });
+
+    it('should calculate integrity score correctly', async () => {
+      const analysis = await analyzer.analyzeMarkdownFile(sourceDir, targetDir, 'code-integrity.md');
+
+      // 3 out of 5 blocks matched (60%)
+      expect(analysis.codeIntegrity?.score).toBe(60);
+      expect(analysis.codeIntegrity?.matchedBlocks).toBe(3);
+      expect(analysis.codeIntegrity?.modifiedBlocks).toBe(1);
+    });
+
+    it('should add code integrity issues to file issues', async () => {
+      const analysis = await analyzer.analyzeMarkdownFile(sourceDir, targetDir, 'code-integrity.md');
+
+      const codeIssues = analysis.issues.filter(i => i.includes('code block'));
+      expect(codeIssues.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('extractCodeBlocks', () => {
+    it('should extract code blocks with language', () => {
+      const content = `
+Some text
+
+\`\`\`python
+import numpy as np
+x = 1
+\`\`\`
+
+More text
+
+\`\`\`javascript
+const y = 2;
+\`\`\`
+`;
+      const blocks = analyzer.extractCodeBlocks(content);
+      
+      expect(blocks.length).toBe(2);
+      expect(blocks[0].language).toBe('python');
+      expect(blocks[0].content).toContain('import numpy');
+      expect(blocks[1].language).toBe('javascript');
+    });
+
+    it('should skip code blocks without language', () => {
+      // Code blocks without language are typically not actual code
+      const content = `
+\`\`\`
+plain code
+\`\`\`
+`;
+      const blocks = analyzer.extractCodeBlocks(content);
+      
+      // Should not extract blocks without language
+      expect(blocks.length).toBe(0);
+    });
+
+    it('should handle tilde fences', () => {
+      const content = `
+~~~python
+x = 1
+~~~
+`;
+      const blocks = analyzer.extractCodeBlocks(content);
+      
+      expect(blocks.length).toBe(1);
+      expect(blocks[0].language).toBe('python');
+    });
+  });
+
+  describe('analyzeCodeIntegrity', () => {
+    it('should return 100% score for identical code', () => {
+      const content = `
+\`\`\`python
+x = 1
+\`\`\`
+`;
+      const integrity = analyzer.analyzeCodeIntegrity(content, content);
+      
+      expect(integrity.score).toBe(100);
+      expect(integrity.matchedBlocks).toBe(1);
+      expect(integrity.modifiedBlocks).toBe(0);
+    });
+
+    it('should detect comment-only differences as normalized match', () => {
+      const source = `
+\`\`\`python
+# Comment
+x = 1
+\`\`\`
+`;
+      const target = `
+\`\`\`python
+# 注释
+x = 1
+\`\`\`
+`;
+      const integrity = analyzer.analyzeCodeIntegrity(source, target);
+      
+      expect(integrity.score).toBe(100);
+      expect(integrity.comparisons[0].match).toBe('normalized-match');
+    });
+
+    it('should detect actual code changes as modified', () => {
+      const source = `
+\`\`\`python
+x = 1
+\`\`\`
+`;
+      const target = `
+\`\`\`python
+y = 2
+\`\`\`
+`;
+      const integrity = analyzer.analyzeCodeIntegrity(source, target);
+      
+      expect(integrity.score).toBe(0);
+      expect(integrity.modifiedBlocks).toBe(1);
+      expect(integrity.comparisons[0].match).toBe('modified');
+    });
+
+    it('should handle missing blocks in target', () => {
+      const source = `
+\`\`\`python
+x = 1
+\`\`\`
+
+\`\`\`python
+y = 2
+\`\`\`
+`;
+      const target = `
+\`\`\`python
+x = 1
+\`\`\`
+`;
+      const integrity = analyzer.analyzeCodeIntegrity(source, target);
+      
+      expect(integrity.missingBlocks).toBe(1);
+      expect(integrity.sourceBlocks).toBe(2);
+    });
+
+    it('should handle extra blocks in target', () => {
+      const source = `
+\`\`\`python
+x = 1
+\`\`\`
+`;
+      const target = `
+\`\`\`python
+x = 1
+\`\`\`
+
+\`\`\`python
+extra = True
+\`\`\`
+`;
+      const integrity = analyzer.analyzeCodeIntegrity(source, target);
+      
+      expect(integrity.extraBlocks).toBe(1);
+      expect(integrity.matchedBlocks).toBe(1);
+    });
+
+    it('should handle files with no code blocks', () => {
+      const content = 'Just text, no code';
+      const integrity = analyzer.analyzeCodeIntegrity(content, content);
+      
+      expect(integrity.sourceBlocks).toBe(0);
+      expect(integrity.score).toBe(100);
     });
   });
 });

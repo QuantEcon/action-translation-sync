@@ -9,9 +9,11 @@
 export interface DiagnoseOptions {
   source: string;           // Path to source repository
   target: string;           // Path to target repository
-  output: string;           // Output file path
+  output: string;           // Output file path (base name, suffixes added)
   format: 'markdown' | 'json' | 'both';
   docsFolder: string;       // Subdirectory containing docs (default: '.')
+  report: 'all' | 'structure' | 'code';  // Which reports to generate
+  maxDiffLines: number;     // Max lines to show in code diffs (default: 50)
 }
 
 // ============================================================================
@@ -21,6 +23,61 @@ export interface DiagnoseOptions {
 export type FileType = 'markdown' | 'toc' | 'config' | 'environment';
 export type AlignmentStatus = 'aligned' | 'likely-aligned' | 'needs-review' | 'diverged' | 'missing' | 'extra';
 export type ConfigStatus = 'identical' | 'structure-match' | 'diverged' | 'missing' | 'extra';
+
+// ============================================================================
+// CODE BLOCK INTEGRITY (Phase 1b)
+// ============================================================================
+
+/**
+ * Represents a code block extracted from a document
+ */
+export interface CodeBlock {
+  index: number;              // Position in document (0-based)
+  language: string;           // Language tag (e.g., 'python', 'javascript')
+  content: string;            // Code content (without fence markers)
+  contentNormalized: string;  // Content with comments stripped and normalized
+  startLine: number;          // Line number where block starts
+}
+
+/**
+ * Result of comparing a single code block pair
+ */
+export interface CodeBlockComparison {
+  index: number;
+  language: string;
+  sourceContent: string;
+  targetContent: string;
+  sourceNormalized: string;   // Normalized source content
+  targetNormalized: string;   // Normalized target content
+  match: 'identical' | 'normalized-match' | 'modified' | 'missing' | 'extra';
+  differences?: string[];     // Human-readable diff description
+  diffLines?: DiffLine[];     // Structured diff for detailed report
+}
+
+/**
+ * A single line in a diff
+ */
+export interface DiffLine {
+  type: 'unchanged' | 'added' | 'removed';
+  content: string;
+  lineNumber?: number;
+}
+
+/**
+ * Code integrity analysis for a file
+ */
+export interface CodeIntegrity {
+  sourceBlocks: number;       // Total code blocks in source
+  targetBlocks: number;       // Total code blocks in target
+  matchedBlocks: number;      // Blocks that match exactly or normalized
+  modifiedBlocks: number;     // Blocks with changes
+  missingBlocks: number;      // Blocks in source but not in target
+  extraBlocks: number;        // Blocks in target but not in source
+  score: number;              // 0-100 integrity score
+  comparisons: CodeBlockComparison[];
+  issues: string[];
+  localizationNote?: string;  // Note if localization patterns detected (e.g., font setup)
+}
 
 /**
  * Structural analysis of a markdown file
@@ -54,6 +111,7 @@ export interface MarkdownAnalysis {
     codeBlockMatch: boolean;
     mathBlockMatch: boolean;
   } | null;
+  codeIntegrity: CodeIntegrity | null;  // Phase 1b: detailed code block comparison
   status: AlignmentStatus;
   issues: string[];
 }
@@ -98,8 +156,6 @@ export interface ConfigAnalysis {
 // ============================================================================
 // DIAGNOSTIC REPORT
 // ============================================================================
-
-export type FileAnalysis = MarkdownAnalysis | ConfigAnalysis;
 
 export interface DiagnosticReport {
   metadata: {

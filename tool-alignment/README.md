@@ -1,12 +1,35 @@
 # Tool: Alignment Diagnostic
 
-A CLI tool for analyzing alignment between source and target translation repositories.
+A CLI tool for analyzing structural alignment and code block integrity between source and target translation repositories.
 
 ## Purpose
 
 This tool helps with:
 1. **Initial Alignment** - Onboarding existing translation repos to automated sync
 2. **Resync** - Detecting divergence between repos over time
+3. **Code Block Integrity** - Verifying that code blocks match between source and target
+
+## Features
+
+### Structure Analysis
+- Section and subsection comparison
+- Heading map detection
+- Config file comparison (`_toc.yml`, `_config.yml`)
+
+### Code Block Integrity (Phase 1b)
+- Extracts code blocks from `{code-cell}` and standard markdown blocks
+- **Normalized comparison**: compares code logic, not comments/strings
+- Supports Python, JavaScript, Julia, R, and more
+- Detects localization patterns (CJK fonts, etc.)
+- Generates detailed diffs showing actual code changes
+
+### Normalization
+Code blocks are normalized before comparison to filter out expected translation differences:
+- Comments → `# << COMMENT >>`
+- Strings → `"<< STRING >>"`
+- Captions → `caption: << CAPTION >>`
+
+This means only actual code logic changes are flagged as modifications.
 
 ## Installation
 
@@ -18,30 +41,20 @@ npm run build
 
 ## Usage
 
-### Structural Diagnostics
-
-Analyze structural alignment between source and target repos:
+### Basic Usage
 
 ```bash
-# Using local paths
+# Generate all reports (structure + code)
 npm run diagnose -- \
-  --source ../test-translation-sync \
-  --target ../test-translation-sync.zh-cn \
-  --output reports/diagnostic-report.md
+  --source ~/repos/lecture-python-intro \
+  --target ~/repos/lecture-intro.zh-cn \
+  --output reports/lecture-intro
 
-# With JSON output
-npm run diagnose -- \
-  --source /path/to/lecture-intro \
-  --target /path/to/lecture-intro.zh-cn \
-  --output reports/alignment.json \
-  --format json
+# Structure report only
+npm run diagnose -- -s ~/repos/source -t ~/repos/target -o reports/output -r structure
 
-# Both formats
-npm run diagnose -- \
-  --source /path/to/source-repo \
-  --target /path/to/target-repo \
-  --output reports/alignment \
-  --format both
+# Code report only
+npm run diagnose -- -s ~/repos/source -t ~/repos/target -o reports/output -r code
 ```
 
 ### Options
@@ -52,29 +65,53 @@ npm run diagnose -- \
 | `--target, -t` | Path to target repository | Required |
 | `--output, -o` | Output file path | `./reports/diagnostic-report` |
 | `--format, -f` | Output format: `markdown`, `json`, `both` | `markdown` |
-| `--docs-folder` | Subdirectory containing docs | `.` (root) |
+| `--report, -r` | Report type: `all`, `structure`, `code` | `all` |
+| `--docs-folder, -d` | Subdirectory containing docs | `lectures` |
+| `--max-diff-lines` | Max lines to show in diffs | `50` |
 
 ## Output
 
-### Diagnostic Report
+### Report Types
 
-The tool generates a report showing:
+The tool generates two separate reports:
 
-- **File Inventory**: All markdown and config files in both repos
-- **Structural Analysis**: Section counts, heading hierarchy, code/math blocks
-- **Alignment Classification**: 
-  - `aligned` - Structure matches, ready for sync
-  - `likely-aligned` - Structure matches with minor differences
-  - `needs-review` - Structure differs, needs attention
-  - `diverged` - Major mismatch
-  - `missing` - File doesn't exist in target
+1. **Structure Report** (`*-structure.md`)
+   - Alignment status per file
+   - Section/subsection counts
+   - Heading map status
+   - Config file analysis
+   - Recommendations
 
-### Config File Analysis
+2. **Code Report** (`*-code.md`)
+   - Code block integrity scores
+   - Summary table with match statistics
+   - Localization pattern detection
+   - Detailed diffs for modified blocks
 
-Also analyzes:
-- `_toc.yml` - Table of contents structure
-- `_config.yml` - Jupyter Book configuration
-- `environment.yml` (optional) - Conda environment
+### Scoring
+
+**Structure Score** (0-100%):
+- `aligned` = 100% (perfect match)
+- `likely-aligned` = 85-99%
+- `needs-review` = 55-84%
+- `diverged` = <55%
+
+**Code Integrity Score** (0-100%):
+- ✅ 100% - All blocks match
+- 🟨 90-99% - Minor differences
+- 🟡 80-89% - Some modifications
+- 🟠 60-79% - Significant differences
+- 🔴 <60% - Major divergence
+
+### Code Block Classification
+
+| Type | Description |
+|------|-------------|
+| `identical` | Exact character match |
+| `normalized-match` | Same after normalizing strings/comments |
+| `modified` | Code logic differs |
+| `missing` | Block in source, not in target |
+| `extra` | Block in target, not in source |
 
 ## Development
 
@@ -84,6 +121,9 @@ npm test
 
 # Build
 npm run build
+
+# Run directly
+npx ts-node src/index.ts diagnose -s /path/to/source -t /path/to/target -o reports/test
 ```
 
 ## Related
