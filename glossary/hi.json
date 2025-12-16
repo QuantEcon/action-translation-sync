@@ -1,0 +1,2239 @@
+{
+  "version": "1.0",
+  "description": "Translation glossary for QuantEcon lectures (English to Hindi)",
+  "terms": [
+    {
+      "en": "Accessible state",
+      "hi": "अभिगम्य अवस्था",
+      "hi-roman": "abhigamya avastha",
+      "context": "Markov chains"
+    },
+    {
+      "en": "Adaptive expectations",
+      "hi": "अनुकूली प्रत्याशाएं",
+      "hi-roman": "anukuli pratyashaen",
+      "context": "economics"
+    },
+    {
+      "en": "Adjacency matrix",
+      "hi": "आसन्नता मैट्रिक्स",
+      "hi-roman": "aasannata matrix",
+      "context": "graph theory"
+    },
+    {
+      "en": "Aggregate consumption",
+      "hi": "कुल उपभोग",
+      "hi-roman": "kul upabhog",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Aggregate demand for capital",
+      "hi": "पूंजी की कुल मांग",
+      "hi-roman": "punji ki kul maang",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Aggregate production function",
+      "hi": "कुल उत्पादन फलन",
+      "hi-roman": "kul utpaadan phalan",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Aggregate supply of capital",
+      "hi": "पूंजी की कुल आपूर्ति",
+      "hi-roman": "punji ki kul aapurti",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Angle sum identities",
+      "hi": "कोण योग सर्वसमिकाएं",
+      "hi-roman": "kon yog sarvasamikaen",
+      "context": "trigonometry"
+    },
+    {
+      "en": "Annuity",
+      "hi": "वार्षिकी",
+      "hi-roman": "varshiki",
+      "context": "finance"
+    },
+    {
+      "en": "AR(1) processes",
+      "hi": "AR(1) प्रक्रिया",
+      "hi-roman": "AR(1) prakriya",
+      "context": "time series",
+      "certainty": "medium"
+    },
+    {
+      "en": "Arrow securities",
+      "hi": "एरो प्रतिभूतियां",
+      "hi-roman": "ero pratibhutiyan",
+      "context": "finance",
+      "certainty": "low"
+    },
+    {
+      "en": "Asymptotic stability",
+      "hi": "अनंतस्पर्शी स्थिरता",
+      "hi-roman": "anantasparshi sthirta",
+      "context": "dynamical systems"
+    },
+    {
+      "en": "Asymptotic stationarity",
+      "hi": "अनंतस्पर्शी स्थिरता",
+      "hi-roman": "anantasparshi sthirta",
+      "context": "time series"
+    },
+    {
+      "en": "Authority centrality",
+      "hi": "प्राधिकार केंद्रीयता",
+      "hi-roman": "pradhikar kendriyata",
+      "context": "network science"
+    },
+    {
+      "en": "Autarky equilibrium",
+      "hi": "स्वावलंबन संतुलन",
+      "hi-roman": "swavalamban santulan",
+      "context": "economics"
+    },
+    {
+      "en": "Autoregressive model",
+      "hi": "स्वप्रतिगामी मॉडल",
+      "hi-roman": "swapratigami model",
+      "context": "time series"
+    },
+    {
+      "en": "Autoregressive representation",
+      "hi": "स्वप्रतिगामी निरूपण",
+      "hi-roman": "swapratigami nirupan",
+      "context": "time series"
+    },
+    {
+      "en": "Balance sheet equation",
+      "hi": "तुलन पत्र समीकरण",
+      "hi-roman": "tulan patra samikaran",
+      "context": "accounting"
+    },
+    {
+      "en": "Bandwidth",
+      "hi": "बैंडविड्थ",
+      "hi-roman": "bandwidth",
+      "context": "kernel density estimation",
+      "certainty": "medium"
+    },
+    {
+      "en": "Barrier option",
+      "hi": "बैरियर विकल्प",
+      "hi-roman": "barrier vikalp",
+      "context": "finance",
+      "certainty": "medium"
+    },
+    {
+      "en": "Bellman operator",
+      "hi": "बेलमैन संकारक",
+      "hi-roman": "bellman sankarak",
+      "context": "dynamic programming",
+      "certainty": "low"
+    },
+    {
+      "en": "Beta distribution",
+      "hi": "बीटा वितरण",
+      "hi-roman": "beta vitaran",
+      "context": "probability",
+      "certainty": "medium"
+    },
+    {
+      "en": "Bivariate uniform distribution",
+      "hi": "द्विचर एकसमान वितरण",
+      "hi-roman": "dvichar eksamaan vitaran",
+      "context": "probability"
+    },
+    {
+      "en": "Budget constraint",
+      "hi": "बजट बाधा",
+      "hi-roman": "budget baadha",
+      "context": "economics",
+      "certainty": "medium"
+    },
+    {
+      "en": "Business cycle",
+      "hi": "व्यापार चक्र",
+      "hi-roman": "vyapaar chakra",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Calculus",
+      "hi": "कलन",
+      "hi-roman": "kalan",
+      "context": "mathematics"
+    },
+    {
+      "en": "Capital depreciation",
+      "hi": "पूंजी मूल्यह्रास",
+      "hi-roman": "punji mulyahras",
+      "context": "economics"
+    },
+    {
+      "en": "Capital dynamics",
+      "hi": "पूंजी गतिकी",
+      "hi-roman": "punji gatiki",
+      "context": "economics"
+    },
+    {
+      "en": "Cauchy distribution",
+      "hi": "कॉशी वितरण",
+      "hi-roman": "cauchy vitaran",
+      "context": "probability",
+      "certainty": "low"
+    },
+    {
+      "en": "Central limit theorem",
+      "hi": "केंद्रीय सीमा प्रमेय",
+      "hi-roman": "kendriya seema pramey",
+      "context": "probability"
+    },
+    {
+      "en": "Central moment",
+      "hi": "केंद्रीय आघूर्ण",
+      "hi-roman": "kendriya aaghurn",
+      "context": "statistics"
+    },
+    {
+      "en": "Centrality measure",
+      "hi": "केंद्रीयता माप",
+      "hi-roman": "kendriyata maap",
+      "context": "network science"
+    },
+    {
+      "en": "Characteristic equation",
+      "hi": "अभिलाक्षणिक समीकरण",
+      "hi-roman": "abhilakshanik samikaran",
+      "context": "linear algebra"
+    },
+    {
+      "en": "Characteristic function",
+      "hi": "अभिलाक्षणिक फलन",
+      "hi-roman": "abhilakshanik phalan",
+      "context": "probability"
+    },
+    {
+      "en": "Characteristic polynomial",
+      "hi": "अभिलाक्षणिक बहुपद",
+      "hi-roman": "abhilakshanik bahupad",
+      "context": "linear algebra"
+    },
+    {
+      "en": "Closed economy",
+      "hi": "बंद अर्थव्यवस्था",
+      "hi-roman": "band arthavyavastha",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Cobb-Douglas production function",
+      "hi": "कॉब-डगलस उत्पादन फलन",
+      "hi-roman": "cobb-douglas utpaadan phalan",
+      "context": "economics",
+      "certainty": "low"
+    },
+    {
+      "en": "Cobweb model",
+      "hi": "मकड़जाल मॉडल",
+      "hi-roman": "makadjaal model",
+      "context": "economics"
+    },
+    {
+      "en": "Communicating states",
+      "hi": "संचारी अवस्थाएं",
+      "hi-roman": "sanchaari avasthaen",
+      "context": "Markov chains"
+    },
+    {
+      "en": "Competitive equilibrium",
+      "hi": "प्रतिस्पर्धी संतुलन",
+      "hi-roman": "pratispardhi santulan",
+      "context": "economics"
+    },
+    {
+      "en": "Complex conjugate",
+      "hi": "सम्मिश्र संयुग्मी",
+      "hi-roman": "sammishr sanyugmi",
+      "context": "complex analysis"
+    },
+    {
+      "en": "Complex eigenvalues",
+      "hi": "सम्मिश्र आइगनमान",
+      "hi-roman": "sammishr eigenvalue",
+      "context": "linear algebra"
+    },
+    {
+      "en": "Complex number",
+      "hi": "सम्मिश्र संख्या",
+      "hi-roman": "sammishr sankhya",
+      "context": "mathematics"
+    },
+    {
+      "en": "Complex plane",
+      "hi": "सम्मिश्र तल",
+      "hi-roman": "sammishr tal",
+      "context": "complex analysis"
+    },
+    {
+      "en": "Conditional probability",
+      "hi": "सशर्त प्रायिकता",
+      "hi-roman": "sashart praayikta",
+      "context": "probability"
+    },
+    {
+      "en": "Consumer sentiment index",
+      "hi": "उपभोक्ता भावना सूचकांक",
+      "hi-roman": "upabhokta bhavna suchkank",
+      "context": "economics"
+    },
+    {
+      "en": "Consumer surplus",
+      "hi": "उपभोक्ता अधिशेष",
+      "hi-roman": "upabhokta adhishesh",
+      "context": "economics"
+    },
+    {
+      "en": "Consumption-smoothing model",
+      "hi": "उपभोग-समतलन मॉडल",
+      "hi-roman": "upabhog-samatlan model",
+      "context": "economics"
+    },
+    {
+      "en": "Continuation value",
+      "hi": "निरंतरता मूल्य",
+      "hi-roman": "nirantarta mulya",
+      "context": "dynamic programming"
+    },
+    {
+      "en": "Contractions",
+      "hi": "संकुचन",
+      "hi-roman": "sankuchan",
+      "context": "functional analysis"
+    },
+    {
+      "en": "Convergence",
+      "hi": "अभिसरण",
+      "hi-roman": "abhisaran",
+      "context": "mathematics"
+    },
+    {
+      "en": "Convergence in distribution",
+      "hi": "वितरण में अभिसरण",
+      "hi-roman": "vitaran mein abhisaran",
+      "context": "probability"
+    },
+    {
+      "en": "Core consumer price index",
+      "hi": "मूल उपभोक्ता मूल्य सूचकांक",
+      "hi-roman": "mool upabhokta mulya suchkank",
+      "context": "economics"
+    },
+    {
+      "en": "CPI",
+      "hi": "मूल उपभोक्ता मूल्य सूचकांक",
+      "hi-roman": "mool upabhokta mulya suchkank",
+      "context": "economics abbreviation"
+    },
+    {
+      "en": "Corporate bond",
+      "hi": "कॉर्पोरेट बॉन्ड",
+      "hi-roman": "corporate bond",
+      "context": "finance",
+      "certainty": "medium"
+    },
+    {
+      "en": "Corporate tax rate",
+      "hi": "कॉर्पोरेट कर दर",
+      "hi-roman": "corporate kar dar",
+      "context": "public finance",
+      "certainty": "medium"
+    },
+    {
+      "en": "Cost function",
+      "hi": "लागत फलन",
+      "hi-roman": "laagat phalan",
+      "context": "economics"
+    },
+    {
+      "en": "Cost-to-go function",
+      "hi": "शेष लागत फलन",
+      "hi-roman": "shesh laagat phalan",
+      "context": "dynamic programming"
+    },
+    {
+      "en": "Counter CDF",
+      "hi": "पूरक संचयी वितरण फलन",
+      "hi-roman": "purak sanchayi vitaran phalan",
+      "context": "probability"
+    },
+    {
+      "en": "CCDF",
+      "hi": "पूरक संचयी वितरण फलन",
+      "hi-roman": "purak sanchayi vitaran phalan",
+      "context": "probability abbreviation"
+    },
+    {
+      "en": "Cumulative distribution function",
+      "hi": "संचयी वितरण फलन",
+      "hi-roman": "sanchayi vitaran phalan",
+      "context": "probability"
+    },
+    {
+      "en": "Cyclical price dynamics",
+      "hi": "चक्रीय मूल्य गतिकी",
+      "hi-roman": "chakriya mulya gatiki",
+      "context": "economics"
+    },
+    {
+      "en": "de Moivre's theorem",
+      "hi": "द मॉइवर प्रमेय",
+      "hi-roman": "de moivre pramey",
+      "context": "complex analysis",
+      "certainty": "low"
+    },
+    {
+      "en": "Degree centrality",
+      "hi": "कोटि केंद्रीयता",
+      "hi-roman": "koti kendriyata",
+      "context": "network science"
+    },
+    {
+      "en": "Deposit receipt",
+      "hi": "जमा रसीद",
+      "hi-roman": "jama raseed",
+      "context": "banking"
+    },
+    {
+      "en": "Development economics",
+      "hi": "विकास अर्थशास्त्र",
+      "hi-roman": "vikas arthashastra",
+      "context": "economics"
+    },
+    {
+      "en": "Discount factor",
+      "hi": "बट्टा गुणक",
+      "hi-roman": "batta gunak",
+      "context": "economics"
+    },
+    {
+      "en": "Discounted payoff",
+      "hi": "बट्टाकृत प्रतिफल",
+      "hi-roman": "battakrit pratiphal",
+      "context": "economics"
+    },
+    {
+      "en": "Discounting",
+      "hi": "बट्टाकरण",
+      "hi-roman": "battakaran",
+      "context": "finance"
+    },
+    {
+      "en": "Distance matrix",
+      "hi": "दूरी मैट्रिक्स",
+      "hi-roman": "doori matrix",
+      "context": "graph theory"
+    },
+    {
+      "en": "Distribution dynamics",
+      "hi": "वितरण गतिकी",
+      "hi-roman": "vitaran gatiki",
+      "context": "economics"
+    },
+    {
+      "en": "Domestic credit",
+      "hi": "घरेलू ऋण",
+      "hi-roman": "gharelu rin",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Dominant eigenvalue",
+      "hi": "प्रभावी आइगनमान",
+      "hi-roman": "prabhavi eigenvalue",
+      "context": "linear algebra"
+    },
+    {
+      "en": "Dynamic Laffer curve",
+      "hi": "गतिक लाफर वक्र",
+      "hi-roman": "gatik laffer vakra",
+      "context": "public finance",
+      "certainty": "low"
+    },
+    {
+      "en": "Dynamic model",
+      "hi": "गतिक मॉडल",
+      "hi-roman": "gatik model",
+      "context": "economics"
+    },
+    {
+      "en": "Dynamic process",
+      "hi": "गतिक प्रक्रिया",
+      "hi-roman": "gatik prakriya",
+      "context": "mathematics"
+    },
+    {
+      "en": "Dynamic programming",
+      "hi": "गतिक प्रोग्रामिंग",
+      "hi-roman": "gatik programming",
+      "context": "optimization"
+    },
+    {
+      "en": "Eigenvector",
+      "hi": "आइगनसदिश",
+      "hi-roman": "eigenvector",
+      "context": "linear algebra"
+    },
+    {
+      "en": "Eigenvector centrality",
+      "hi": "आइगनसदिश केंद्रीयता",
+      "hi-roman": "eigenvector kendriyata",
+      "context": "network science"
+    },
+    {
+      "en": "Eigenvector decomposition",
+      "hi": "आइगनसदिश अपघटन",
+      "hi-roman": "eigenvector apghatan",
+      "context": "linear algebra"
+    },
+    {
+      "en": "Elasticity of substitution",
+      "hi": "प्रतिस्थापन की लोच",
+      "hi-roman": "pratisthapan ki loch",
+      "context": "economics"
+    },
+    {
+      "en": "Empirical Distribution",
+      "hi": "आनुभविक वितरण",
+      "hi-roman": "anubhavik vitaran",
+      "context": "statistics"
+    },
+    {
+      "en": "Equalizing Difference Model",
+      "hi": "समतुल्यकारी अंतर मॉडल",
+      "hi-roman": "samtulyakari antar model",
+      "context": "labor economics"
+    },
+    {
+      "en": "Equilibrium",
+      "hi": "संतुलन",
+      "hi-roman": "santulan",
+      "context": "economics"
+    },
+    {
+      "en": "Ergodicity",
+      "hi": "एर्गोडिकता",
+      "hi-roman": "ergodicity",
+      "context": "stochastic processes"
+    },
+    {
+      "en": "Euclidean distance",
+      "hi": "यूक्लिडियन दूरी",
+      "hi-roman": "euclidean doori",
+      "context": "mathematics",
+      "certainty": "low"
+    },
+    {
+      "en": "Euler equation",
+      "hi": "यूलर समीकरण",
+      "hi-roman": "euler samikaran",
+      "context": "economics",
+      "certainty": "low"
+    },
+    {
+      "en": "Euler's formula",
+      "hi": "यूलर सूत्र",
+      "hi-roman": "euler sutra",
+      "context": "complex analysis",
+      "certainty": "low"
+    },
+    {
+      "en": "European call option",
+      "hi": "यूरोपीय कॉल विकल्प",
+      "hi-roman": "european call vikalp",
+      "context": "finance",
+      "certainty": "medium"
+    },
+    {
+      "en": "Exercise",
+      "hi": "अभ्यास",
+      "hi-roman": "abhyas",
+      "context": "educational content"
+    },
+    {
+      "en": "Exogenous",
+      "hi": "बहिर्जात",
+      "hi-roman": "bahirjaat",
+      "context": "economics"
+    },
+    {
+      "en": "Exogenous initial capital stock",
+      "hi": "बहिर्जात प्रारंभिक पूंजी भंडार",
+      "hi-roman": "bahirjaat prarambhik punji bhandar",
+      "context": "economics"
+    },
+    {
+      "en": "Expansions",
+      "hi": "विस्तार",
+      "hi-roman": "vistaar",
+      "context": "business cycles"
+    },
+    {
+      "en": "Expiry date",
+      "hi": "समाप्ति तिथि",
+      "hi-roman": "samapti tithi",
+      "context": "finance"
+    },
+    {
+      "en": "Exponential distribution",
+      "hi": "चरघातांकी वितरण",
+      "hi-roman": "charghatanki vitaran",
+      "context": "probability"
+    },
+    {
+      "en": "Fiat money",
+      "hi": "आदेश मुद्रा",
+      "hi-roman": "aadesh mudra",
+      "context": "monetary economics"
+    },
+    {
+      "en": "Financial repression",
+      "hi": "वित्तीय दमन",
+      "hi-roman": "vittiya daman",
+      "context": "economics"
+    },
+    {
+      "en": "Finite horizon",
+      "hi": "परिमित क्षितिज",
+      "hi-roman": "parimit kshitij",
+      "context": "dynamic programming"
+    },
+    {
+      "en": "First fundamental welfare theorem",
+      "hi": "प्रथम मूलभूत कल्याण प्रमेय",
+      "hi-roman": "pratham moolbhut kalyan pramey",
+      "context": "welfare economics"
+    },
+    {
+      "en": "First Moment",
+      "hi": "प्रथम आघूर्ण",
+      "hi-roman": "pratham aaghurn",
+      "context": "statistics"
+    },
+    {
+      "en": "Fiscal policy multiplier",
+      "hi": "राजकोषीय नीति गुणक",
+      "hi-roman": "rajkoshiya niti gunak",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Fiscal theory",
+      "hi": "राजकोषीय सिद्धांत",
+      "hi-roman": "rajkoshiya siddhant",
+      "context": "public finance"
+    },
+    {
+      "en": "Fiscal theory of price levels",
+      "hi": "मूल्य स्तरों का राजकोषीय सिद्धांत",
+      "hi-roman": "mulya staron ka rajkoshiya siddhant",
+      "context": "monetary economics"
+    },
+    {
+      "en": "Flow utility function",
+      "hi": "प्रवाह उपयोगिता फलन",
+      "hi-roman": "pravah upyogita phalan",
+      "context": "economics"
+    },
+    {
+      "en": "Folk theorem",
+      "hi": "लोक प्रमेय",
+      "hi-roman": "lok pramey",
+      "context": "game theory"
+    },
+    {
+      "en": "Forcing variable",
+      "hi": "बाध्यकारी चर",
+      "hi-roman": "badhyakari char",
+      "context": "difference equations"
+    },
+    {
+      "en": "Forecast errors",
+      "hi": "पूर्वानुमान त्रुटियां",
+      "hi-roman": "purvanuман trutiyan",
+      "context": "time series"
+    },
+    {
+      "en": "Forward-looking difference equation",
+      "hi": "अग्रदर्शी अंतर समीकरण",
+      "hi-roman": "agradarshi antar samikaran",
+      "context": "economics"
+    },
+    {
+      "en": "Fractional reserve banking",
+      "hi": "आंशिक आरक्षित बैंकिंग",
+      "hi-roman": "aanshik aarakshit banking",
+      "context": "banking"
+    },
+    {
+      "en": "FRED",
+      "hi": "फेडरल रिजर्व आर्थिक डेटा",
+      "hi-roman": "federal reserve arthik data",
+      "context": "data source",
+      "certainty": "medium"
+    },
+    {
+      "en": "Federal Reserve Economic Data",
+      "hi": "फेडरल रिजर्व आर्थिक डेटा",
+      "hi-roman": "federal reserve arthik data",
+      "context": "data source",
+      "certainty": "medium"
+    },
+    {
+      "en": "Gaussian kernel",
+      "hi": "गॉसियन कर्नेल",
+      "hi-roman": "gaussian kernel",
+      "context": "kernel methods",
+      "certainty": "low"
+    },
+    {
+      "en": "Geary–Khamis dollar",
+      "hi": "गीयरी-खामिस डॉलर",
+      "hi-roman": "geary-khamis dollar",
+      "context": "international comparison",
+      "certainty": "low"
+    },
+    {
+      "en": "Gershgorin Circle Theorem",
+      "hi": "गर्शगोरिन वृत्त प्रमेय",
+      "hi-roman": "gershgorin vritt pramey",
+      "context": "linear algebra",
+      "certainty": "low"
+    },
+    {
+      "en": "Global Financial Crisis",
+      "hi": "वैश्विक वित्तीय संकट",
+      "hi-roman": "vaishvik vittiya sankat",
+      "context": "economic history"
+    },
+    {
+      "en": "GFC",
+      "hi": "वैश्विक वित्तीय संकट",
+      "hi-roman": "vaishvik vittiya sankat",
+      "context": "economic history abbreviation"
+    },
+    {
+      "en": "Global stability",
+      "hi": "वैश्विक स्थिरता",
+      "hi-roman": "vaishvik sthirta",
+      "context": "dynamical systems"
+    },
+    {
+      "en": "Golden Rule savings rate",
+      "hi": "स्वर्ण नियम बचत दर",
+      "hi-roman": "swarn niyam bachat dar",
+      "context": "growth theory"
+    },
+    {
+      "en": "Gordon formula",
+      "hi": "गॉर्डन सूत्र",
+      "hi-roman": "gordon sutra",
+      "context": "finance",
+      "certainty": "low"
+    },
+    {
+      "en": "Government budget constraint",
+      "hi": "सरकारी बजट बाधा",
+      "hi-roman": "sarkari budget baadha",
+      "context": "public finance"
+    },
+    {
+      "en": "Government expenditures multiplier",
+      "hi": "सरकारी व्यय गुणक",
+      "hi-roman": "sarkari vyay gunak",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Greek debt crisis",
+      "hi": "ग्रीक ऋण संकट",
+      "hi-roman": "greek rin sankat",
+      "context": "economic history"
+    },
+    {
+      "en": "Gross Domestic Product",
+      "hi": "सकल घरेलू उत्पाद",
+      "hi-roman": "sakal gharelu utpaad",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "GDP",
+      "hi": "सकल घरेलू उत्पाद",
+      "hi-roman": "sakal gharelu utpaad",
+      "context": "macroeconomics abbreviation"
+    },
+    {
+      "en": "Gross nominal interest rate",
+      "hi": "सकल नाममात्र ब्याज दर",
+      "hi-roman": "sakal naammatra byaj dar",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Gross rate of return",
+      "hi": "सकल प्रतिफल दर",
+      "hi-roman": "sakal pratiphal dar",
+      "context": "finance"
+    },
+    {
+      "en": "Growth facts",
+      "hi": "विकास तथ्य",
+      "hi-roman": "vikas tathya",
+      "context": "growth theory"
+    },
+    {
+      "en": "Grim trigger strategy",
+      "hi": "कठोर प्रतिक्रिया रणनीति",
+      "hi-roman": "kathor pratikriya ranniti",
+      "context": "game theory"
+    },
+    {
+      "en": "Heavy-tailed distribution",
+      "hi": "भारी-पुच्छ वितरण",
+      "hi-roman": "bhaari-puchh vitaran",
+      "context": "probability"
+    },
+    {
+      "en": "Hicksian demand curve",
+      "hi": "हिक्सियन मांग वक्र",
+      "hi-roman": "hicksian maang vakra",
+      "context": "microeconomics",
+      "certainty": "low"
+    },
+    {
+      "en": "Histogram",
+      "hi": "आयतचित्र",
+      "hi-roman": "aayatchitra",
+      "context": "statistics"
+    },
+    {
+      "en": "Hub centrality",
+      "hi": "केंद्र केंद्रीयता",
+      "hi-roman": "kendra kendriyata",
+      "context": "network science"
+    },
+    {
+      "en": "Human wealth",
+      "hi": "मानव संपदा",
+      "hi-roman": "maanav sampada",
+      "context": "economics"
+    },
+    {
+      "en": "Hyperinflation",
+      "hi": "अतिमुद्रास्फीति",
+      "hi-roman": "atimudrasphiti",
+      "context": "monetary economics"
+    },
+    {
+      "en": "Imaginary part",
+      "hi": "काल्पनिक भाग",
+      "hi-roman": "kalpnik bhag",
+      "context": "complex analysis"
+    },
+    {
+      "en": "Independent and identically distributed",
+      "hi": "स्वतंत्र और समान रूप से वितरित",
+      "hi-roman": "swatantra aur samaan roop se vitarit",
+      "context": "probability"
+    },
+    {
+      "en": "Indicator function",
+      "hi": "सूचक फलन",
+      "hi-roman": "suchak phalan",
+      "context": "mathematics"
+    },
+    {
+      "en": "Industrial output",
+      "hi": "औद्योगिक उत्पादन",
+      "hi-roman": "audyogik utpaadan",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Industrial Revolution",
+      "hi": "औद्योगिक क्रांति",
+      "hi-roman": "audyogik kranti",
+      "context": "economic history"
+    },
+    {
+      "en": "Inflation tax",
+      "hi": "मुद्रास्फीति कर",
+      "hi-roman": "mudrasphiti kar",
+      "context": "public finance"
+    },
+    {
+      "en": "Inflation-indexed bonds",
+      "hi": "मुद्रास्फीति-सूचकांकित बॉन्ड",
+      "hi-roman": "mudrasphiti-suchkankrit bond",
+      "context": "finance"
+    },
+    {
+      "en": "Inflation-tax theory",
+      "hi": "मुद्रास्फीति-कर सिद्धांत",
+      "hi-roman": "mudrasphiti-kar siddhant",
+      "context": "monetary economics"
+    },
+    {
+      "en": "Initial condition",
+      "hi": "प्रारंभिक शर्त",
+      "hi-roman": "prarambhik shart",
+      "context": "differential equations"
+    },
+    {
+      "en": "Input-output model",
+      "hi": "निवेश-निर्गम मॉडल",
+      "hi-roman": "nivesh-nirgam model",
+      "context": "economics"
+    },
+    {
+      "en": "Invariant subspace",
+      "hi": "अपरिवर्ती उपसमष्टि",
+      "hi-roman": "aparivartri upsamashti",
+      "context": "linear algebra"
+    },
+    {
+      "en": "Investment multiplier",
+      "hi": "निवेश गुणक",
+      "hi-roman": "nivesh gunak",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Irreducible matrix",
+      "hi": "अविभाज्य मैट्रिक्स",
+      "hi-roman": "avibhajya matrix",
+      "context": "linear algebra"
+    },
+    {
+      "en": "Jump Chain Algorithm",
+      "hi": "जंप चेन एल्गोरिदम",
+      "hi-roman": "jump chain algorithm",
+      "context": "Markov chains"
+    },
+    {
+      "en": "Jump variable",
+      "hi": "जंप चर",
+      "hi-roman": "jump char",
+      "context": "economics"
+    },
+    {
+      "en": "Katz centrality",
+      "hi": "काट्ज़ केंद्रीयता",
+      "hi-roman": "katz kendriyata",
+      "context": "network science",
+      "certainty": "low"
+    },
+    {
+      "en": "Kernel",
+      "hi": "कर्नेल",
+      "hi-roman": "kernel",
+      "context": "functional analysis",
+      "certainty": "medium"
+    },
+    {
+      "en": "Kernel density estimate",
+      "hi": "कर्नेल घनत्व अनुमान",
+      "hi-roman": "kernel ghanatva anumaan",
+      "context": "statistics",
+      "certainty": "medium"
+    },
+    {
+      "en": "Kernel density estimator",
+      "hi": "कर्नेल घनत्व प्राक्कलक",
+      "hi-roman": "kernel ghanatva praakkalak",
+      "context": "statistics",
+      "certainty": "medium"
+    },
+    {
+      "en": "Keynesian multiplier",
+      "hi": "कीन्सियन गुणक",
+      "hi-roman": "keynesian gunak",
+      "context": "macroeconomics",
+      "certainty": "low"
+    },
+    {
+      "en": "Knockout barrier",
+      "hi": "नॉकआउट बैरियर",
+      "hi-roman": "knockout barrier",
+      "context": "options",
+      "certainty": "medium"
+    },
+    {
+      "en": "Kolmogorov-Smirnov test",
+      "hi": "कोल्मोगोरोव-स्मिर्नोव परीक्षण",
+      "hi-roman": "kolmogorov-smirnov parikshan",
+      "context": "statistics",
+      "certainty": "low"
+    },
+    {
+      "en": "Laffer curve",
+      "hi": "लाफर वक्र",
+      "hi-roman": "laffer vakra",
+      "context": "public finance",
+      "certainty": "low"
+    },
+    {
+      "en": "Lake model",
+      "hi": "झील मॉडल",
+      "hi-roman": "jheel model",
+      "context": "labor economics"
+    },
+    {
+      "en": "Law of large numbers",
+      "hi": "बड़ी संख्याओं का नियम",
+      "hi-roman": "badi sankhyaon ka niyam",
+      "context": "probability"
+    },
+    {
+      "en": "Law of total probability",
+      "hi": "कुल प्रायिकता का नियम",
+      "hi-roman": "kul praayikta ka niyam",
+      "context": "probability"
+    },
+    {
+      "en": "Lecture",
+      "hi": "व्याख्यान",
+      "hi-roman": "vyakhyaan",
+      "context": "educational content"
+    },
+    {
+      "en": "Legal restrictions theory",
+      "hi": "कानूनी प्रतिबंध सिद्धांत",
+      "hi-roman": "kaanooni pratibandh siddhant",
+      "context": "monetary economics"
+    },
+    {
+      "en": "Leontief Inverse",
+      "hi": "लियोन्टीफ व्युत्क्रम",
+      "hi-roman": "leontief vyutkram",
+      "context": "input-output economics",
+      "certainty": "low"
+    },
+    {
+      "en": "Light-tailed distribution",
+      "hi": "हल्की-पुच्छ वितरण",
+      "hi-roman": "halki-puchh vitaran",
+      "context": "probability"
+    },
+    {
+      "en": "Linear algebra",
+      "hi": "रैखिक बीजगणित",
+      "hi-roman": "raikhik bijganit",
+      "context": "mathematics"
+    },
+    {
+      "en": "Linear differential equation",
+      "hi": "रैखिक अवकल समीकरण",
+      "hi-roman": "raikhik avakal samikaran",
+      "context": "mathematics"
+    },
+    {
+      "en": "Linear programming",
+      "hi": "रैखिक प्रोग्रामिंग",
+      "hi-roman": "raikhik programming",
+      "context": "optimization"
+    },
+    {
+      "en": "Log likelihood function",
+      "hi": "लॉग संभाव्यता फलन",
+      "hi-roman": "log sambhavyata phalan",
+      "context": "statistics"
+    },
+    {
+      "en": "Log transform",
+      "hi": "लॉग रूपांतरण",
+      "hi-roman": "log rupantaran",
+      "context": "mathematics"
+    },
+    {
+      "en": "Log-normal distribution",
+      "hi": "लॉग-सामान्य वितरण",
+      "hi-roman": "log-samanya vitaran",
+      "context": "probability"
+    },
+    {
+      "en": "Long-Run Growth",
+      "hi": "दीर्घकालीन विकास",
+      "hi-roman": "dirghkalin vikas",
+      "context": "growth theory"
+    },
+    {
+      "en": "Lorenz curve",
+      "hi": "लोरेंज वक्र",
+      "hi-roman": "lorenz vakra",
+      "context": "income distribution",
+      "certainty": "low"
+    },
+    {
+      "en": "Marginal distribution",
+      "hi": "सीमांत वितरण",
+      "hi-roman": "seemant vitaran",
+      "context": "probability"
+    },
+    {
+      "en": "Marginal product of capital",
+      "hi": "पूंजी का सीमांत उत्पाद",
+      "hi-roman": "punji ka seemant utpaad",
+      "context": "economics"
+    },
+    {
+      "en": "Marginal propensity to consume",
+      "hi": "सीमांत उपभोग प्रवृत्ति",
+      "hi-roman": "seemant upabhog pravritti",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Marginal propensity to save",
+      "hi": "सीमांत बचत प्रवृत्ति",
+      "hi-roman": "seemant bachat pravritti",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Marginal revenue",
+      "hi": "सीमांत राजस्व",
+      "hi-roman": "seemant rajasva",
+      "context": "microeconomics"
+    },
+    {
+      "en": "Marginal utility of wealth",
+      "hi": "धन की सीमांत उपयोगिता",
+      "hi-roman": "dhan ki seemant upyogita",
+      "context": "economics"
+    },
+    {
+      "en": "Market clearing",
+      "hi": "बाजार समाशोधन",
+      "hi-roman": "bazaar samashodhan",
+      "context": "economics"
+    },
+    {
+      "en": "Markov chain",
+      "hi": "मार्कोव श्रृंखला",
+      "hi-roman": "markov shrinkhla",
+      "context": "stochastic processes",
+      "certainty": "low"
+    },
+    {
+      "en": "Marshallian demand curve",
+      "hi": "मार्शलियन मांग वक्र",
+      "hi-roman": "marshallian maang vakra",
+      "context": "microeconomics",
+      "certainty": "low"
+    },
+    {
+      "en": "Matrix inversion",
+      "hi": "मैट्रिक्स व्युत्क्रमण",
+      "hi-roman": "matrix vyutkraman",
+      "context": "linear algebra",
+      "certainty": "medium"
+    },
+    {
+      "en": "Matrix multiplication",
+      "hi": "मैट्रिक्स गुणन",
+      "hi-roman": "matrix gunan",
+      "context": "linear algebra",
+      "certainty": "medium"
+    },
+    {
+      "en": "Maximum likelihood estimation",
+      "hi": "अधिकतम संभाव्यता अनुमान",
+      "hi-roman": "adhiktam sambhavyata anumaan",
+      "context": "statistics"
+    },
+    {
+      "en": "Method of successive approximations",
+      "hi": "क्रमिक सन्निकटन विधि",
+      "hi-roman": "kramik sannikatan vidhi",
+      "context": "numerical methods"
+    },
+    {
+      "en": "Moment generating function",
+      "hi": "आघूर्ण जनक फलन",
+      "hi-roman": "aaghurn janak phalan",
+      "context": "probability"
+    },
+    {
+      "en": "Moments",
+      "hi": "आघूर्ण",
+      "hi-roman": "aaghurn",
+      "context": "probability"
+    },
+    {
+      "en": "Money demand",
+      "hi": "मुद्रा मांग",
+      "hi-roman": "mudra maang",
+      "context": "monetary economics"
+    },
+    {
+      "en": "Money multiplier",
+      "hi": "मुद्रा गुणक",
+      "hi-roman": "mudra gunak",
+      "context": "monetary economics"
+    },
+    {
+      "en": "Money supply",
+      "hi": "मुद्रा आपूर्ति",
+      "hi-roman": "mudra aapurti",
+      "context": "monetary economics"
+    },
+    {
+      "en": "Money-financed government deficit",
+      "hi": "मुद्रा-वित्तपोषित सरकारी घाटा",
+      "hi-roman": "mudra-vittaposhit sarkari ghata",
+      "context": "public finance"
+    },
+    {
+      "en": "Monte Carlo",
+      "hi": "मोंटे कार्लो",
+      "hi-roman": "monte carlo",
+      "context": "simulation methods",
+      "certainty": "low"
+    },
+    {
+      "en": "Moving average representation",
+      "hi": "चल औसत निरूपण",
+      "hi-roman": "chal ausat nirupan",
+      "context": "time series"
+    },
+    {
+      "en": "Multiple consumer economy",
+      "hi": "बहु उपभोक्ता अर्थव्यवस्था",
+      "hi-roman": "bahu upabhokta arthavyavastha",
+      "context": "economics"
+    },
+    {
+      "en": "Multiplier-accelerator model",
+      "hi": "गुणक-त्वरक मॉडल",
+      "hi-roman": "gunak-twarak model",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Multivariate normal distributions",
+      "hi": "बहुचर सामान्य वितरण",
+      "hi-roman": "bahuchar samanya vitaran",
+      "context": "probability"
+    },
+    {
+      "en": "Mutual fund",
+      "hi": "म्यूचुअल फंड",
+      "hi-roman": "mutual fund",
+      "context": "finance"
+    },
+    {
+      "en": "Naive expectations",
+      "hi": "सरल प्रत्याशाएं",
+      "hi-roman": "saral pratyashaen",
+      "context": "economics"
+    },
+    {
+      "en": "NBER",
+      "hi": "राष्ट्रीय आर्थिक अनुसंधान ब्यूरो",
+      "hi-roman": "rashtriya arthik anusandhan bureau",
+      "context": "institution"
+    },
+    {
+      "en": "National Bureau of Economic Research",
+      "hi": "राष्ट्रीय आर्थिक अनुसंधान ब्यूरो",
+      "hi-roman": "rashtriya arthik anusandhan bureau",
+      "context": "institution"
+    },
+    {
+      "en": "Net nominal interest rate",
+      "hi": "शुद्ध नाममात्र ब्याज दर",
+      "hi-roman": "shuddh naammatra byaj dar",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Network science",
+      "hi": "नेटवर्क विज्ञान",
+      "hi-roman": "network vigyan",
+      "context": "mathematics",
+      "certainty": "medium"
+    },
+    {
+      "en": "Neumann Series Lemma",
+      "hi": "न्यूमैन श्रेणी लेम्मा",
+      "hi-roman": "neumann shreni lemma",
+      "context": "functional analysis",
+      "certainty": "low"
+    },
+    {
+      "en": "Newton's method",
+      "hi": "न्यूटन विधि",
+      "hi-roman": "newton vidhi",
+      "context": "numerical methods",
+      "certainty": "low"
+    },
+    {
+      "en": "Non-financial income",
+      "hi": "गैर-वित्तीय आय",
+      "hi-roman": "gair-vittiya aay",
+      "context": "economics"
+    },
+    {
+      "en": "Non-satiation",
+      "hi": "अतृप्ति",
+      "hi-roman": "atripti",
+      "context": "microeconomics"
+    },
+    {
+      "en": "Non-stationary univariate time series",
+      "hi": "गैर-स्थिर एकचर समय श्रृंखला",
+      "hi-roman": "gair-sthir ekchar samay shrinkhla",
+      "context": "time series"
+    },
+    {
+      "en": "Normal distribution",
+      "hi": "सामान्य वितरण",
+      "hi-roman": "samanya vitaran",
+      "context": "probability"
+    },
+    {
+      "en": "Numeraire",
+      "hi": "अंकमान",
+      "hi-roman": "ankamaan",
+      "context": "economics"
+    },
+    {
+      "en": "Numerical integration",
+      "hi": "संख्यात्मक समाकलन",
+      "hi-roman": "sankhyatmak samakalan",
+      "context": "numerical methods"
+    },
+    {
+      "en": "Oil Crisis",
+      "hi": "तेल संकट",
+      "hi-roman": "tel sankat",
+      "context": "economic history"
+    },
+    {
+      "en": "Open market operations",
+      "hi": "खुला बाजार संचालन",
+      "hi-roman": "khula bazaar sanchalan",
+      "context": "monetary policy"
+    },
+    {
+      "en": "Optimal path",
+      "hi": "इष्टतम पथ",
+      "hi-roman": "ishtatam path",
+      "context": "optimization"
+    },
+    {
+      "en": "Optimal policy",
+      "hi": "इष्टतम नीति",
+      "hi-roman": "ishtatam niti",
+      "context": "optimization"
+    },
+    {
+      "en": "Ordinary Least Squares",
+      "hi": "साधारण न्यूनतम वर्ग",
+      "hi-roman": "sadharan nyuntam varg",
+      "context": "econometrics"
+    },
+    {
+      "en": "OLS",
+      "hi": "साधारण न्यूनतम वर्ग",
+      "hi-roman": "sadharan nyuntam varg",
+      "context": "econometrics abbreviation"
+    },
+    {
+      "en": "Output elasticity of capital",
+      "hi": "पूंजी की उत्पादन लोच",
+      "hi-roman": "punji ki utpaadan loch",
+      "context": "production economics"
+    },
+    {
+      "en": "Output multiplier",
+      "hi": "उत्पादन गुणक",
+      "hi-roman": "utpaadan gunak",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Overlapping generations model",
+      "hi": "अतिव्यापी पीढ़ी मॉडल",
+      "hi-roman": "ativyapi peedhi model",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "OLG model",
+      "hi": "अतिव्यापी पीढ़ी मॉडल",
+      "hi-roman": "ativyapi peedhi model",
+      "context": "macroeconomics abbreviation"
+    },
+    {
+      "en": "PageRank algorithm",
+      "hi": "पेजरैंक एल्गोरिदम",
+      "hi-roman": "pagerank algorithm",
+      "context": "network science",
+      "certainty": "low"
+    },
+    {
+      "en": "Pareto tail",
+      "hi": "पैरेटो पुच्छ",
+      "hi-roman": "pareto puchh",
+      "context": "probability",
+      "certainty": "low"
+    },
+    {
+      "en": "Partial derivative",
+      "hi": "आंशिक अवकलज",
+      "hi-roman": "aanshik avakalaj",
+      "context": "calculus"
+    },
+    {
+      "en": "Path simulation",
+      "hi": "पथ अनुकरण",
+      "hi-roman": "path anukaran",
+      "context": "simulation"
+    },
+    {
+      "en": "Perfect foresight",
+      "hi": "पूर्ण दूरदर्शिता",
+      "hi-roman": "poorn doordarshita",
+      "context": "economics"
+    },
+    {
+      "en": "Perfect foresight model",
+      "hi": "पूर्ण दूरदर्शिता मॉडल",
+      "hi-roman": "poorn doordarshita model",
+      "context": "economics"
+    },
+    {
+      "en": "Perron projection",
+      "hi": "पेरॉन प्रक्षेपण",
+      "hi-roman": "perron prakshepan",
+      "context": "linear algebra",
+      "certainty": "low"
+    },
+    {
+      "en": "Perron-Frobenius theorem",
+      "hi": "पेरॉन-फ्रोबेनियस प्रमेय",
+      "hi-roman": "perron-frobenius pramey",
+      "context": "linear algebra",
+      "certainty": "low"
+    },
+    {
+      "en": "Power law",
+      "hi": "घात नियम",
+      "hi-roman": "ghaat niyam",
+      "context": "probability"
+    },
+    {
+      "en": "Present discounted value",
+      "hi": "वर्तमान बट्टाकृत मूल्य",
+      "hi-roman": "vartmaan battakrit mulya",
+      "context": "finance"
+    },
+    {
+      "en": "Present value",
+      "hi": "वर्तमान मूल्य",
+      "hi-roman": "vartmaan mulya",
+      "context": "finance"
+    },
+    {
+      "en": "Present value model",
+      "hi": "वर्तमान मूल्य मॉडल",
+      "hi-roman": "vartmaan mulya model",
+      "context": "finance"
+    },
+    {
+      "en": "Price level",
+      "hi": "मूल्य स्तर",
+      "hi-roman": "mulya star",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Primitive matrix",
+      "hi": "आदिम मैट्रिक्स",
+      "hi-roman": "aadim matrix",
+      "context": "linear algebra"
+    },
+    {
+      "en": "Probability density function",
+      "hi": "प्रायिकता घनत्व फलन",
+      "hi-roman": "praayikta ghanatva phalan",
+      "context": "probability"
+    },
+    {
+      "en": "Probability mass function",
+      "hi": "प्रायिकता द्रव्यमान फलन",
+      "hi-roman": "praayikta dravyamaan phalan",
+      "context": "probability"
+    },
+    {
+      "en": "Producer surplus",
+      "hi": "उत्पादक अधिशेष",
+      "hi-roman": "utpaadak adhishesh",
+      "context": "microeconomics"
+    },
+    {
+      "en": "Projected corporate tax revenue",
+      "hi": "अनुमानित कॉर्पोरेट कर राजस्व",
+      "hi-roman": "anumaanit corporate kar rajasva",
+      "context": "public finance"
+    },
+    {
+      "en": "Purchasing power parity",
+      "hi": "क्रय शक्ति समता",
+      "hi-roman": "kray shakti samata",
+      "context": "international economics"
+    },
+    {
+      "en": "Quantity theory of money",
+      "hi": "मुद्रा का परिमाण सिद्धांत",
+      "hi-roman": "mudra ka parimaan siddhant",
+      "context": "monetary economics"
+    },
+    {
+      "en": "Rational expectations",
+      "hi": "तर्कसंगत प्रत्याशाएं",
+      "hi-roman": "tarksangat pratyashaen",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Real bills theory",
+      "hi": "वास्तविक बिल सिद्धांत",
+      "hi-roman": "vastavik bill siddhant",
+      "context": "monetary economics"
+    },
+    {
+      "en": "Real money balances",
+      "hi": "वास्तविक मुद्रा शेष",
+      "hi-roman": "vastavik mudra shesh",
+      "context": "monetary economics"
+    },
+    {
+      "en": "Real part",
+      "hi": "वास्तविक भाग",
+      "hi-roman": "vastavik bhag",
+      "context": "complex analysis"
+    },
+    {
+      "en": "Recessions",
+      "hi": "मंदी",
+      "hi-roman": "mandi",
+      "context": "business cycles"
+    },
+    {
+      "en": "Recursive expressions",
+      "hi": "पुनरावर्ती व्यंजक",
+      "hi-roman": "punaravrti vyanjak",
+      "context": "mathematics"
+    },
+    {
+      "en": "Reform and liberalization",
+      "hi": "सुधार और उदारीकरण",
+      "hi-roman": "sudhaar aur udarikaran",
+      "context": "economic policy"
+    },
+    {
+      "en": "Reserve-deposit ratio",
+      "hi": "आरक्षित-जमा अनुपात",
+      "hi-roman": "aarakshit-jama anupaat",
+      "context": "banking"
+    },
+    {
+      "en": "Residuals",
+      "hi": "अवशेष",
+      "hi-roman": "avshesh",
+      "context": "econometrics"
+    },
+    {
+      "en": "Risk-neutral pricing",
+      "hi": "जोखिम-तटस्थ मूल्य निर्धारण",
+      "hi-roman": "jokhim-tatasth mulya nirdharan",
+      "context": "finance"
+    },
+    {
+      "en": "Sample mean",
+      "hi": "प्रतिदर्श माध्य",
+      "hi-roman": "pratidarsh madhya",
+      "context": "statistics"
+    },
+    {
+      "en": "Sample variance",
+      "hi": "प्रतिदर्श प्रसरण",
+      "hi-roman": "pratidarsh prasaran",
+      "context": "statistics"
+    },
+    {
+      "en": "Scatter plot",
+      "hi": "प्रकीर्ण आरेख",
+      "hi-roman": "prakirn aarekh",
+      "context": "statistics"
+    },
+    {
+      "en": "Second fundamental welfare theorem",
+      "hi": "द्वितीय मूलभूत कल्याण प्रमेय",
+      "hi-roman": "dwitiya moolbhut kalyan pramey",
+      "context": "welfare economics"
+    },
+    {
+      "en": "Second-order linear difference equation",
+      "hi": "द्वितीय-कोटि रैखिक अंतर समीकरण",
+      "hi-roman": "dwitiya-koti raikhik antar samikaran",
+      "context": "difference equations"
+    },
+    {
+      "en": "Seigniorage",
+      "hi": "मुद्रा ढलाई लाभ",
+      "hi-roman": "mudra dhalai labh",
+      "context": "public finance"
+    },
+    {
+      "en": "Silverman's rule",
+      "hi": "सिल्वरमैन नियम",
+      "hi-roman": "silverman niyam",
+      "context": "kernel density estimation",
+      "certainty": "low"
+    },
+    {
+      "en": "Simple regression model",
+      "hi": "सरल प्रतिगमन मॉडल",
+      "hi-roman": "saral pratigaman model",
+      "context": "econometrics"
+    },
+    {
+      "en": "Social welfare",
+      "hi": "सामाजिक कल्याण",
+      "hi-roman": "samajik kalyan",
+      "context": "welfare economics"
+    },
+    {
+      "en": "Solow-Swan Growth Model",
+      "hi": "सोलो-स्वान विकास मॉडल",
+      "hi-roman": "solow-swan vikas model",
+      "context": "growth theory",
+      "certainty": "low"
+    },
+    {
+      "en": "Spectral gap",
+      "hi": "वर्णक्रमीय अंतराल",
+      "hi-roman": "varnakrameey antral",
+      "context": "linear algebra"
+    },
+    {
+      "en": "Spectral radius",
+      "hi": "वर्णक्रमीय त्रिज्या",
+      "hi-roman": "varnakrameey trijya",
+      "context": "linear algebra"
+    },
+    {
+      "en": "Spectral theory",
+      "hi": "वर्णक्रमीय सिद्धांत",
+      "hi-roman": "varnakrameey siddhant",
+      "context": "linear algebra"
+    },
+    {
+      "en": "Spot price",
+      "hi": "हाजिर मूल्य",
+      "hi-roman": "haazir mulya",
+      "context": "finance"
+    },
+    {
+      "en": "Stable cycle",
+      "hi": "स्थिर चक्र",
+      "hi-roman": "sthir chakra",
+      "context": "dynamical systems"
+    },
+    {
+      "en": "Stagflation",
+      "hi": "मुद्रास्फीतिजनित मंदी",
+      "hi-roman": "mudrasphitijanit mandi",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "State space",
+      "hi": "अवस्था समष्टि",
+      "hi-roman": "avastha samashti",
+      "context": "stochastic processes"
+    },
+    {
+      "en": "State transition matrix",
+      "hi": "अवस्था संक्रमण मैट्रिक्स",
+      "hi-roman": "avastha sankraman matrix",
+      "context": "Markov chains"
+    },
+    {
+      "en": "State variable",
+      "hi": "अवस्था चर",
+      "hi-roman": "avastha char",
+      "context": "dynamic systems"
+    },
+    {
+      "en": "State-contingent claims",
+      "hi": "अवस्था-आकस्मिक दावे",
+      "hi-roman": "avastha-aakasmik dave",
+      "context": "finance"
+    },
+    {
+      "en": "Stationary distribution",
+      "hi": "स्थिर वितरण",
+      "hi-roman": "sthir vitaran",
+      "context": "Markov chains"
+    },
+    {
+      "en": "Stationarity",
+      "hi": "स्थिरता",
+      "hi-roman": "sthirta",
+      "context": "time series"
+    },
+    {
+      "en": "Statistical stationarity",
+      "hi": "सांख्यिकीय स्थिरता",
+      "hi-roman": "sankhyikiya sthirta",
+      "context": "time series"
+    },
+    {
+      "en": "Steady state",
+      "hi": "स्थिर अवस्था",
+      "hi-roman": "sthir avastha",
+      "context": "dynamical systems"
+    },
+    {
+      "en": "Stochastic difference equation",
+      "hi": "यादृच्छिक अंतर समीकरण",
+      "hi-roman": "yaadrichchhik antar samikaran",
+      "context": "stochastic processes"
+    },
+    {
+      "en": "Stochastic linear difference equation",
+      "hi": "यादृच्छिक रैखिक अंतर समीकरण",
+      "hi-roman": "yaadrichchhik raikhik antar samikaran",
+      "context": "stochastic processes"
+    },
+    {
+      "en": "Stochastic matrix",
+      "hi": "यादृच्छिक मैट्रिक्स",
+      "hi-roman": "yaadrichchhik matrix",
+      "context": "Markov chains"
+    },
+    {
+      "en": "Stochastic productivity",
+      "hi": "यादृच्छिक उत्पादकता",
+      "hi-roman": "yaadrichchhik utpaadakta",
+      "context": "economics"
+    },
+    {
+      "en": "Stochastic volatility",
+      "hi": "यादृच्छिक अस्थिरता",
+      "hi-roman": "yaadrichchhik asthirta",
+      "context": "finance"
+    },
+    {
+      "en": "Strike price",
+      "hi": "स्ट्राइक मूल्य",
+      "hi-roman": "strike mulya",
+      "context": "options"
+    },
+    {
+      "en": "Strong law of large numbers",
+      "hi": "बड़ी संख्याओं का प्रबल नियम",
+      "hi-roman": "badi sankhyaon ka prabal niyam",
+      "context": "probability"
+    },
+    {
+      "en": "Strongly connected",
+      "hi": "प्रबल संबद्ध",
+      "hi-roman": "prabal sambaddh",
+      "context": "graph theory"
+    },
+    {
+      "en": "Successive approximation",
+      "hi": "क्रमिक सन्निकटन",
+      "hi-roman": "kramik sannikatan",
+      "context": "numerical methods"
+    },
+    {
+      "en": "Support",
+      "hi": "आधार",
+      "hi-roman": "aadhaar",
+      "context": "probability"
+    },
+    {
+      "en": "Sum of the squared residuals",
+      "hi": "वर्गित अवशेषों का योग",
+      "hi-roman": "vargit avsheshon ka yog",
+      "context": "econometrics"
+    },
+    {
+      "en": "SSR",
+      "hi": "वर्गित अवशेषों का योग",
+      "hi-roman": "vargit avsheshon ka yog",
+      "context": "econometrics abbreviation"
+    },
+    {
+      "en": "Survey of Consumer Finances",
+      "hi": "उपभोक्ता वित्त सर्वेक्षण",
+      "hi-roman": "upabhokta vitt sarvekshan",
+      "context": "data source"
+    },
+    {
+      "en": "Tail index",
+      "hi": "पुच्छ सूचकांक",
+      "hi-roman": "puchh suchkank",
+      "context": "probability"
+    },
+    {
+      "en": "Tax farming",
+      "hi": "कर खेती",
+      "hi-roman": "kar kheti",
+      "context": "public finance"
+    },
+    {
+      "en": "Tax-smoothing model",
+      "hi": "कर-समतलन मॉडल",
+      "hi-roman": "kar-samatlan model",
+      "context": "public finance"
+    },
+    {
+      "en": "Taylor series",
+      "hi": "टेलर श्रेणी",
+      "hi-roman": "taylor shreni",
+      "context": "calculus",
+      "certainty": "low"
+    },
+    {
+      "en": "Terminal condition",
+      "hi": "अंतिम शर्त",
+      "hi-roman": "antim shart",
+      "context": "dynamic programming"
+    },
+    {
+      "en": "Terminal price",
+      "hi": "अंतिम मूल्य",
+      "hi-roman": "antim mulya",
+      "context": "finance"
+    },
+    {
+      "en": "Time series",
+      "hi": "समय श्रृंखला",
+      "hi-roman": "samay shrinkhla",
+      "context": "statistics"
+    },
+    {
+      "en": "Time to build",
+      "hi": "निर्माण समय",
+      "hi-roman": "nirmaan samay",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Transition probability",
+      "hi": "संक्रमण प्रायिकता",
+      "hi-roman": "sankraman praayikta",
+      "context": "Markov chains"
+    },
+    {
+      "en": "Trigonometric form",
+      "hi": "त्रिकोणमितीय रूप",
+      "hi-roman": "trikonmitiya roop",
+      "context": "complex analysis"
+    },
+    {
+      "en": "Trigonometric integrals",
+      "hi": "त्रिकोणमितीय समाकल",
+      "hi-roman": "trikonmitiya samakal",
+      "context": "calculus"
+    },
+    {
+      "en": "Underlying asset",
+      "hi": "अंतर्निहित परिसंपत्ति",
+      "hi-roman": "antarnihit parisampatti",
+      "context": "derivatives"
+    },
+    {
+      "en": "University of Michigan",
+      "hi": "मिशिगन विश्वविद्यालय",
+      "hi-roman": "michigan vishwavidyalay",
+      "context": "institution"
+    },
+    {
+      "en": "Unpleasant monetarist arithmetic",
+      "hi": "अप्रिय मुद्रावादी अंकगणित",
+      "hi-roman": "apriya mudravadi ankganit",
+      "context": "monetary economics"
+    },
+    {
+      "en": "Vector field",
+      "hi": "सदिश क्षेत्र",
+      "hi-roman": "sadish kshetra",
+      "context": "mathematics"
+    },
+    {
+      "en": "Vector linear difference equations",
+      "hi": "सदिश रैखिक अंतर समीकरण",
+      "hi-roman": "sadish raikhik antar samikaran",
+      "context": "difference equations"
+    },
+    {
+      "en": "Vectorization",
+      "hi": "सदिशीकरण",
+      "hi-roman": "sadishikaran",
+      "context": "numerical computation"
+    },
+    {
+      "en": "Vertices",
+      "hi": "शीर्ष",
+      "hi-roman": "shirsh",
+      "context": "graph theory"
+    },
+    {
+      "en": "Violin plot",
+      "hi": "वायोलिन प्लॉट",
+      "hi-roman": "violin plot",
+      "context": "data visualization"
+    },
+    {
+      "en": "Volatility",
+      "hi": "अस्थिरता",
+      "hi-roman": "asthirta",
+      "context": "finance"
+    },
+    {
+      "en": "Wage gap",
+      "hi": "वेतन अंतर",
+      "hi-roman": "vetan antar",
+      "context": "labor economics"
+    },
+    {
+      "en": "Weighted average",
+      "hi": "भारित औसत",
+      "hi-roman": "bharit ausat",
+      "context": "statistics"
+    },
+    {
+      "en": "Weighted directed graph",
+      "hi": "भारित दिग्गामी ग्राफ",
+      "hi-roman": "bharit diggami graph",
+      "context": "graph theory"
+    },
+    {
+      "en": "Weight function",
+      "hi": "भार फलन",
+      "hi-roman": "bhar phalan",
+      "context": "mathematics"
+    },
+    {
+      "en": "Welfare criterion",
+      "hi": "कल्याण मानदंड",
+      "hi-roman": "kalyan maandand",
+      "context": "welfare economics"
+    },
+    {
+      "en": "Welfare maximization problem",
+      "hi": "कल्याण अधिकतमीकरण समस्या",
+      "hi-roman": "kalyan adhiktamikaran samasya",
+      "context": "welfare economics"
+    },
+    {
+      "en": "World Bank",
+      "hi": "विश्व बैंक",
+      "hi-roman": "vishwa bank",
+      "context": "institution"
+    },
+    {
+      "en": "Zero-sum game",
+      "hi": "शून्य-योग खेल",
+      "hi-roman": "shunya-yog khel",
+      "context": "game theory"
+    },
+    {
+      "en": "Abba Lerner",
+      "hi": "अब्बा लर्नर",
+      "hi-roman": "abba lerner",
+      "context": "economist name",
+      "certainty": "low"
+    },
+    {
+      "en": "Adam Tooze",
+      "hi": "एडम टूज़",
+      "hi-roman": "adam tooze",
+      "context": "historian name",
+      "certainty": "low"
+    },
+    {
+      "en": "Albert Marcet",
+      "hi": "अल्बर्ट मार्सेट",
+      "hi-roman": "albert marcet",
+      "context": "economist name",
+      "certainty": "low"
+    },
+    {
+      "en": "Alberto Bisin",
+      "hi": "अल्बर्टो बिसिन",
+      "hi-roman": "alberto bisin",
+      "context": "economist name",
+      "certainty": "low"
+    },
+    {
+      "en": "Angus Maddison",
+      "hi": "एंगस मैडिसन",
+      "hi-roman": "angus maddison",
+      "context": "economic historian name",
+      "certainty": "low"
+    },
+    {
+      "en": "Brian Wright",
+      "hi": "ब्रायन राइट",
+      "hi-roman": "brian wright",
+      "context": "economist name",
+      "certainty": "low"
+    },
+    {
+      "en": "Christian Schluter",
+      "hi": "क्रिश्चियन श्लूटर",
+      "hi-roman": "christian schluter",
+      "context": "economist name",
+      "certainty": "low"
+    },
+    {
+      "en": "Dimitris Bertsimas",
+      "hi": "दिमित्रिस बर्टसिमास",
+      "hi-roman": "dimitris bertsimas",
+      "context": "mathematician name",
+      "certainty": "low"
+    },
+    {
+      "en": "Eugene Slutsky",
+      "hi": "यूजीन स्लट्स्की",
+      "hi-roman": "eugene slutsky",
+      "context": "economist name",
+      "certainty": "low"
+    },
+    {
+      "en": "Francis Ysidro Edgeworth",
+      "hi": "फ्रांसिस इसिड्रो एजवर्थ",
+      "hi-roman": "francis ysidro edgeworth",
+      "context": "economist name",
+      "certainty": "low"
+    },
+    {
+      "en": "Gerard Debreu",
+      "hi": "जेरार्ड देब्रू",
+      "hi-roman": "gerard debreu",
+      "context": "economist name",
+      "certainty": "low"
+    },
+    {
+      "en": "Guangming Zhao",
+      "hi": "गुआंगमिंग झाओ",
+      "hi-roman": "guangming zhao",
+      "context": "researcher name",
+      "certainty": "low"
+    },
+    {
+      "en": "Harold Hotelling",
+      "hi": "हेरोल्ड होटेलिंग",
+      "hi-roman": "harold hotelling",
+      "context": "economist name",
+      "certainty": "low"
+    },
+    {
+      "en": "Hiroki Kondo",
+      "hi": "हिरोकी कोंडो",
+      "hi-roman": "hiroki kondo",
+      "context": "researcher name",
+      "certainty": "low"
+    },
+    {
+      "en": "James Hamilton",
+      "hi": "जेम्स हैमिल्टन",
+      "hi-roman": "james hamilton",
+      "context": "economist name",
+      "certainty": "low"
+    },
+    {
+      "en": "Jennifer Burns",
+      "hi": "जेनिफर बर्न्स",
+      "hi-roman": "jennifer burns",
+      "context": "historian name",
+      "certainty": "low"
+    },
+    {
+      "en": "Jess Benhabib",
+      "hi": "जेस बेनहबीब",
+      "hi-roman": "jess benhabib",
+      "context": "economist name",
+      "certainty": "low"
+    },
+    {
+      "en": "John Tsitsiklis",
+      "hi": "जॉन सिट्सिक्लिस",
+      "hi-roman": "john tsitsiklis",
+      "context": "mathematician name",
+      "certainty": "low"
+    },
+    {
+      "en": "Jonathan Temple",
+      "hi": "जोनाथन टेम्पल",
+      "hi-roman": "jonathan temple",
+      "context": "economist name",
+      "certainty": "low"
+    },
+    {
+      "en": "José Scheinkman",
+      "hi": "होसे शाइनकमैन",
+      "hi-roman": "jose scheinkman",
+      "context": "economist name",
+      "certainty": "low"
+    },
+    {
+      "en": "Kenneth Arrow",
+      "hi": "केनेथ एरो",
+      "hi-roman": "kenneth arrow",
+      "context": "economist name",
+      "certainty": "low"
+    },
+    {
+      "en": "Leon Walras",
+      "hi": "लियोन वालरास",
+      "hi-roman": "leon walras",
+      "context": "economist name",
+      "certainty": "low"
+    },
+    {
+      "en": "Leonhard Euler",
+      "hi": "लियोनहार्ड यूलर",
+      "hi-roman": "leonhard euler",
+      "context": "mathematician name",
+      "certainty": "low"
+    },
+    {
+      "en": "Mi Luo",
+      "hi": "मी लुओ",
+      "hi-roman": "mi luo",
+      "context": "researcher name",
+      "certainty": "low"
+    },
+    {
+      "en": "Michael Bruno",
+      "hi": "माइकल ब्रूनो",
+      "hi-roman": "michael bruno",
+      "context": "economist name",
+      "certainty": "low"
+    },
+    {
+      "en": "Milton Friedman",
+      "hi": "मिल्टन फ्रीडमैन",
+      "hi-roman": "milton friedman",
+      "context": "economist name",
+      "certainty": "low"
+    },
+    {
+      "en": "Neil Wallace",
+      "hi": "नील वैलेस",
+      "hi-roman": "neil wallace",
+      "context": "economist name",
+      "certainty": "low"
+    },
+    {
+      "en": "Patrick Imam",
+      "hi": "पैट्रिक इमाम",
+      "hi-roman": "patrick imam",
+      "context": "economist name",
+      "certainty": "low"
+    },
+    {
+      "en": "Paul Samuelson",
+      "hi": "पॉल सैमुएलसन",
+      "hi-roman": "paul samuelson",
+      "context": "economist name",
+      "certainty": "low"
+    },
+    {
+      "en": "Phillip Cagan",
+      "hi": "फिलिप कागन",
+      "hi-roman": "phillip cagan",
+      "context": "economist name",
+      "certainty": "low"
+    },
+    {
+      "en": "Pythagoras",
+      "hi": "पाइथागोरस",
+      "hi-roman": "pythagoras",
+      "context": "mathematician name",
+      "certainty": "low"
+    },
+    {
+      "en": "Ragnar Frisch",
+      "hi": "रगनार फ्रिश",
+      "hi-roman": "ragnar frisch",
+      "context": "economist name",
+      "certainty": "low"
+    },
+    {
+      "en": "Robert Solow",
+      "hi": "रॉबर्ट सोलो",
+      "hi-roman": "robert solow",
+      "context": "economist name",
+      "certainty": "low"
+    },
+    {
+      "en": "Simon Kuznets",
+      "hi": "साइमन कुज़नेट्स",
+      "hi-roman": "simon kuznets",
+      "context": "economist name",
+      "certainty": "low"
+    },
+    {
+      "en": "Thomas C. Schelling",
+      "hi": "थॉमस सी. शेलिंग",
+      "hi-roman": "thomas c. schelling",
+      "context": "economist name",
+      "certainty": "low"
+    },
+    {
+      "en": "Thomas Sargent",
+      "hi": "थॉमस सार्जेंट",
+      "hi-roman": "thomas sargent",
+      "context": "economist name",
+      "certainty": "low"
+    },
+    {
+      "en": "Trevor Swan",
+      "hi": "ट्रेवर स्वान",
+      "hi-roman": "trevor swan",
+      "context": "economist name",
+      "certainty": "low"
+    },
+    {
+      "en": "Vilfredo Pareto",
+      "hi": "विल्फ्रेडो पैरेटो",
+      "hi-roman": "vilfredo pareto",
+      "context": "economist name",
+      "certainty": "low"
+    },
+    {
+      "en": "Xavier Gabaix",
+      "hi": "ज़ेवियर गाबाई",
+      "hi-roman": "xavier gabaix",
+      "context": "economist name",
+      "certainty": "low"
+    },
+    {
+      "en": "Xin Guo",
+      "hi": "शिन गुओ",
+      "hi-roman": "xin guo",
+      "context": "researcher name",
+      "certainty": "low"
+    },
+    {
+      "en": "Yoshi Fujiwara",
+      "hi": "योशी फुजिवारा",
+      "hi-roman": "yoshi fujiwara",
+      "context": "researcher name",
+      "certainty": "low"
+    },
+    {
+      "en": "Yunzhe Hu",
+      "hi": "युन्झे हू",
+      "hi-roman": "yunzhe hu",
+      "context": "researcher name",
+      "certainty": "low"
+    }
+  ]
+}
