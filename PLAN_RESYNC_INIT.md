@@ -1,8 +1,8 @@
 # Resync & Initial Alignment: Implementation Plan
 
 **Document Status**: Phase 1 + 1b Complete, Phase 2 Planned  
-**Last Updated**: 15 December 2025  
-**Version**: v0.6
+**Last Updated**: 16 December 2025  
+**Version**: v0.8
 
 This document provides a focused implementation plan for two related features:
 1. **Initial Alignment** - Onboard existing translation repos (one-time setup)
@@ -18,14 +18,14 @@ This document provides a focused implementation plan for two related features:
 |-------|--------|-------------|
 | **Phase 1** | ✅ Complete | Structural Diagnostics - CLI tool with reports |
 | **Phase 1b** | ✅ Complete | Code Block Integrity Check (zero-cost enhancement) |
-| **Phase 2** | 🔲 Next | Haiku Quality Scoring (per-section assessment) |
+| **Phase 2** | 🔲 Next | Translation Quality Assessment via Haiku |
 | **Phase 3** | 🔲 Planned | Heading-Map Generator |
 | **Phase 4** | 🔲 Planned | Interactive Alignment PR |
 | **Phase 5** | 🔲 Planned | GitHub Action Integration |
 
 ### Next Development Actions
 
-1. **Phase 2: Haiku Quality Scoring** - Per-section translation quality assessment using Claude Haiku (~$0.10 for full repo). Replaces complex heuristics with simple, accurate LLM scoring.
+1. **Phase 2: Translation Quality Assessment** - Per-section quality scoring using Claude Haiku (~$0.15 for lecture-intro). Assesses accuracy, fluency, terminology, and completeness. Details in Phase 2 section below.
 
 ### Phase 1b Results (15 Dec 2025)
 
@@ -542,58 +542,268 @@ interface TranslationComparison {
 
 ---
 
-### Phase 2: Heading-Map Generator 🔲 NOT STARTED
+### Phase 2: Translation Quality Assessment 🔲 NEXT
 
-#### Milestone 2.1: Heading-Map Generator
+**Goal**: Per-section translation quality scoring using Claude Haiku (~$0.15 for lecture-intro). Assesses accuracy, fluency, terminology, and completeness.
 
-**Goal**: Auto-generate heading-maps for aligned files.
+#### Why Haiku?
 
-**Deliverables**:
-- [ ] `generateHeadingMap(sourceFile, targetFile)` function
-- [ ] Position-based section matching
-- [ ] Recursive subsection handling
-- [ ] Frontmatter injection
+| Factor | Haiku | Sonnet |
+|--------|-------|--------|
+| Cost per 1M tokens | $0.25 input / $1.25 output | $3 input / $15 output |
+| Speed | ~2x faster | - |
+| Quality scoring accuracy | Excellent for structured assessment | Overkill for scoring |
+| Estimated cost (400 sections) | ~$0.10-0.15 | ~$1-2 |
 
-**Logic**:
+Haiku provides **excellent accuracy for quality scoring tasks** at a fraction of the cost.
+
+#### Architecture
+
 ```
-For aligned files (same section count):
-  1. Match sections by position (1st → 1st, 2nd → 2nd)
-  2. Extract: English heading ID → Chinese heading text
-  3. Build heading-map object
-  4. Inject into target file frontmatter
+┌─────────────────────────────────────────────────────────────┐
+│  Phase 1 + 1b: Structural + Code Integrity           FREE  │
+│  ├── Section/subsection alignment                          │
+│  ├── Code block integrity (51 tests)                       │
+│  └── Output: Structure Score + Code Integrity Score        │
+│                                                            │
+│  Files classified: ALIGNED (38), LIKELY (8), REVIEW (2),   │
+│                    DIVERGED (3), MISSING (2), EXTRA (2)    │
+└─────────────────────────────────────────────────────────────┘
+                           │
+                           ▼ (only aligned/likely-aligned files)
+┌─────────────────────────────────────────────────────────────┐
+│  Phase 2: Quality Assessment                        ~$0.15 │
+│  ├── Per-section scoring via Haiku                         │
+│  ├── Assess: accuracy, fluency, terminology, completeness  │
+│  └── Output: Quality Score per section + flagged issues    │
+└─────────────────────────────────────────────────────────────┘
+                           │
+                           ▼
+┌─────────────────────────────────────────────────────────────┐
+│  Combined Report                                           │
+│  ├── Structure alignment (from Phase 1)                    │
+│  ├── Code integrity (from Phase 1b)                        │
+│  └── Translation quality (from Phase 2) ← NEW              │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-**Reusable Code**:
-- `heading-map.ts:updateHeadingMap()` - Update maps
-- `heading-map.ts:injectHeadingMap()` - Write to frontmatter
+#### Scope: Which Files to Assess?
+
+**Assess**: Files with status `aligned` or `likely-aligned`  
+**Skip**: Files with status `diverged`, `needs-review`, `missing`, `extra`
+
+**Rationale**: Quality assessment makes sense for structurally aligned files. Diverged files need structural fixes first.
+
+For `lecture-intro`:
+- **Assess**: 46 files (38 aligned + 8 likely-aligned)
+- **Skip**: 9 files (3 diverged + 2 needs-review + 2 missing + 2 extra)
+
+#### Milestone 2.1: Quality Scorer Module
+
+**New File**: `tool-alignment/src/quality-scorer.ts`
+
+**Interface**:
+```typescript
+interface QualityAssessment {
+  overallScore: number;        // 0-100 aggregate
+  sectionCount: number;        // Total sections assessed
+  flaggedCount: number;        // Sections with issues
+  cost: {
+    inputTokens: number;
+    outputTokens: number;
+    totalUSD: number;
+  };
+  sections: SectionQuality[];
+}
+
+interface SectionQuality {
+  sectionId: string;           // e.g., "introduction"
+  heading: string;             // English heading
+  translatedHeading: string;   // Target heading
+  
+  // Scores (0-100)
+  accuracyScore: number;       // Meaning preserved?
+  fluencyScore: number;        // Natural language?
+  terminologyScore: number;    // Correct terms used?
+  completenessScore: number;   // Nothing omitted?
+  overallScore: number;        // Weighted average
+  
+  // Issues
+  flags: QualityFlag[];        // Specific issues found
+  notes: string;               // Assessor notes
+}
+
+type QualityFlag = 
+  | 'inaccurate'      // Meaning changed or wrong
+  | 'awkward'         // Unnatural phrasing
+  | 'terminology'     // Wrong technical term
+  | 'omission'        // Content missing
+  | 'addition'        // Extra content added
+  | 'formatting';     // MyST formatting issues
+```
+
+#### Milestone 2.2: Haiku Integration
+
+**Prompt Design** (key to accuracy):
+```
+You are a translation quality assessor. Evaluate this translation from English to ${targetLanguage}.
+
+## English Source
+${englishContent}
+
+## Translation
+${translatedContent}
+
+## Glossary (required terminology)
+${glossaryTerms}
+
+## Assess on these criteria (0-100 each):
+
+1. **Accuracy** - Is the meaning preserved correctly?
+   - 90-100: Perfect/near-perfect accuracy
+   - 70-89: Minor inaccuracies, meaning clear
+   - 50-69: Some meaning lost or changed
+   - <50: Significant errors
+
+2. **Fluency** - Does it read naturally in ${targetLanguage}?
+   - 90-100: Native-level fluency
+   - 70-89: Readable with minor awkwardness
+   - 50-69: Understandable but unnatural
+   - <50: Difficult to read
+
+3. **Terminology** - Are technical terms translated correctly per glossary?
+   - 90-100: All terms correct
+   - 70-89: Most terms correct
+   - 50-69: Some terms wrong
+   - <50: Many terms wrong
+
+4. **Completeness** - Is all content translated?
+   - 90-100: Complete
+   - 70-89: Minor omissions
+   - 50-69: Some content missing
+   - <50: Significant omissions
+
+## Output JSON:
+{
+  "accuracy": <number>,
+  "fluency": <number>,
+  "terminology": <number>,
+  "completeness": <number>,
+  "overall": <number>,  // weighted: accuracy 40%, fluency 25%, terminology 20%, completeness 15%
+  "flags": ["<flag1>", "<flag2>"],  // only if score <80 in any category
+  "notes": "<brief explanation of any issues>"
+}
+```
+
+#### Milestone 2.3: Quality Report Generator
+
+**New Report Type**: `*-quality.md`
+
+**Sample Output**:
+```markdown
+# Translation Quality Report
+
+**Source**: lecture-python-intro
+**Target**: lecture-intro.zh-cn
+**Language**: zh-cn
+**Generated**: 2025-12-20
+**API Cost**: $0.12 (48,000 input tokens, 12,000 output tokens)
+
+## Summary
+
+| Metric | Score |
+|--------|-------|
+| **Overall Quality** | 87% |
+| Files Assessed | 46 |
+| Sections Assessed | 312 |
+| Sections Flagged | 18 (6%) |
+
+### Score Breakdown
+
+| Category | Average | Min | Max |
+|----------|---------|-----|-----|
+| Accuracy | 89% | 65% | 100% |
+| Fluency | 85% | 58% | 100% |
+| Terminology | 91% | 72% | 100% |
+| Completeness | 88% | 70% | 100% |
+
+## Flagged Sections (Need Attention)
+
+| File | Section | Score | Flags |
+|------|---------|-------|-------|
+| `mle.md` | Maximum Likelihood | 65% | inaccurate, terminology |
+| `cobweb.md` | Dynamics | 72% | awkward |
+| `solow.md` | Steady State | 70% | omission |
+```
+
+#### Milestone 2.4: CLI Integration
+
+**New Command Option**:
+```bash
+# Run quality assessment on aligned files
+npm run diagnose -- \
+  --source ../lecture-python-intro \
+  --target ../lecture-intro.zh-cn \
+  --report quality \
+  --output reports/lecture-intro-quality.md
+
+# Run all reports (structure + code + quality)
+npm run diagnose -- \
+  --source ../lecture-python-intro \
+  --target ../lecture-intro.zh-cn \
+  --report all \
+  --output reports/lecture-intro
+```
+
+**Cost Confirmation** (since API costs money):
+```
+Quality assessment will analyze 46 files (312 sections).
+Estimated cost: $0.12
+
+Proceed? [Y/n]
+```
+
+#### Cost Estimates
+
+| Repository | Sections | Est. Cost |
+|------------|----------|-----------|
+| lecture-intro (46 files) | ~312 | ~$0.08 |
+| lecture-python (200 files) | ~1400 | ~$0.35 |
+| Full QuantEcon suite | ~3000 | ~$0.75 |
+
+#### Files to Create/Modify
+
+| File | Purpose |
+|------|---------|
+| `src/quality-scorer.ts` | Quality assessment logic |
+| `src/haiku-client.ts` | Haiku API wrapper |
+| `src/__tests__/quality-scorer.test.ts` | Unit tests |
+| `src/index.ts` | Add `--report quality` option |
+| `src/report-generator.ts` | Add quality report generation |
+| `src/types.ts` | Add quality assessment types |
+| `package.json` | Add `@anthropic-ai/sdk` dependency |
+
+#### Timeline Estimate
+
+| Milestone | Effort |
+|-----------|--------|
+| 2.1 Quality Scorer Module | 2-3 hours |
+| 2.2 Haiku Integration | 1-2 hours |
+| 2.3 Quality Report Generator | 2-3 hours |
+| 2.4 CLI Integration | 1 hour |
+| Testing & Refinement | 2-3 hours |
+| **Total** | **~10-14 hours** |
+
+#### Open Questions
+
+1. **Batch vs. individual API calls?** - Current plan: One call per section
+2. **Cache results?** - Store quality scores to avoid re-assessment?
+3. **Threshold for flagging?** - Currently: Flag if any category < 80
+4. **Include in default `--report all`?** - Cost concern: May need separate flag
 
 ---
 
-#### Milestone 2.2: Divergence & Quality Resolver
-
-**Goal**: Provide strategies for different divergence types and quality levels.
-
-| Issue Type | Strategy |
-|------------|----------|
-| **Alignment Issues** | |
-| Target missing sections | Option: Translate & append |
-| Target has extra sections | Keep extras, update heading-map |
-| Major restructure | Create issue for manual review |
-| Content drift (same structure) | Option: Re-translate sections |
-| **Quality Issues** | |
-| Poor quality (< 50%) | Recommend full re-translation |
-| Needs improvement (50-70%) | Flag for review, generate heading-map |
-| Acceptable/High (> 70%) | Generate heading-map, enable sync |
-
-**Deliverables**:
-- [ ] Strategy selection logic
-- [ ] GitHub issue creation for complex cases
-- [ ] Optional auto-translation for missing sections
-- [ ] Quality-based re-translation recommendations
-
----
-
-### Phase 3: Interactive Alignment PR
+### Phase 3: Heading-Map Generator 🔲 PLANNED
 
 #### Milestone 3.1: Alignment PR Generator
 
@@ -956,30 +1166,38 @@ inputs:
 
 ## Next Steps
 
-### Phase 1: Structural Diagnostics (CLI)
+### Phase 1: Structural Diagnostics (CLI) ✅
 1. [x] Review and finalize this plan
-2. [ ] Set up `tool-alignment/` directory structure
-3. [ ] Implement Milestone 1.1: Structural Analyzer
-4. [ ] Test on `test-translation-sync` repos (local)
-5. [ ] Implement Milestone 1.3: Report Generator
-6. [ ] Run diagnostics on `lecture-intro` repos
+2. [x] Set up `tool-alignment/` directory structure
+3. [x] Implement Milestone 1.1: Structural Analyzer
+4. [x] Test on `test-translation-sync` repos (local)
+5. [x] Implement Milestone 1.3: Report Generator
+6. [x] Run diagnostics on `lecture-intro` repos
+7. [x] Implement Phase 1b: Code Block Integrity
 
-### Phase 2: Translation Quality Assessment
-7. [ ] Assess if structural diagnostics are sufficient
-8. [ ] Implement Milestone 1.2: Translation Comparator
-9. [ ] Per-section quality scoring
+### Phase 2: Translation Quality Assessment 🔲
+8. [ ] Implement Milestone 2.1: Quality Scorer Module
+9. [ ] Implement Milestone 2.2: Haiku Integration
+10. [ ] Implement Milestone 2.3: Quality Report Generator
+11. [ ] Implement Milestone 2.4: CLI Integration
+12. [ ] Per-section quality scoring
 
-### Phase 3: Interactive Alignment PR
-10. [ ] Implement Milestone 3.1: Alignment PR Generator
-11. [ ] Create PR with heading-maps + quality table
-12. [ ] Implement Milestone 3.2: Re-translation Workflow
-13. [ ] `/update-translations` comment trigger
-14. [ ] Test interactive workflow end-to-end
+### Phase 3: Heading-Map Generator 🔲
+13. [ ] Implement heading-map generation for aligned files
+14. [ ] Position-based section matching with recursive subsections
+15. [ ] Frontmatter injection
 
-### Phase 4: GitHub Action Integration
-15. [ ] Add `mode: align` to GitHub Action
-16. [ ] Add `mode: resync` to GitHub Action
-17. [ ] Add `mode: retranslate` for PR workflow
+### Phase 4: Interactive Alignment PR 🔲
+16. [ ] Implement Milestone 4.1: Alignment PR Generator
+17. [ ] Create PR with heading-maps + quality table
+18. [ ] Implement Milestone 4.2: Re-translation Workflow
+19. [ ] `/update-translations` comment trigger
+20. [ ] Test interactive workflow end-to-end
+
+### Phase 5: GitHub Action Integration 🔲
+21. [ ] Add `mode: align` to GitHub Action
+22. [ ] Add `mode: resync` to GitHub Action
+23. [ ] Add `mode: retranslate` for PR workflow
 
 ---
 

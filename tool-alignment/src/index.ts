@@ -38,14 +38,6 @@ async function runDiagnose(options: DiagnoseOptions): Promise<void> {
   const targetRoot = path.resolve(options.target);
   const docsFolder = options.docsFolder === '.' ? '' : options.docsFolder;
 
-  // Get source path for file discovery
-  const sourceDocsPath = docsFolder 
-    ? path.join(sourceRoot, docsFolder)
-    : sourceRoot;
-  const targetDocsPath = docsFolder
-    ? path.join(targetRoot, docsFolder)
-    : targetRoot;
-
   // 1. Discover markdown files
   console.log(chalk.yellow('📁 Discovering files...'));
   

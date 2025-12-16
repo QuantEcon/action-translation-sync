@@ -3,7 +3,7 @@
 **Source**: `/Users/mmcky/work/quantecon/lecture-python-intro`  
 **Target**: `/Users/mmcky/work/quantecon/lecture-intro.zh-cn`  
 **Docs Folder**: `.`  
-**Generated**: 2025-12-15T03:09:16.782Z  
+**Generated**: 2025-12-16T01:53:21.117Z  
 **Tool Version**: 0.1.0
 
 ## Summary

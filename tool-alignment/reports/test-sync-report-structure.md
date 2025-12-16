@@ -3,7 +3,7 @@
 **Source**: `/Users/mmcky/work/quantecon/action-translation/tool-test-action-on-github/test-translation-sync`  
 **Target**: `/Users/mmcky/work/quantecon/action-translation/tool-test-action-on-github/test-translation-sync.zh-cn`  
 **Docs Folder**: `.`  
-**Generated**: 2025-12-15T03:11:56.088Z  
+**Generated**: 2025-12-16T01:53:02.952Z  
 **Tool Version**: 0.1.0
 
 ## Summary
@@ -24,13 +24,15 @@
 The **Structure Score** is calculated as follows:
 
 ```
-Base Score = 100
+Base Score = 0
 
-Penalties:
-  - Section count mismatch:     -20 per missing/extra section
-  - Subsection count mismatch:  -10 per missing/extra subsection
-  - Code block count mismatch:  -15 (if counts differ)
-  - Math block count mismatch:  -15 (if counts differ)
+Bonuses (additive):
+  - Section count match:       +40
+  - Subsection count match:    +30
+  - Code block count match:    +15
+  - Math block count match:    +15
+
+Maximum Score = 100
 
 Classification:
   - aligned:        100% (perfect match)

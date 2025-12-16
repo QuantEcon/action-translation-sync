@@ -18,7 +18,6 @@ import {
   ConfigAnalysis,
   HeadingInfo,
   AlignmentStatus,
-  ConfigStatus,
   Section,
   CodeBlock,
   CodeBlockComparison,
