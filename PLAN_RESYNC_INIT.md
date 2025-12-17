@@ -1,8 +1,8 @@
 # Resync & Initial Alignment: Implementation Plan
 
-**Document Status**: Phase 1 + 1b Complete, Phase 2 Planned  
-**Last Updated**: 16 December 2025  
-**Version**: v0.8
+**Document Status**: Phase 1 + 1b + 2 Complete | Phase 3 Proposed  
+**Last Updated**: 17 December 2025  
+**Version**: v0.11
 
 This document provides a focused implementation plan for two related features:
 1. **Initial Alignment** - Onboard existing translation repos (one-time setup)
@@ -18,19 +18,381 @@ This document provides a focused implementation plan for two related features:
 |-------|--------|-------------|
 | **Phase 1** | ✅ Complete | Structural Diagnostics - CLI tool with reports |
 | **Phase 1b** | ✅ Complete | Code Block Integrity Check (zero-cost enhancement) |
-| **Phase 2** | 🔲 Next | Translation Quality Assessment via Haiku |
-| **Phase 3** | 🔲 Planned | Heading-Map Generator |
-| **Phase 4** | 🔲 Planned | Interactive Alignment PR |
-| **Phase 5** | 🔲 Planned | GitHub Action Integration |
+| **Phase 2** | ✅ Complete | Translation Quality Assessment via Claude |
+| **Phase 3** | 🔲 **Planned** | **File-Centric Refactor** - Single file diagnostics with action recommendations |
+| **Phase 4** | 🔲 Planned | Heading-Map Generator |
+| **Phase 5** | 🔲 Planned | Interactive Alignment PR |
+| **Phase 6** | 🔲 Planned | GitHub Action Integration |
 
 ### Next Development Actions
 
-1. **Phase 2: Translation Quality Assessment** - Per-section quality scoring using Claude Haiku (~$0.15 for lecture-intro). Assesses accuracy, fluency, terminology, and completeness. Details in Phase 2 section below.
+1. **Phase 3: File-Centric Refactor** - Refocus tool on single-file diagnostics for actionable decisions
+2. **Phase 2 Testing Program** - Calibrate quality scoring thresholds (can run in parallel)
+
+### Phase 2 Complete (17 Dec 2025)
+
+**Feature**: Translation Quality Assessment via Claude  
+**Tests**: 11 new tests (99 total in tool-alignment)
+
+| Feature | Implementation |
+|---------|----------------|
+| Quality scoring | Per-section accuracy, fluency, terminology, completeness |
+| Multi-model support | Haiku 3.5, Haiku 4.5, Sonnet 4.5 (configurable via `--model`) |
+| Score calculation | Weighted average: accuracy 40%, fluency 25%, terminology 20%, completeness 15% |
+| Quality flags | `inaccurate`, `awkward`, `terminology`, `omission`, `addition`, `formatting` |
+| Flagging threshold | Score < 80% (configurable, requires calibration) |
+| Cost estimation | Pre-flight estimate with cost confirmation prompt |
+| Report generation | `*-quality-{model}.md` reports with recommendations |
+| Glossary support | Full glossary (357 terms) sent for accurate terminology checking |
+
+**Model Options**:
+| Model | ID | Cost (input/output per MTK) |
+|-------|----|-----------------------------|
+| `haiku3_5` | claude-3-5-haiku-20241022 | $0.25 / $1.25 |
+| `haiku4_5` | claude-haiku-4-5-20251001 | $1.00 / $5.00 |
+| `sonnet4_5` | claude-sonnet-4-5-20250929 | $3.00 / $15.00 |
+
+**CLI Usage**:
+```bash
+npm run diagnose -- assess <structure-report> \
+  --source ../lecture-python-intro \
+  --target ../lecture-intro.zh-cn \
+  --target-language zh-cn \
+  --glossary ../glossary/zh-cn.json \
+  --model haiku3_5 \
+  -y  # Skip cost confirmation
+```
+
+**Report Structure**:
+1. **Summary** - Overall quality, files assessed, sections flagged
+2. **Score Breakdown** - Average accuracy, fluency, terminology, completeness
+3. **Files Requiring Attention** - Sorted by score with recommendations:
+   - 🔴 **Retranslate** (score < 60%)
+   - 🟠 Review all sections (60-70%)
+   - 🟡 Review flagged sections (70-80%)
+   - ✓ Minor issues only (≥80%)
+4. **File Details** - Per-section scores with flagged section notes in collapsible details
+
+**Score Display** (4-tier color scheme):
+- 🟢 90-100%: Excellent
+- 🟡 80-89%: Good/Acceptable  
+- 🟠 50-79%: Needs Improvement (flagged)
+- 🔴 <50%: Poor (flagged)
+
+**Assessment Results** (lecture-intro, 233 sections):
+| Model | Overall | Cost | Time |
+|-------|---------|------|------|
+| Haiku 3.5 | 94% | $0.31 | ~5 min |
+| Haiku 4.5 | 83% | $1.34 | ~8 min |
+| Sonnet 4.5 | 86% | $3.89 | ~12 min |
+
+### Phase 2 Future Work: Threshold Calibration
+
+**Current State**: Flagging threshold is set to score < 80%, but this needs validation.
+
+**Testing Program** (TODO):
+1. Create gold-standard test set:
+   - Select ~20 sections across quality spectrum
+   - Have human expert rate each section (needs retranslation / acceptable / good)
+2. Run assessments with each model
+3. Compare AI scores against human judgment
+4. Calibrate threshold to maximize:
+   - True positives: flagging sections that actually need work
+   - True negatives: not flagging acceptable sections
+5. Document optimal threshold and model recommendation
+
+**Research Questions**:
+- Does Haiku 3.5's higher overall scores (94%) indicate it's too lenient?
+- Are Sonnet 4.5's detailed notes worth 10x the cost?
+- What threshold best separates "needs retranslation" from "acceptable"?
+
+---
+
+### Phase 3: File-Centric Refactor (Proposed)
+
+**Planned**: December 2025
+
+#### Problem Statement
+
+The current tool generates three comprehensive reports:
+1. Structure report (`*-structure.md`) - 52 files
+2. Code report (`*-code.md`) - 52 files  
+3. Quality report (`*-quality-{model}.md`) - 45 files
+
+**Pain Points**:
+- **Information overload**: Three reports × 50+ files = overwhelming
+- **No clear action**: Must mentally cross-reference 3 reports per file
+- **Hard to prioritize**: Which file should I work on first?
+- **Decision paralysis**: Good data, but no clear "what do I do next?"
+
+#### Solution: File-Centric Diagnostics
+
+Refactor from **series-level analysis** to **file-level actionable diagnostics**.
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    TRIAGE (Series-level)                    │
+│  Quick scan all files → Prioritized list by urgency         │
+│  "Here are the 5 files that need attention, in order"       │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│                  DIAGNOSE (File-level)                      │
+│  All 3 dimensions for ONE file → ONE action recommendation  │
+│  "For intro.md: RESYNC - structure aligned, code OK"        │
+└─────────────────────────────────────────────────────────────┘
+```
+
+#### New CLI Design
+
+```bash
+# Series Triage: Quick overview, prioritized list
+npm run diagnose -- triage \
+  --source /path/to/english \
+  --target /path/to/chinese
+
+# Output: Prioritized list of files needing attention
+# 1. 🔴 missing_file.md    - MISSING (needs translation)
+# 2. 🔴 diverged_file.md   - DIVERGED (major structural issues)
+# 3. 🟠 low_quality.md     - QUALITY 65% (needs review)
+# 4. 🟡 code_modified.md   - CODE 75% (verify changes)
+# 5. ✅ 47 files OK
+
+# File Diagnose: Deep dive on single file
+npm run diagnose -- file intro.md \
+  --source /path/to/english \
+  --target /path/to/chinese \
+  --glossary ../glossary/zh-cn.json
+
+# Output: Complete diagnosis + recommended action
+```
+
+#### File-Level Output Format
+
+```markdown
+# 📄 File Diagnostic: intro.md
+
+## Quick Summary
+| Dimension    | Status | Score | Details |
+|-------------|--------|-------|---------|
+| Structure   | ✅ Aligned | 100% | 5/5 sections, 12/12 subsections |
+| Code        | ⚠️ Modified | 85% | 2 blocks modified (i18n) |
+| Quality     | 🟢 Good | 94% | No flagged sections |
+
+## 🎯 Recommended Action: OK ✅
+All dimensions pass thresholds. File is ready for automated sync.
+
+---
+
+## Detailed Analysis
+
+### Structure
+- Sections: 5/5 matched ✅
+- Subsections: 12/12 matched ✅
+- Heading-map: Present and complete ✅
+- Config alignment: N/A (file-level)
+
+### Code Integrity (85%)
+| Block | Line | Status | Notes |
+|-------|------|--------|-------|
+| 1 | 45 | ✅ Identical | |
+| 2 | 78 | 📍 i18n | CJK font config added |
+| 3 | 112 | ⚠️ Modified | Variable renamed |
+
+<details><summary>Block 3 diff</summary>
+
+\`\`\`diff
+- result = compute_value(x)
++ resultado = compute_value(x)  # Changed variable name
+\`\`\`
+
+</details>
+
+### Translation Quality (94%)
+| Section | Score | Flags | Notes |
+|---------|-------|-------|-------|
+| Introduction | 96% | - | Excellent |
+| Background | 92% | - | Good |
+| Model | 94% | - | Good |
+| Results | 95% | - | Excellent |
+| Conclusion | 93% | - | Good |
+
+No sections flagged for review.
+```
+
+#### Action Categories
+
+| Action | Icon | Conditions | What to Do |
+|--------|------|------------|------------|
+| **OK** | ✅ | All dimensions ≥80% | Ready for sync, no action needed |
+| **RESYNC** | 🔄 | Structure aligned, quality OK, minor code drift | Run action-translation to sync |
+| **REVIEW CODE** | 🔧 | Code integrity <80% | Verify code changes are intentional |
+| **REVIEW QUALITY** | 📝 | Quality <80% | Review flagged sections |
+| **RETRANSLATE** | 🔴 | Quality <60% or major issues | Full retranslation needed |
+| **CREATE** | 📄 | Missing in target | New translation needed |
+| **DIVERGED** | ⚠️ | Structure mismatch >20% | Manual structural alignment needed |
+
+#### Decision Matrix
+
+```
+                    Quality Score
+                    ≥80%        60-79%      <60%
+                ┌───────────┬───────────┬───────────┐
+Structure    OK │    ✅     │    📝     │    🔴     │
+Aligned         │    OK     │  REVIEW   │ RETRANS   │
+                │           │  QUALITY  │  LATE     │
+                ├───────────┼───────────┼───────────┤
+Structure       │    ⚠️     │    ⚠️     │    ⚠️     │
+Misaligned      │ DIVERGED  │ DIVERGED  │ DIVERGED  │
+                └───────────┴───────────┴───────────┘
+
+Code Score overlay:
+- If code <80%: Add "REVIEW CODE" to action
+- If code is i18n only: Note but don't flag
+```
+
+#### Triage Output Format
+
+```markdown
+# 📊 Series Triage: lecture-intro
+
+**Source**: lecture-python-intro/lectures (51 files)
+**Target**: lecture-intro.zh-cn/lectures (50 files)
+**Date**: 17 December 2025
+
+## Priority Action List
+
+| Priority | File | Action | Issue |
+|----------|------|--------|-------|
+| 🔴 1 | `new_lecture.md` | CREATE | Missing in target |
+| 🔴 2 | `restructured.md` | DIVERGED | 3 sections mismatch |
+| 🟠 3 | `poor_quality.md` | RETRANSLATE | Quality 52% |
+| 🟠 4 | `needs_review.md` | REVIEW QUALITY | Quality 72% |
+| 🟡 5 | `code_modified.md` | REVIEW CODE | Code 68% |
+
+## Summary
+
+| Status | Count | Files |
+|--------|-------|-------|
+| ✅ OK | 45 | Ready for sync |
+| 🔴 Critical | 2 | Needs immediate attention |
+| 🟠 Review | 2 | Needs quality review |
+| 🟡 Verify | 1 | Verify code changes |
+
+## Next Steps
+1. Run `npm run diagnose -- file new_lecture.md ...` to diagnose missing file
+2. Run `npm run diagnose -- file restructured.md ...` to see structure diff
+3. Work through priority list top to bottom
+```
+
+#### Design Decisions
+
+| Decision | Choice | Rationale |
+|----------|--------|-----------|
+| **Triage cost** | Structure + Code only (zero cost) | Start with free checks; add quality assessment only if over-flagging occurs |
+| **i18n code changes** | Note but don't flag | Valid localization changes (CJK fonts, etc.) are acceptable modifications |
+| **Thresholds** | TBD via testing program | Need human-validated test cases to calibrate cutoffs |
+| **Triage scope** | All files | Must check every file to ensure complete sync readiness |
+
+#### Threshold Calibration Program
+
+**Problem**: The action categories depend on score thresholds (e.g., ≥80% = OK, <60% = RETRANSLATE). These thresholds are currently arbitrary and need validation.
+
+**Testing Program**:
+
+1. **Create Gold-Standard Test Set**
+   - Select ~20-30 file pairs across the quality spectrum
+   - Include: excellent translations, acceptable translations, poor translations, structural mismatches
+   - Have human expert classify each file into action categories
+
+2. **Run Tool Analysis**
+   - Execute structure + code analysis on test set
+   - Record scores for each dimension
+
+3. **Compare & Calibrate**
+   - Compare tool recommendations vs human classifications
+   - Identify optimal thresholds that maximize:
+     - **True positives**: Correctly flagging files that need work
+     - **True negatives**: Not flagging files that are OK
+   - Minimize false positives (over-flagging) and false negatives (missing issues)
+
+4. **Iterate**
+   - If structure + code thresholds produce too many false positives → adjust thresholds
+   - If still over-flagging → consider adding quality assessment to triage
+   - Document final thresholds with justification
+
+**Test Case Categories**:
+| Category | Expected Action | Example Characteristics |
+|----------|-----------------|------------------------|
+| Perfect alignment | ✅ OK | 100% structure, 100% code |
+| Minor code drift | ✅ OK or 🔧 REVIEW CODE | 100% structure, 85-95% code (i18n only) |
+| Significant code changes | 🔧 REVIEW CODE | 100% structure, <80% code (logic changes) |
+| Missing sections | ⚠️ DIVERGED | <80% structure match |
+| Extra sections | ⚠️ DIVERGED | Target has sections not in source |
+| Missing file | 📄 CREATE | File in source only |
+| Quality issues only | 📝 REVIEW QUALITY | 100% structure, 100% code, <80% quality |
+
+**Success Criteria**:
+- ≥90% agreement between tool recommendations and human classifications
+- Clear threshold values with documented rationale
+- Edge cases identified and handled
+
+#### Implementation Plan
+
+**Milestone 3.1: Refactor Core Analysis**
+- [ ] Create `file-analyzer.ts` - Single file analysis combining all dimensions
+- [ ] Create `triage.ts` - Series-level quick scan (structure + code only)
+- [ ] Refactor CLI to support `triage` and `file` subcommands
+- [ ] Update types for file-level results
+
+**Milestone 3.2: Action Recommendation Engine**
+- [ ] Create `action-recommender.ts` - Decision matrix implementation
+- [ ] Handle edge cases (missing files, config-only, i18n patterns, etc.)
+- [ ] Make thresholds configurable (for calibration testing)
+- [ ] Add confidence scoring for recommendations
+
+**Milestone 3.3: Threshold Calibration**
+- [ ] Create gold-standard test set (20-30 file pairs)
+- [ ] Run calibration tests
+- [ ] Document optimal thresholds
+- [ ] Decide if quality assessment needed in triage
+
+**Milestone 3.4: Report Generators**
+- [ ] Create `triage-report.ts` - Series-level triage report
+- [ ] Create `file-report.ts` - Single file diagnostic report
+- [ ] Deprecate or simplify existing report generators
+
+**Milestone 3.5: Testing & Migration**
+- [ ] Add test fixtures for file-level analysis
+- [ ] Update existing tests
+- [ ] Document migration from series-level to file-level workflow
+- [ ] Validate against lecture-intro repos
+
+#### Benefits
+
+| Benefit | Description |
+|---------|-------------|
+| **Actionable** | Each file gets ONE clear recommendation |
+| **Focused** | Work on one file at a time, all info in one place |
+| **Prioritized** | Triage tells you what to fix first |
+| **Workflow-friendly** | Natural progression: triage → diagnose → fix → verify |
+| **Reduced cognitive load** | No cross-referencing 3 reports |
+| **Zero-cost triage** | Structure + code analysis is free; quality only when needed |
+
+#### Migration Path
+
+1. **Keep existing commands** working during transition
+2. **Add new `triage` and `file` subcommands** alongside existing `diagnose`
+3. **Deprecate series-level reports** once file-level is validated
+4. **Update documentation** with new workflow
+
+---
 
 ### Phase 1b Results (15 Dec 2025)
 
 **Feature**: Code Block Integrity Check  
-**Tests**: 51 new tests (88 total in tool-alignment)
+**Tests**: 51 tests (88 total in tool-alignment, now 99 with Phase 2)
 
 | Feature | Implementation |
 |---------|----------------|
@@ -156,14 +518,15 @@ We evaluated building Level 0 heuristics (character ratio, glossary checks, sent
 └─────────────────────────────────────────────────────────────┘
 ```
 
-### Cost Estimate (lecture-intro: 52 files, ~400 sections)
+### Cost Estimate (lecture-intro: 52 files, ~233 sections)
 
 | Phase | Cost | Notes |
 |-------|------|-------|
 | Phase 1 + 1b | $0 | Structural + code integrity |
-| Phase 2 | ~$0.10 | Haiku scoring all sections |
-| Phase 2b | ~$0.50 | Sonnet on ~10 flagged sections (if needed) |
-| **Total** | **~$0.60** | vs $25+ for brute-force full translation |
+| Phase 2 (Haiku 3.5) | ~$0.50 | Quality scoring all sections |
+| Phase 2 (Haiku 4.5) | ~$2.00 | Higher quality, 4x cost |
+| Phase 2 (Sonnet 4.5) | ~$6.00 | Detailed notes, 12x cost |
+| **Typical Total** | **~$0.50** | Using Haiku 3.5 for cost-effective assessment |
 
 ---
 

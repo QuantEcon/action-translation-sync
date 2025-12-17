@@ -12,8 +12,14 @@ export interface DiagnoseOptions {
   output: string;           // Output file path (base name, suffixes added)
   format: 'markdown' | 'json' | 'both';
   docsFolder: string;       // Subdirectory containing docs (default: '.')
-  report: 'all' | 'structure' | 'code';  // Which reports to generate
+  report: 'all' | 'structure' | 'code' | 'quality';  // Which reports to generate
   maxDiffLines: number;     // Max lines to show in code diffs (default: 50)
+  // Quality assessment options (Phase 2)
+  apiKey?: string;          // Anthropic API key (required for quality report)
+  targetLanguage?: string;  // Target language code (e.g., 'zh-cn')
+  glossaryPath?: string;    // Path to glossary JSON file
+  skipConfirmation?: boolean; // Skip cost confirmation prompt
+  model?: string;           // Model for quality assessment (haiku3_5, haiku4_5, sonnet4_5)
 }
 
 // ============================================================================
@@ -196,6 +202,100 @@ export type RecommendedAction =
   | 'translate-file'
   | 'review-config'
   | 'update-config';
+
+// ============================================================================
+// QUALITY ASSESSMENT (Phase 2)
+// ============================================================================
+
+/**
+ * Flags indicating specific quality issues found in a translation
+ */
+export type QualityFlag = 
+  | 'inaccurate'      // Meaning changed or wrong
+  | 'awkward'         // Unnatural phrasing
+  | 'terminology'     // Wrong technical term
+  | 'omission'        // Content missing
+  | 'addition'        // Extra content added
+  | 'formatting';     // MyST formatting issues
+
+/**
+ * Quality assessment for a single section
+ */
+export interface SectionQuality {
+  sectionId: string;           // e.g., "introduction"
+  heading: string;             // English heading
+  translatedHeading: string;   // Target heading
+  
+  // Scores (0-100)
+  accuracyScore: number;       // Meaning preserved?
+  fluencyScore: number;        // Natural language?
+  terminologyScore: number;    // Correct terms used?
+  completenessScore: number;   // Nothing omitted?
+  overallScore: number;        // Weighted average
+  
+  // Issues
+  flags: QualityFlag[];        // Specific issues found
+  notes: string;               // Assessor notes
+}
+
+/**
+ * Quality assessment for a file
+ */
+export interface FileQualityAssessment {
+  file: string;
+  overallScore: number;        // 0-100 aggregate
+  sectionCount: number;        // Total sections assessed
+  flaggedCount: number;        // Sections with issues
+  sections: SectionQuality[];
+}
+
+/**
+ * Quality assessment for entire repository
+ */
+export interface QualityAssessment {
+  model: string;               // Model used for assessment
+  overallScore: number;        // 0-100 aggregate
+  filesAssessed: number;       // Total files assessed
+  filesSkipped: number;        // Files skipped (diverged/missing/etc)
+  sectionCount: number;        // Total sections assessed
+  flaggedCount: number;        // Sections with issues
+  
+  // Cost tracking
+  cost: {
+    inputTokens: number;
+    outputTokens: number;
+    totalUSD: number;
+  };
+  
+  // Breakdown by category
+  averageScores: {
+    accuracy: number;
+    fluency: number;
+    terminology: number;
+    completeness: number;
+  };
+  
+  // Per-file assessments
+  files: FileQualityAssessment[];
+}
+
+/**
+ * Progress callback for quality assessment
+ */
+export type ProgressCallback = (current: number, total: number, fileName: string) => void;
+
+/**
+ * Options for quality assessment
+ */
+export interface QualityAssessmentOptions {
+  apiKey: string;
+  targetLanguage: string;
+  glossaryPath?: string;
+  skipConfirmation?: boolean;
+  maxSections?: number;        // Limit for testing/cost control
+  model?: string;              // Model for quality assessment (haiku3_5, haiku4_5, sonnet4_5)
+  onProgress?: ProgressCallback; // Progress callback
+}
 
 // ============================================================================
 // REUSE FROM MAIN PROJECT

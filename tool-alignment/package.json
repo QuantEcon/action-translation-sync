@@ -19,6 +19,7 @@
   "author": "QuantEcon",
   "license": "MIT",
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
     "commander": "^11.1.0",
     "js-yaml": "^4.1.0",
     "chalk": "^4.1.2"
