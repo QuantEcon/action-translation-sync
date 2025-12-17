@@ -28,3 +28,7 @@ test-translation-sync/
 test-translation-sync.zh-cn/
 tool-test-action-on-github/test-translation-sync/
 tool-test-action-on-github/test-translation-sync.zh-cn/
+
+# Generated status reports
+tool-alignment/status/
+tool-alignment/reports/
