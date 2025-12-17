@@ -55,7 +55,7 @@ export interface CodeBlockComparison {
   targetContent: string;
   sourceNormalized: string;   // Normalized source content
   targetNormalized: string;   // Normalized target content
-  match: 'identical' | 'normalized-match' | 'modified' | 'missing' | 'extra';
+  match: 'identical' | 'normalized-match' | 'i18n-only' | 'modified' | 'missing' | 'extra';
   differences?: string[];     // Human-readable diff description
   diffLines?: DiffLine[];     // Structured diff for detailed report
 }
@@ -76,7 +76,8 @@ export interface CodeIntegrity {
   sourceBlocks: number;       // Total code blocks in source
   targetBlocks: number;       // Total code blocks in target
   matchedBlocks: number;      // Blocks that match exactly or normalized
-  modifiedBlocks: number;     // Blocks with changes
+  i18nOnlyBlocks: number;     // Blocks with only i18n changes (font config, etc)
+  modifiedBlocks: number;     // Blocks with actual code changes
   missingBlocks: number;      // Blocks in source but not in target
   extraBlocks: number;        // Blocks in target but not in source
   score: number;              // 0-100 integrity score

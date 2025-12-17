@@ -499,6 +499,7 @@ export class StructuralAnalyzer {
     
     const comparisons: CodeBlockComparison[] = [];
     let matchedBlocks = 0;
+    let i18nOnlyBlocks = 0;
     let modifiedBlocks = 0;
     let missingBlocks = 0;
     let extraBlocks = 0;
@@ -512,11 +513,26 @@ export class StructuralAnalyzer {
       const targetBlock = targetBlocks[i];
       
       if (sourceBlock && targetBlock) {
-        const comparison = this.compareCodeBlock(sourceBlock, targetBlock, i);
+        let comparison = this.compareCodeBlock(sourceBlock, targetBlock, i);
+        
+        // If marked as 'modified', check if changes are i18n-only
+        if (comparison.match === 'modified') {
+          const i18nCheck = this.isI18nOnlyChange(sourceBlock.content, targetBlock.content);
+          if (i18nCheck.isI18nOnly) {
+            comparison = {
+              ...comparison,
+              match: 'i18n-only',
+              differences: [`i18n-only changes: ${i18nCheck.patterns.join(', ')}`],
+            };
+          }
+        }
+        
         comparisons.push(comparison);
         
         if (comparison.match === 'identical' || comparison.match === 'normalized-match') {
           matchedBlocks++;
+        } else if (comparison.match === 'i18n-only') {
+          i18nOnlyBlocks++;
         } else {
           modifiedBlocks++;
           issues.push(`Code block ${i + 1} (${sourceBlock.language || 'unknown'}): modified`);
@@ -550,9 +566,10 @@ export class StructuralAnalyzer {
       }
     }
     
-    // Calculate score: 100% if all blocks match, decreases with modifications
+    // Calculate score: i18n-only changes count as matched (they're expected)
+    const effectiveMatches = matchedBlocks + i18nOnlyBlocks;
     const score = sourceBlocks.length > 0 
-      ? Math.round((matchedBlocks / sourceBlocks.length) * 100) 
+      ? Math.round((effectiveMatches / sourceBlocks.length) * 100) 
       : 100;
 
     // Check for localization patterns that might explain score differences
@@ -562,6 +579,7 @@ export class StructuralAnalyzer {
       sourceBlocks: sourceBlocks.length,
       targetBlocks: targetBlocks.length,
       matchedBlocks,
+      i18nOnlyBlocks,
       modifiedBlocks,
       missingBlocks,
       extraBlocks,
@@ -570,6 +588,61 @@ export class StructuralAnalyzer {
       issues,
       localizationNote,
     };
+  }
+
+  /**
+   * Check if changes between source and target are i18n-only (font config, etc)
+   * Returns { isI18nOnly: boolean, patterns: string[] }
+   */
+  private isI18nOnlyChange(sourceContent: string, targetContent: string): { isI18nOnly: boolean; patterns: string[] } {
+    // Known i18n patterns - lines that are typically added for CJK/localization support
+    const I18N_PATTERNS = [
+      // Font configuration
+      { pattern: /^\s*import matplotlib as mpl\s*$/m, name: 'mpl import' },
+      { pattern: /^\s*FONTPATH\s*=\s*["'][^"']+["']\s*$/m, name: 'font path' },
+      { pattern: /^\s*mpl\.font_manager\.fontManager\.addfont\s*\(/m, name: 'font registration' },
+      { pattern: /^\s*plt\.rcParams\['font\./m, name: 'rcParams font' },
+      { pattern: /^\s*plt\.rcParams\['axes\.unicode_minus'\]/m, name: 'unicode minus' },
+      { pattern: /^\s*mpl\.rcParams\[/m, name: 'mpl rcParams' },
+      { pattern: /^\s*matplotlib\.rc\s*\(/m, name: 'matplotlib rc' },
+      { pattern: /^\s*from matplotlib import font_manager/m, name: 'font_manager import' },
+      { pattern: /^\s*font_manager\./m, name: 'font_manager usage' },
+      // Data loading for name translations
+      { pattern: /^\s*\w+_cn\s*=\s*pd\.read_csv\s*\(/m, name: 'i18n name mapping' },
+      { pattern: /^\s*\w+_names?\s*=\s*{/m, name: 'i18n name dict' },
+    ];
+
+    // Get lines that are in target but not in source
+    const sourceLines = new Set(sourceContent.split('\n').map(l => l.trim()).filter(l => l));
+    const targetLines = targetContent.split('\n').map(l => l.trim()).filter(l => l);
+    const addedLines = targetLines.filter(l => !sourceLines.has(l));
+
+    if (addedLines.length === 0) {
+      return { isI18nOnly: false, patterns: [] };
+    }
+
+    // Check if ALL added lines match i18n patterns
+    const detectedPatterns: string[] = [];
+    for (const line of addedLines) {
+      let matchedAny = false;
+      for (const { pattern, name } of I18N_PATTERNS) {
+        if (pattern.test(line)) {
+          if (!detectedPatterns.includes(name)) {
+            detectedPatterns.push(name);
+          }
+          matchedAny = true;
+          break;
+        }
+      }
+      
+      // If this added line doesn't match any i18n pattern, there are real changes
+      if (!matchedAny) {
+        return { isI18nOnly: false, patterns: detectedPatterns };
+      }
+    }
+
+    // All added lines are i18n patterns
+    return { isI18nOnly: detectedPatterns.length > 0, patterns: detectedPatterns };
   }
 
   /**
@@ -743,16 +816,12 @@ export class StructuralAnalyzer {
     }
     // For unknown languages, don't strip comments - compare raw
     
-    // Step 4: Normalize whitespace (trim lines, collapse multiple spaces, collapse multiple blank lines)
+    // Step 4: Normalize whitespace (trim lines, collapse multiple spaces, remove blank lines)
+    // Blank lines are not semantically meaningful for code comparison
     normalized = normalized
       .split('\n')
       .map(line => line.trim().replace(/\s+/g, ' '))  // Trim and collapse multiple spaces to single
-      .filter((line, i, arr) => {
-        // Keep non-empty lines and at most one blank line in a row
-        if (line !== '') return true;
-        if (i === 0) return false;
-        return arr[i - 1] !== '';
-      })
+      .filter(line => line !== '')  // Remove all blank lines
       .join('\n')
       .trim();
     
