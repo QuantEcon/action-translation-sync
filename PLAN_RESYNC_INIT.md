@@ -1,14 +1,183 @@
 # Resync & Initial Alignment: Implementation Plan
 
-**Document Status**: Implementation Planning  
-**Last Updated**: December 2025  
-**Version**: Draft v0.1
+**Document Status**: Phase 1 + 1b Complete, Phase 2 Planned  
+**Last Updated**: 16 December 2025  
+**Version**: v0.8
 
 This document provides a focused implementation plan for two related features:
 1. **Initial Alignment** - Onboard existing translation repos (one-time setup)
 2. **Resync** - Detect and fix divergence over time (periodic maintenance)
 
 **Design Principle**: Simple, low-complexity approach with clear phases.
+
+---
+
+## Implementation Status
+
+| Phase | Status | Description |
+|-------|--------|-------------|
+| **Phase 1** | ✅ Complete | Structural Diagnostics - CLI tool with reports |
+| **Phase 1b** | ✅ Complete | Code Block Integrity Check (zero-cost enhancement) |
+| **Phase 2** | 🔲 Next | Translation Quality Assessment via Haiku |
+| **Phase 3** | 🔲 Planned | Heading-Map Generator |
+| **Phase 4** | 🔲 Planned | Interactive Alignment PR |
+| **Phase 5** | 🔲 Planned | GitHub Action Integration |
+
+### Next Development Actions
+
+1. **Phase 2: Translation Quality Assessment** - Per-section quality scoring using Claude Haiku (~$0.15 for lecture-intro). Assesses accuracy, fluency, terminology, and completeness. Details in Phase 2 section below.
+
+### Phase 1b Results (15 Dec 2025)
+
+**Feature**: Code Block Integrity Check  
+**Tests**: 51 new tests (88 total in tool-alignment)
+
+| Feature | Implementation |
+|---------|----------------|
+| Code extraction | `{code-cell}` directives + standard markdown code blocks with language |
+| String normalization | `"<< STRING >>"` placeholder (handles translated labels) |
+| Comment normalization | `# << COMMENT >>` placeholder (preserves structure) |
+| Caption normalization | `caption: << CAPTION >>` placeholder (handles translated captions) |
+| Exact matching | Detects identical code blocks |
+| Normalized matching | Detects blocks differing only in strings/comments/whitespace |
+| Modified detection | Identifies blocks with actual logic changes |
+| Missing/extra | Detects blocks present in only one file |
+| Integrity score | 0-100% based on matched vs total blocks |
+| Localization detection | Flags CJK font config patterns with 📍 i18n note |
+| LCS diff algorithm | Accurate line-by-line diff showing only code logic changes |
+
+**Normalization Strategy** (compares logical code structure):
+1. String literals → `"<< STRING >>"` (handles `label="estimate"` → `label="估计值"`)
+2. Comments → `# << COMMENT >>` (handles `# text` → `# 中文`)
+3. Captions → `caption: << CAPTION >>` (handles translated figure captions)
+4. Whitespace → trimmed, multiple spaces collapsed, blank lines collapsed
+
+**Score Display** (5-tier color scheme):
+- ✅ 100% - Perfect match
+- 🟨 90-99% - Minor differences
+- 🟡 80-89% - Some modifications
+- 🟠 60-79% - Significant differences
+- 🔴 <60% - Major divergence
+
+**Localization Patterns Detected**:
+- `plt.rcParams['font.sans-serif']` - CJK font configuration  
+- `SimHei`, `SimSun`, etc. - CJK font families
+- `axes.unicode_minus` - Unicode minus handling
+
+**Reports Generated**:
+- `*-structure.md` - Structural alignment (sections, headings, config)
+- `*-code.md` - Code block integrity with diffs
+
+**Impact** (lecture-intro diagnostic):
+| Metric | Value |
+|--------|-------|
+| Overall Score | 79% (717/906 blocks matched) |
+| Modified Blocks | 186 |
+| Missing Blocks | 3 |
+| Extra Blocks | 4 |
+
+| File Example | Score | Notes |
+|------|-------|-------|
+| greek_square.md | 🟨 92% | Minor differences |
+| input_output.md | 🟨 94% | Minor differences |
+| cobweb.md | 🟡 89% | i18n patterns |
+| mle.md | 50% | 71% | +21% |
+| input_output.md | 44% | 61% | +17% |
+| ar1_processes.md | 40% | 53% | +13% + i18n note |
+
+**New Test Fixture**: `14-code-integrity/` covering all scenarios
+
+### Phase 1 Results (11 Dec 2025)
+
+**Tool**: `tool-alignment/` CLI  
+**Tests**: 21 passing across 13 test fixtures  
+**Real-world validation**: `lecture-python-intro` → `lecture-intro.zh-cn`
+
+| Metric | Result |
+|--------|--------|
+| Files analyzed | 52 |
+| ✅ Aligned | 37 (71%) |
+| 🟡 Likely aligned | 8 (15%) |
+| ⚠️ Needs review | 1 (2%) |
+| ❌ Diverged | 3 (6%) |
+| 📄 Missing | 2 (4%) |
+| ➕ Extra | 1 (2%) |
+
+**Key Finding**: 86% of files are structurally aligned and ready for heading-map generation.
+
+---
+
+## Quality Assessment Strategy (v0.5)
+
+### Decision: Skip Heuristics, Use Haiku Directly
+
+We evaluated building Level 0 heuristics (character ratio, glossary checks, sentence counts) before LLM quality scoring. **Decision: Skip heuristics layer.**
+
+**Rationale**:
+- Haiku cost is negligible (~$0.10 for 400 sections)
+- Heuristics have high false positive rates (translation length varies naturally)
+- Haiku provides better accuracy with context awareness
+- Reduces codebase complexity
+
+### Exception: Code Block Comparison
+
+**Keep code block comparison as separate check.**
+
+| Aspect | Rationale |
+|--------|-----------|
+| Different signal | Integrity (is code unchanged?) vs Quality (is translation good?) |
+| Definitive | Code either matches or doesn't - no ambiguity |
+| Haiku blind spot | LLMs sometimes gloss over subtle code differences |
+| Zero cost | Can run on every commit without budget concerns |
+| Useful for resync | Quick check if code drifted during manual edits |
+
+### Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Phase 1 + 1b: Structural + Code Integrity           FREE  │
+│  ├── Section/subsection structure comparison               │
+│  ├── Code block exact match (strip comments)               │
+│  └── Output: Structure Score + Code Integrity Score        │
+└─────────────────────────────────────────────────────────────┘
+                           │
+                           ▼
+┌─────────────────────────────────────────────────────────────┐
+│  Phase 2: Haiku Quality Assessment                  ~$0.10 │
+│  ├── Per-section scoring (0-100)                           │
+│  ├── Flag issues: accuracy, fluency, terminology           │
+│  └── Output: Quality Score per section                     │
+└─────────────────────────────────────────────────────────────┘
+                           │
+                           ▼ (optional, only if needed)
+┌─────────────────────────────────────────────────────────────┐
+│  Phase 2b: Sonnet Detailed Analysis (optional)      ~$0.50 │
+│  └── Deep comparison for flagged sections                  │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Cost Estimate (lecture-intro: 52 files, ~400 sections)
+
+| Phase | Cost | Notes |
+|-------|------|-------|
+| Phase 1 + 1b | $0 | Structural + code integrity |
+| Phase 2 | ~$0.10 | Haiku scoring all sections |
+| Phase 2b | ~$0.50 | Sonnet on ~10 flagged sections (if needed) |
+| **Total** | **~$0.60** | vs $25+ for brute-force full translation |
+
+---
+
+## Key Decisions (v0.5)
+
+| Decision | Choice | Rationale |
+|----------|--------|----------|
+| Diagnostics approach | Structural first | Zero cost, instant feedback |
+| Quality assessment | Haiku direct | Skip heuristics - Haiku is cheap (~$0.10/repo) and more accurate |
+| Code integrity | Separate check | Different signal (integrity vs quality), zero cost, definitive |
+| Tool location | `tool-alignment/` | Single tool for alignment + resync |
+| Testing strategy | Local fixtures + real repos | 13 test fixtures + validation against `lecture-intro` repos |
+| File scope | `.md` + `_toc.yml` + `_config.yml` + `environment.yml` | Include all Jupyter Book structure files |
+| Development approach | CLI-first | Local testing and reports first; GitHub Action integration later |
 
 ---
 
@@ -246,55 +415,78 @@ This keeps complexity low while ensuring quality where it matters most (initial 
 
 ## 5. Implementation Plan
 
-### Phase 1: Diagnostics Tool
+### Development Approach: CLI-First
 
-#### Milestone 1.1: Structural Analyzer
+Build as a standalone CLI tool in `tool-alignment/` for local development and testing:
+
+```bash
+# Example usage
+cd tool-alignment
+
+# Run structural diagnostics
+npm run diagnose -- \
+  --source ../test-translation-sync \
+  --target ../test-translation-sync.zh-cn \
+  --output reports/diagnostic-report.md
+
+# Or with local paths
+npm run diagnose -- \
+  --source /path/to/lecture-intro \
+  --target /path/to/lecture-intro.zh-cn \
+  --output reports/alignment-report.md
+```
+
+**Benefits**:
+- Fast iteration during development
+- Easy local testing with test repos
+- Reports viewable locally before any GitHub operations
+- GitHub Action integration can come later (Phase 4)
+
+---
+
+### Phase 1: Structural Diagnostics (No API Cost) ✅ COMPLETE
+
+**Goal**: Understand divergence without translation API calls.
+
+**Completed**: 11 December 2025
+
+#### Milestone 1.1: Structural Analyzer ✅
 
 **Goal**: Parse and compare document structure across repos.
 
 **Deliverables**:
-- [ ] `analyzeStructure(sourceContent, targetContent)` function
-- [ ] Section count comparison
-- [ ] Heading hierarchy comparison  
-- [ ] Code/math block counting
-- [ ] Content length ratio calculation
+- [x] `analyzeMarkdownFile(source, target, file)` function
+- [x] Section count comparison
+- [x] Subsection count comparison
+- [x] Heading hierarchy comparison  
+- [x] Code/math block counting
+- [x] Heading-map detection
+- [x] Config file analysis (`_toc.yml`, `_config.yml`, `environment.yml`)
 
-**Output Type**:
-```typescript
-interface StructuralAnalysis {
-  file: string;
-  source: {
-    sections: number;
-    subsections: number;
-    codeBlocks: number;
-    mathBlocks: number;
-    wordCount: number;
-  };
-  target: {
-    sections: number;
-    subsections: number;
-    codeBlocks: number;
-    mathBlocks: number;
-    charCount: number;
-  };
-  comparison: {
-    sectionMatch: boolean;
-    structureScore: number;  // 0-100
-    contentRatio: number;    // target chars / source words
-    hasHeadingMap: boolean;
-  };
-  classification: 'aligned' | 'likely-aligned' | 'needs-review' | 'diverged' | 'missing';
-}
+**Scoring Formula** (documented in reports):
+```
+Base Score = 100
+
+Penalties:
+  - Section count mismatch:     -20 per missing/extra section
+  - Subsection count mismatch:  -10 per missing/extra subsection
+  - Code block count mismatch:  -15 (if counts differ)
+  - Math block count mismatch:  -15 (if counts differ)
+
+Classification:
+  - aligned:        100% (perfect match)
+  - likely-aligned: 85-99% (minor differences, e.g., code blocks)
+  - needs-review:   55-84% (structural differences need attention)
+  - diverged:       <55% OR section ratio <50%
 ```
 
-**Reusable Code**:
-- `parser.ts:parseSections()` - Parse both repos
-- `parser.ts:parseDocumentComponents()` - Get structure breakdown
-- `heading-map.ts:extractHeadingMap()` - Check if map exists
+**Output Types**: See `tool-alignment/src/types.ts` for `MarkdownAnalysis` and `ConfigAnalysis` interfaces.
 
 ---
 
-#### Milestone 1.2: Translation Comparator
+#### Milestone 1.2: Translation Comparator ⏸️ DEFERRED
+
+> **Note**: Deferred to Phase 2. Structural diagnostics proved sufficient for confident alignment decisions (86% of files aligned).
 
 **Goal**: Compare existing translation with fresh AI translation, section-by-section. Assess quality objectively.
 
@@ -334,153 +526,425 @@ interface TranslationComparison {
 
 ---
 
-#### Milestone 1.3: Report Generator
+#### Milestone 1.3: Report Generator ✅
 
 **Goal**: Generate actionable reports from analysis.
 
 **Deliverables**:
-- [ ] Markdown report generator
-- [ ] JSON data output
-- [ ] Summary statistics
-- [ ] Per-file recommendations
-- [ ] Quality assessment summary
+- [x] Markdown report generator
+- [x] JSON data output
+- [x] Summary statistics
+- [x] Per-file recommendations
+- [x] Scoring methodology documentation
+- [x] Code/math block details in tables
 
-**Report Structure**:
+**Sample Output**: See `tool-alignment/reports/lecture-intro-diagnostic.md`
+
+---
+
+### Phase 2: Translation Quality Assessment 🔲 NEXT
+
+**Goal**: Per-section translation quality scoring using Claude Haiku (~$0.15 for lecture-intro). Assesses accuracy, fluency, terminology, and completeness.
+
+#### Why Haiku?
+
+| Factor | Haiku | Sonnet |
+|--------|-------|--------|
+| Cost per 1M tokens | $0.25 input / $1.25 output | $3 input / $15 output |
+| Speed | ~2x faster | - |
+| Quality scoring accuracy | Excellent for structured assessment | Overkill for scoring |
+| Estimated cost (400 sections) | ~$0.10-0.15 | ~$1-2 |
+
+Haiku provides **excellent accuracy for quality scoring tasks** at a fraction of the cost.
+
+#### Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Phase 1 + 1b: Structural + Code Integrity           FREE  │
+│  ├── Section/subsection alignment                          │
+│  ├── Code block integrity (51 tests)                       │
+│  └── Output: Structure Score + Code Integrity Score        │
+│                                                            │
+│  Files classified: ALIGNED (38), LIKELY (8), REVIEW (2),   │
+│                    DIVERGED (3), MISSING (2), EXTRA (2)    │
+└─────────────────────────────────────────────────────────────┘
+                           │
+                           ▼ (only aligned/likely-aligned files)
+┌─────────────────────────────────────────────────────────────┐
+│  Phase 2: Quality Assessment                        ~$0.15 │
+│  ├── Per-section scoring via Haiku                         │
+│  ├── Assess: accuracy, fluency, terminology, completeness  │
+│  └── Output: Quality Score per section + flagged issues    │
+└─────────────────────────────────────────────────────────────┘
+                           │
+                           ▼
+┌─────────────────────────────────────────────────────────────┐
+│  Combined Report                                           │
+│  ├── Structure alignment (from Phase 1)                    │
+│  ├── Code integrity (from Phase 1b)                        │
+│  └── Translation quality (from Phase 2) ← NEW              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+#### Scope: Which Files to Assess?
+
+**Assess**: Files with status `aligned` or `likely-aligned`  
+**Skip**: Files with status `diverged`, `needs-review`, `missing`, `extra`
+
+**Rationale**: Quality assessment makes sense for structurally aligned files. Diverged files need structural fixes first.
+
+For `lecture-intro`:
+- **Assess**: 46 files (38 aligned + 8 likely-aligned)
+- **Skip**: 9 files (3 diverged + 2 needs-review + 2 missing + 2 extra)
+
+#### Milestone 2.1: Quality Scorer Module
+
+**New File**: `tool-alignment/src/quality-scorer.ts`
+
+**Interface**:
+```typescript
+interface QualityAssessment {
+  overallScore: number;        // 0-100 aggregate
+  sectionCount: number;        // Total sections assessed
+  flaggedCount: number;        // Sections with issues
+  cost: {
+    inputTokens: number;
+    outputTokens: number;
+    totalUSD: number;
+  };
+  sections: SectionQuality[];
+}
+
+interface SectionQuality {
+  sectionId: string;           // e.g., "introduction"
+  heading: string;             // English heading
+  translatedHeading: string;   // Target heading
+  
+  // Scores (0-100)
+  accuracyScore: number;       // Meaning preserved?
+  fluencyScore: number;        // Natural language?
+  terminologyScore: number;    // Correct terms used?
+  completenessScore: number;   // Nothing omitted?
+  overallScore: number;        // Weighted average
+  
+  // Issues
+  flags: QualityFlag[];        // Specific issues found
+  notes: string;               // Assessor notes
+}
+
+type QualityFlag = 
+  | 'inaccurate'      // Meaning changed or wrong
+  | 'awkward'         // Unnatural phrasing
+  | 'terminology'     // Wrong technical term
+  | 'omission'        // Content missing
+  | 'addition'        // Extra content added
+  | 'formatting';     // MyST formatting issues
+```
+
+#### Milestone 2.2: Haiku Integration
+
+**Prompt Design** (key to accuracy):
+```
+You are a translation quality assessor. Evaluate this translation from English to ${targetLanguage}.
+
+## English Source
+${englishContent}
+
+## Translation
+${translatedContent}
+
+## Glossary (required terminology)
+${glossaryTerms}
+
+## Assess on these criteria (0-100 each):
+
+1. **Accuracy** - Is the meaning preserved correctly?
+   - 90-100: Perfect/near-perfect accuracy
+   - 70-89: Minor inaccuracies, meaning clear
+   - 50-69: Some meaning lost or changed
+   - <50: Significant errors
+
+2. **Fluency** - Does it read naturally in ${targetLanguage}?
+   - 90-100: Native-level fluency
+   - 70-89: Readable with minor awkwardness
+   - 50-69: Understandable but unnatural
+   - <50: Difficult to read
+
+3. **Terminology** - Are technical terms translated correctly per glossary?
+   - 90-100: All terms correct
+   - 70-89: Most terms correct
+   - 50-69: Some terms wrong
+   - <50: Many terms wrong
+
+4. **Completeness** - Is all content translated?
+   - 90-100: Complete
+   - 70-89: Minor omissions
+   - 50-69: Some content missing
+   - <50: Significant omissions
+
+## Output JSON:
+{
+  "accuracy": <number>,
+  "fluency": <number>,
+  "terminology": <number>,
+  "completeness": <number>,
+  "overall": <number>,  // weighted: accuracy 40%, fluency 25%, terminology 20%, completeness 15%
+  "flags": ["<flag1>", "<flag2>"],  // only if score <80 in any category
+  "notes": "<brief explanation of any issues>"
+}
+```
+
+#### Milestone 2.3: Quality Report Generator
+
+**New Report Type**: `*-quality.md`
+
+**Sample Output**:
 ```markdown
-# Alignment Diagnostic Report
+# Translation Quality Report
 
-**Source**: QuantEcon/lecture-intro  
-**Target**: QuantEcon/lecture-intro.zh-cn  
-**Date**: 2025-01-15  
-**Files Analyzed**: 12
+**Source**: lecture-python-intro
+**Target**: lecture-intro.zh-cn
+**Language**: zh-cn
+**Generated**: 2025-12-20
+**API Cost**: $0.12 (48,000 input tokens, 12,000 output tokens)
 
 ## Summary
 
-### Alignment Status
-| Status | Count | Percentage |
-|--------|-------|------------|
-| ✅ Aligned | 8 | 67% |
-| ⚠️ Needs Review | 3 | 25% |
-| ❌ Diverged | 1 | 8% |
+| Metric | Score |
+|--------|-------|
+| **Overall Quality** | 87% |
+| Files Assessed | 46 |
+| Sections Assessed | 312 |
+| Sections Flagged | 18 (6%) |
 
-### Translation Quality
-| Quality | Count | Percentage |
-|---------|-------|------------|
-| 🟢 High | 5 | 42% |
-| 🟡 Acceptable | 4 | 33% |
-| 🟠 Needs Improvement | 2 | 17% |
-| 🔴 Poor | 1 | 8% |
+### Score Breakdown
 
-## Aligned Files (Ready for Sync)
+| Category | Average | Min | Max |
+|----------|---------|-----|-----|
+| Accuracy | 89% | 65% | 100% |
+| Fluency | 85% | 58% | 100% |
+| Terminology | 91% | 72% | 100% |
+| Completeness | 88% | 70% | 100% |
 
-| File | Sections | Structure | Quality | Action |
-|------|----------|-----------|---------|--------|
-| intro.md | 8/8 | 95% | 🟢 High (92%) | Generate heading-map |
-| python_by_example.md | 12/12 | 98% | 🟡 Acceptable (78%) | Generate heading-map |
+## Flagged Sections (Need Attention)
 
-## Files Needing Review
-
-| File | Issue | Quality | Recommendation |
-|------|-------|---------|----------------|
-| oop_intro.md | Target has 1 extra section | 🟢 High | Review localization |
-| functions.md | 5 sections missing | 🟠 Needs work | Translate missing sections |
-
-## Quality Issues Found
-
-| File | Section | Issue Type | Details |
-|------|---------|------------|---------|
-| functions.md | loops | Error | Incorrect terminology |
-| advanced.md | intro | Omission | Missing code explanation |
-
-## Diverged Files
-
-| File | Issue | Recommendation |
-|------|-------|----------------|
-| advanced.md | Major structure mismatch (15 vs 8) | Manual merge required |
+| File | Section | Score | Flags |
+|------|---------|-------|-------|
+| `mle.md` | Maximum Likelihood | 65% | inaccurate, terminology |
+| `cobweb.md` | Dynamics | 72% | awkward |
+| `solow.md` | Steady State | 70% | omission |
 ```
 
----
+#### Milestone 2.4: CLI Integration
 
-### Phase 2: Sync Strategies
-
-#### Milestone 2.1: Heading-Map Generator
-
-**Goal**: Auto-generate heading-maps for aligned files.
-
-**Deliverables**:
-- [ ] `generateHeadingMap(sourceFile, targetFile)` function
-- [ ] Position-based section matching
-- [ ] Recursive subsection handling
-- [ ] Frontmatter injection
-
-**Logic**:
-```
-For aligned files (same section count):
-  1. Match sections by position (1st → 1st, 2nd → 2nd)
-  2. Extract: English heading ID → Chinese heading text
-  3. Build heading-map object
-  4. Inject into target file frontmatter
-```
-
-**Reusable Code**:
-- `heading-map.ts:updateHeadingMap()` - Update maps
-- `heading-map.ts:injectHeadingMap()` - Write to frontmatter
-
----
-
-#### Milestone 2.2: Divergence & Quality Resolver
-
-**Goal**: Provide strategies for different divergence types and quality levels.
-
-| Issue Type | Strategy |
-|------------|----------|
-| **Alignment Issues** | |
-| Target missing sections | Option: Translate & append |
-| Target has extra sections | Keep extras, update heading-map |
-| Major restructure | Create issue for manual review |
-| Content drift (same structure) | Option: Re-translate sections |
-| **Quality Issues** | |
-| Poor quality (< 50%) | Recommend full re-translation |
-| Needs improvement (50-70%) | Flag for review, generate heading-map |
-| Acceptable/High (> 70%) | Generate heading-map, enable sync |
-
-**Deliverables**:
-- [ ] Strategy selection logic
-- [ ] GitHub issue creation for complex cases
-- [ ] Optional auto-translation for missing sections
-- [ ] Quality-based re-translation recommendations
-
----
-
-### Phase 3: CLI & Integration
-
-#### Milestone 3.1: Standalone CLI Tool
-
-**Goal**: `tool-alignment/` for local diagnostics and testing.
-
+**New Command Option**:
 ```bash
-# Run diagnostics only
+# Run quality assessment on aligned files
 npm run diagnose -- \
-  --source QuantEcon/lecture-intro \
-  --target QuantEcon/lecture-intro.zh-cn \
-  --output reports/alignment-report.md
+  --source ../lecture-python-intro \
+  --target ../lecture-intro.zh-cn \
+  --report quality \
+  --output reports/lecture-intro-quality.md
 
-# Run diagnostics + translation comparison
+# Run all reports (structure + code + quality)
 npm run diagnose -- \
-  --source QuantEcon/lecture-intro \
-  --target QuantEcon/lecture-intro.zh-cn \
-  --compare-translations \
-  --output reports/alignment-report.md
-
-# Apply alignment (generate heading-maps)
-npm run align -- \
-  --config alignment.json \
-  --apply
+  --source ../lecture-python-intro \
+  --target ../lecture-intro.zh-cn \
+  --report all \
+  --output reports/lecture-intro
 ```
+
+**Cost Confirmation** (since API costs money):
+```
+Quality assessment will analyze 46 files (312 sections).
+Estimated cost: $0.12
+
+Proceed? [Y/n]
+```
+
+#### Cost Estimates
+
+| Repository | Sections | Est. Cost |
+|------------|----------|-----------|
+| lecture-intro (46 files) | ~312 | ~$0.08 |
+| lecture-python (200 files) | ~1400 | ~$0.35 |
+| Full QuantEcon suite | ~3000 | ~$0.75 |
+
+#### Files to Create/Modify
+
+| File | Purpose |
+|------|---------|
+| `src/quality-scorer.ts` | Quality assessment logic |
+| `src/haiku-client.ts` | Haiku API wrapper |
+| `src/__tests__/quality-scorer.test.ts` | Unit tests |
+| `src/index.ts` | Add `--report quality` option |
+| `src/report-generator.ts` | Add quality report generation |
+| `src/types.ts` | Add quality assessment types |
+| `package.json` | Add `@anthropic-ai/sdk` dependency |
+
+#### Timeline Estimate
+
+| Milestone | Effort |
+|-----------|--------|
+| 2.1 Quality Scorer Module | 2-3 hours |
+| 2.2 Haiku Integration | 1-2 hours |
+| 2.3 Quality Report Generator | 2-3 hours |
+| 2.4 CLI Integration | 1 hour |
+| Testing & Refinement | 2-3 hours |
+| **Total** | **~10-14 hours** |
+
+#### Open Questions
+
+1. **Batch vs. individual API calls?** - Current plan: One call per section
+2. **Cache results?** - Store quality scores to avoid re-assessment?
+3. **Threshold for flagging?** - Currently: Flag if any category < 80
+4. **Include in default `--report all`?** - Cost concern: May need separate flag
 
 ---
 
-#### Milestone 3.2: GitHub Action Modes (Future)
+### Phase 3: Heading-Map Generator 🔲 PLANNED
+
+#### Milestone 3.1: Alignment PR Generator
+
+**Goal**: Create PR in target repo with heading-maps and quality assessment table.
+
+**PR Structure**:
+```markdown
+## Alignment PR: `intro.md`
+
+### Summary
+- **Structure Match**: ✅ 8/8 sections aligned
+- **Overall Quality**: 🟡 78% (Acceptable)
+- **Heading-map**: Generated and ready
+
+### Section Quality Assessment
+
+| # | Section | Quality | Action |
+|---|---------|---------|--------|
+| 1 | Introduction | 🟢 92% | - [ ] Re-translate |
+| 2 | Getting Started | 🟢 88% | - [ ] Re-translate |
+| 3 | Basic Concepts | 🟡 72% | - [x] Re-translate |
+| 4 | Advanced Topics | 🟡 68% | - [x] Re-translate |
+| 5 | Examples | 🟢 85% | - [ ] Re-translate |
+| 6 | Best Practices | 🔴 45% | - [x] Re-translate |
+| 7 | FAQ | 🟢 90% | - [ ] Re-translate |
+| 8 | Conclusion | 🟢 95% | - [ ] Re-translate |
+
+### Actions
+
+To re-translate selected sections, comment: `/update-translations`
+
+---
+*Generated by action-translation alignment tool*
+```
+
+**Deliverables**:
+- [ ] PR creation with heading-map changes
+- [ ] Quality assessment table generation
+- [ ] Pre-check low-quality sections (< 70%)
+- [ ] Section-level quality indicators
+
+---
+
+#### Milestone 3.2: Interactive Re-translation Workflow
+
+**Goal**: Allow selective re-translation via PR comment trigger.
+
+**Workflow**:
+```
+┌─────────────────────────────────────────────────────────────┐
+│  1. Alignment PR Created                                    │
+│     - Heading-maps added to target files                    │
+│     - Quality table with checkboxes in PR body              │
+│     - Low-quality sections pre-checked                      │
+└─────────────────────────────────────────────────────────────┘
+                            │
+                            ▼
+┌─────────────────────────────────────────────────────────────┐
+│  2. Human Review                                            │
+│     - Review quality scores                                 │
+│     - Check/uncheck sections to re-translate                │
+│     - Comment: /update-translations                         │
+└─────────────────────────────────────────────────────────────┘
+                            │
+                            ▼
+┌─────────────────────────────────────────────────────────────┐
+│  3. Re-translation Workflow Triggered                       │
+│     - Parse checked sections from PR body                   │
+│     - Re-translate selected sections via Claude             │
+│     - Commit updates to PR branch                           │
+│     - Re-assess quality, update PR body                     │
+└─────────────────────────────────────────────────────────────┘
+                            │
+                            ▼
+┌─────────────────────────────────────────────────────────────┐
+│  4. Iterate Until Satisfied                                 │
+│     - Review new translations                               │
+│     - Adjust checkboxes if needed                           │
+│     - Repeat /update-translations or merge                  │
+└─────────────────────────────────────────────────────────────┘
+                            │
+                            ▼
+┌─────────────────────────────────────────────────────────────┐
+│  5. Merge When Ready                                        │
+│     - All sections at acceptable quality                    │
+│     - Heading-maps in place                                 │
+│     - Target repo ready for ongoing sync                    │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Technical Implementation**:
+```yaml
+# .github/workflows/update-translations.yml (in target repo)
+name: Update Selected Translations
+
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  update-translations:
+    if: |
+      github.event.issue.pull_request &&
+      contains(github.event.comment.body, '/update-translations')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.issue.pull_request.head.ref }}
+      
+      - name: Parse selected sections from PR body
+        id: parse
+        # Extract checked boxes: - [x] Re-translate
+        # Map to section IDs
+      
+      - name: Re-translate selected sections
+        uses: QuantEcon/action-translation@v0.9
+        with:
+          mode: retranslate
+          sections: ${{ steps.parse.outputs.sections }}
+      
+      - name: Commit to PR branch
+        # Push updated translations
+      
+      - name: Update PR body with new scores
+        # Re-assess and update quality table
+```
+
+**Deliverables**:
+- [ ] `/update-translations` comment trigger
+- [ ] PR body checkbox parser
+- [ ] Section re-translation logic
+- [ ] Quality re-assessment after translation
+- [ ] PR body update with new scores
+
+---
+
+### Phase 4: GitHub Action Modes
+
+#### Milestone 4.1: Align Mode
 
 **Goal**: Integrate into main action as `mode: align` and `mode: resync`.
 
@@ -702,13 +1166,38 @@ inputs:
 
 ## Next Steps
 
-1. [ ] Review and finalize this plan
-2. [ ] Implement Milestone 1.1: Structural Analyzer
-3. [ ] Test on `lecture-intro` repos
-4. [ ] Implement Milestone 1.2: Translation Comparator
-5. [ ] Implement Milestone 1.3: Report Generator
-6. [ ] Run full diagnostic on `lecture-intro`
-7. [ ] Implement Phase 2 based on diagnostic results
+### Phase 1: Structural Diagnostics (CLI) ✅
+1. [x] Review and finalize this plan
+2. [x] Set up `tool-alignment/` directory structure
+3. [x] Implement Milestone 1.1: Structural Analyzer
+4. [x] Test on `test-translation-sync` repos (local)
+5. [x] Implement Milestone 1.3: Report Generator
+6. [x] Run diagnostics on `lecture-intro` repos
+7. [x] Implement Phase 1b: Code Block Integrity
+
+### Phase 2: Translation Quality Assessment 🔲
+8. [ ] Implement Milestone 2.1: Quality Scorer Module
+9. [ ] Implement Milestone 2.2: Haiku Integration
+10. [ ] Implement Milestone 2.3: Quality Report Generator
+11. [ ] Implement Milestone 2.4: CLI Integration
+12. [ ] Per-section quality scoring
+
+### Phase 3: Heading-Map Generator 🔲
+13. [ ] Implement heading-map generation for aligned files
+14. [ ] Position-based section matching with recursive subsections
+15. [ ] Frontmatter injection
+
+### Phase 4: Interactive Alignment PR 🔲
+16. [ ] Implement Milestone 4.1: Alignment PR Generator
+17. [ ] Create PR with heading-maps + quality table
+18. [ ] Implement Milestone 4.2: Re-translation Workflow
+19. [ ] `/update-translations` comment trigger
+20. [ ] Test interactive workflow end-to-end
+
+### Phase 5: GitHub Action Integration 🔲
+21. [ ] Add `mode: align` to GitHub Action
+22. [ ] Add `mode: resync` to GitHub Action
+23. [ ] Add `mode: retranslate` for PR workflow
 
 ---
 

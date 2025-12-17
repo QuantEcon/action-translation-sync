@@ -1,0 +1,12 @@
+{
+  "description": "Target has 1 extra section (localization content)",
+  "files": {
+    "analysis.md": {
+      "status": "needs-review",
+      "source": { "sections": 3, "subsections": 0 },
+      "target": { "sections": 4, "subsections": 0 },
+      "comparison": { "sectionMatch": false },
+      "issues": ["Target has 1 extra section(s)"]
+    }
+  }
+}
