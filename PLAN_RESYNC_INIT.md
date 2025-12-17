@@ -1,8 +1,8 @@
 # Resync & Initial Alignment: Implementation Plan
 
-**Document Status**: Phase 1 + 1b + 2 Complete | Phase 3 Proposed  
-**Last Updated**: 17 December 2025  
-**Version**: v0.11
+**Document Status**: Phase 1 + 1b + 2 + 3.1 Complete  
+**Last Updated**: 18 December 2025  
+**Version**: v0.12
 
 This document provides a focused implementation plan for two related features:
 1. **Initial Alignment** - Onboard existing translation repos (one-time setup)
@@ -19,15 +19,62 @@ This document provides a focused implementation plan for two related features:
 | **Phase 1** | ✅ Complete | Structural Diagnostics - CLI tool with reports |
 | **Phase 1b** | ✅ Complete | Code Block Integrity Check (zero-cost enhancement) |
 | **Phase 2** | ✅ Complete | Translation Quality Assessment via Claude |
-| **Phase 3** | 🔲 **Planned** | **File-Centric Refactor** - Single file diagnostics with action recommendations |
+| **Phase 3** | � **In Progress** | **File-Centric Refactor** - Milestone 3.1 complete |
 | **Phase 4** | 🔲 Planned | Heading-Map Generator |
 | **Phase 5** | 🔲 Planned | Interactive Alignment PR |
 | **Phase 6** | 🔲 Planned | GitHub Action Integration |
 
 ### Next Development Actions
 
-1. **Phase 3: File-Centric Refactor** - Refocus tool on single-file diagnostics for actionable decisions
-2. **Phase 2 Testing Program** - Calibrate quality scoring thresholds (can run in parallel)
+1. **Phase 3.2**: Action Recommendation Engine - configurable thresholds for calibration
+2. **Phase 3.3**: Threshold Calibration - create gold-standard test set
+3. **Phase 2 Testing Program** - Calibrate quality scoring thresholds (can run in parallel)
+
+### Phase 3.1 Complete (18 Dec 2025)
+
+**Feature**: File-Centric Triage & Diagnostics  
+**Tests**: 18 new tests (117 total in tool-alignment)
+
+| Feature | Implementation |
+|---------|----------------|
+| `triage` command | Series-level scan with prioritized action list |
+| `file` command | Single-file detailed diagnostic |
+| Output structure | `status/<repo-name>/_triage.md` + individual file reports |
+| File-level analysis | Combines structure + code dimensions |
+| Action recommendations | ok, resync, review-code, review-quality, retranslate, create, diverged |
+| Priority sorting | critical → high → medium → low → ok |
+| Default behavior | Only generate reports for files needing attention |
+| `--all` flag | Generate reports for ALL files (debug mode) |
+
+**New CLI Commands**:
+```bash
+# Triage entire series
+npm run diagnose -- triage \
+  --source /path/to/lecture-python-intro \
+  --target /path/to/lecture-intro.zh-cn \
+  --docs-folder lectures
+
+# Diagnose single file
+npm run diagnose -- file cobweb.md \
+  --source /path/to/lecture-python-intro \
+  --target /path/to/lecture-intro.zh-cn \
+  --docs-folder lectures
+```
+
+**Output Files**:
+- `status/<repo-name>/_triage.md` - Series summary with prioritized action list
+- `status/<repo-name>/<file>.md` - Individual file diagnostics
+
+**Initial Results** (lecture-python-intro → lecture-intro.zh-cn):
+| Metric | Count |
+|--------|-------|
+| Total Files | 52 |
+| ✅ OK | 9 (17%) |
+| ⚠️ Needs Attention | 43 (83%) |
+| 📄 Create (missing) | 2 |
+| ⚠️ Diverged | 12 |
+| 🔧 Review code | 15 |
+| 🔄 Resync | 14 |
 
 ### Phase 2 Complete (17 Dec 2025)
 
@@ -340,15 +387,17 @@ Code Score overlay:
 
 #### Implementation Plan
 
-**Milestone 3.1: Refactor Core Analysis**
-- [ ] Create `file-analyzer.ts` - Single file analysis combining all dimensions
-- [ ] Create `triage.ts` - Series-level quick scan (structure + code only)
-- [ ] Refactor CLI to support `triage` and `file` subcommands
-- [ ] Update types for file-level results
+**Milestone 3.1: Refactor Core Analysis** ✅ Complete (18 Dec 2025)
+- [x] Create `file-analyzer.ts` - Single file analysis combining all dimensions
+- [x] Create `triage.ts` - Series-level quick scan (structure + code only)
+- [x] Refactor CLI to support `triage` and `file` subcommands
+- [x] Update types for file-level results
+- [x] Create `triage-report.ts` - Combined report generation
+- [x] Add 18 tests for Phase 3 modules
 
 **Milestone 3.2: Action Recommendation Engine**
-- [ ] Create `action-recommender.ts` - Decision matrix implementation
-- [ ] Handle edge cases (missing files, config-only, i18n patterns, etc.)
+- [x] Integrated into `file-analyzer.ts` (`recommendAction()` method)
+- [x] Handle edge cases (missing files, i18n patterns)
 - [ ] Make thresholds configurable (for calibration testing)
 - [ ] Add confidence scoring for recommendations
 
@@ -358,16 +407,16 @@ Code Score overlay:
 - [ ] Document optimal thresholds
 - [ ] Decide if quality assessment needed in triage
 
-**Milestone 3.4: Report Generators**
-- [ ] Create `triage-report.ts` - Series-level triage report
-- [ ] Create `file-report.ts` - Single file diagnostic report
+**Milestone 3.4: Report Generators** ✅ Complete
+- [x] Create `triage-report.ts` - Series-level triage report
+- [x] Create file report generation (integrated in `triage-report.ts`)
 - [ ] Deprecate or simplify existing report generators
 
 **Milestone 3.5: Testing & Migration**
-- [ ] Add test fixtures for file-level analysis
-- [ ] Update existing tests
+- [x] Add test fixtures for file-level analysis (using existing fixtures)
+- [x] Add 18 new tests (117 total)
 - [ ] Document migration from series-level to file-level workflow
-- [ ] Validate against lecture-intro repos
+- [x] Validate against lecture-intro repos
 
 #### Benefits
 

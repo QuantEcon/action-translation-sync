@@ -5,10 +5,62 @@ A CLI tool for analyzing structural alignment, code block integrity, and transla
 ## Purpose
 
 This tool helps with:
-1. **Initial Alignment** - Onboarding existing translation repos to automated sync
-2. **Resync** - Detecting divergence between repos over time
-3. **Code Block Integrity** - Verifying that code blocks match between source and target
-4. **Translation Quality** - AI-powered assessment of translation accuracy and fluency
+1. **Triage** - Quick scan to identify files needing attention (Phase 3)
+2. **File Diagnostics** - Deep dive on individual files (Phase 3)
+3. **Initial Alignment** - Onboarding existing translation repos to automated sync
+4. **Resync** - Detecting divergence between repos over time
+5. **Code Block Integrity** - Verifying that code blocks match between source and target
+6. **Translation Quality** - AI-powered assessment of translation accuracy and fluency
+
+## Quick Start (Phase 3)
+
+### Triage a Repository
+
+Get a prioritized list of files needing attention:
+
+```bash
+npm run diagnose -- triage \
+  --source ~/repos/lecture-python-intro \
+  --target ~/repos/lecture-intro.zh-cn \
+  --docs-folder lectures
+
+# Output: ./status/lecture-python-intro/_triage.md
+```
+
+### Diagnose a Single File
+
+Get detailed analysis of one file:
+
+```bash
+npm run diagnose -- file cobweb.md \
+  --source ~/repos/lecture-python-intro \
+  --target ~/repos/lecture-intro.zh-cn \
+  --docs-folder lectures
+
+# Output: ./status/lecture-python-intro/cobweb.md
+```
+
+### Triage Options
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `--source, -s` | Path to source repository | Required |
+| `--target, -t` | Path to target repository | Required |
+| `--docs-folder, -d` | Subdirectory containing docs | `.` |
+| `--output, -o` | Output directory | `./status/<repo-name>` |
+| `--all, -a` | Generate reports for ALL files | `false` |
+
+### Action Categories
+
+| Action | Icon | When | What to Do |
+|--------|------|------|------------|
+| `ok` | ✅ | All checks pass | Ready for sync |
+| `resync` | 🔄 | Missing heading-map | Run action-translation |
+| `review-code` | 🔧 | Code modified | Verify code changes |
+| `review-quality` | 📝 | Quality < 80% | Review flagged sections |
+| `retranslate` | 🔴 | Quality < 60% | Full retranslation |
+| `create` | 📄 | Missing in target | New translation needed |
+| `diverged` | ⚠️ | Structure mismatch | Manual alignment |
 
 ## Features
 

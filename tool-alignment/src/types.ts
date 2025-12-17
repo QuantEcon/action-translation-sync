@@ -298,6 +298,129 @@ export interface QualityAssessmentOptions {
 }
 
 // ============================================================================
+// PHASE 3: FILE-CENTRIC DIAGNOSTICS
+// ============================================================================
+
+/**
+ * Action recommendation for a file
+ */
+export type FileAction = 
+  | 'ok'              // ✅ Ready for sync, no action needed
+  | 'resync'          // 🔄 Can auto-sync with action-translation
+  | 'review-code'     // 🔧 Code changes need verification
+  | 'review-quality'  // 📝 Quality issues need review
+  | 'retranslate'     // 🔴 Full retranslation needed
+  | 'create'          // 📄 New translation needed (missing)
+  | 'diverged';       // ⚠️ Manual structural alignment needed
+
+/**
+ * Priority level for triage sorting
+ */
+export type Priority = 'critical' | 'high' | 'medium' | 'low' | 'ok';
+
+/**
+ * Consolidated analysis for a single file
+ */
+export interface FileDiagnostic {
+  file: string;
+  
+  // Existence
+  sourceExists: boolean;
+  targetExists: boolean;
+  
+  // Structure dimension
+  structure: {
+    score: number;              // 0-100
+    sectionMatch: boolean;
+    subsectionMatch: boolean;
+    sourceSections: number;
+    targetSections: number;
+    sourceSubsections: number;
+    targetSubsections: number;
+    hasHeadingMap: boolean;
+    issues: string[];
+  } | null;
+  
+  // Code dimension
+  code: {
+    score: number;              // 0-100
+    sourceBlocks: number;
+    targetBlocks: number;
+    matchedBlocks: number;
+    modifiedBlocks: number;
+    missingBlocks: number;
+    extraBlocks: number;
+    hasLocalizationChanges: boolean;  // i18n patterns detected
+    issues: string[];
+  } | null;
+  
+  // Quality dimension (optional, only if assessed)
+  quality?: {
+    score: number;              // 0-100
+    sectionCount: number;
+    flaggedCount: number;
+    issues: string[];
+  };
+  
+  // Recommendation
+  action: FileAction;
+  priority: Priority;
+  reason: string;               // Human-readable explanation
+}
+
+/**
+ * Result of triaging a series
+ */
+export interface TriageResult {
+  metadata: {
+    sourceRepo: string;         // Repo name extracted from path
+    sourcePath: string;         // Full source path
+    targetPath: string;         // Full target path
+    docsFolder: string;
+    generatedAt: string;
+    version: string;
+  };
+  
+  summary: {
+    totalFiles: number;
+    ok: number;
+    needsAttention: number;
+    byAction: Record<FileAction, number>;
+  };
+  
+  // Files sorted by priority
+  files: FileDiagnostic[];
+  
+  // Only files needing attention (for default report)
+  filesNeedingAttention: FileDiagnostic[];
+}
+
+/**
+ * Options for triage command
+ */
+export interface TriageOptions {
+  source: string;               // Path to source repository
+  target: string;               // Path to target repository
+  docsFolder: string;           // Subdirectory containing docs (default: '.')
+  output: string;               // Output directory (default: './status')
+  all: boolean;                 // Generate reports for ALL files (not just flagged)
+}
+
+/**
+ * Options for file command
+ */
+export interface FileOptions {
+  file: string;                 // Filename to diagnose
+  source: string;               // Path to source repository
+  target: string;               // Path to target repository
+  docsFolder: string;           // Subdirectory containing docs (default: '.')
+  output: string;               // Output directory (default: './status')
+  glossaryPath?: string;        // Optional glossary for quality check
+  targetLanguage?: string;      // Target language code
+  apiKey?: string;              // API key for quality check
+}
+
+// ============================================================================
 // REUSE FROM MAIN PROJECT
 // ============================================================================
 
