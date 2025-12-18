@@ -1,5 +1,19 @@
 # Tool: Alignment Diagnostic
 
+> ⚠️ **DEPRECATED - FOR REFERENCE ONLY**
+>
+> This tool is no longer actively developed. Development has moved to **`tool-onboarding`**, which provides:
+> - Hybrid analysis (deterministic code + Claude prose)
+> - Simpler architecture (single file, ~830 lines)
+> - Better accuracy (no code hallucinations)
+> - i18n detection (CJK font config recognized)
+>
+> See `tool-onboarding/README.md` for the active tool.
+>
+> This repository is retained for **reference** - it contains useful learnings about structural analysis that informed tool-onboarding.
+
+---
+
 A CLI tool for analyzing structural alignment, code block integrity, and translation quality between source and target translation repositories.
 
 ## Purpose

@@ -1,0 +1,31 @@
+{
+  "name": "tool-onboarding",
+  "version": "1.0.0",
+  "description": "Simple CLI tool to check translation alignment using Claude AI",
+  "main": "dist/index.js",
+  "bin": {
+    "onboard": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "onboard": "ts-node src/index.ts"
+  },
+  "keywords": [
+    "translation",
+    "onboarding",
+    "claude",
+    "ai"
+  ],
+  "author": "QuantEcon",
+  "license": "MIT",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.52.0",
+    "chalk": "^4.1.2",
+    "commander": "^11.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.4",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
+  }
+}

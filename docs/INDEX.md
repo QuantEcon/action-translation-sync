@@ -53,8 +53,10 @@ Complete documentation for the Translation Action (GitHub Action).
 
 **Standalone tools for different workflows:**
 
-1. **[Bulk Translator](../tool-bulk-translator/README.md)** - One-time bulk translation for initial setup
-2. **[GitHub Test Tool](../tool-test-action-on-github/README.md)** - Automated GitHub testing + quality evaluation
+1. **[Onboarding Tool](../tool-onboarding/README.md)** - Assess translation alignment before enabling sync (active)
+2. **[Bulk Translator](../tool-bulk-translator/README.md)** - One-time bulk translation for initial setup
+3. **[GitHub Test Tool](../tool-test-action-on-github/README.md)** - Automated GitHub testing + quality evaluation
+4. **[Alignment Tool](../tool-alignment/README.md)** - Structural analysis (deprecated, for reference)
 
 ---
 
