@@ -20,6 +20,8 @@ Glossary files are named using **language codes**:
 
 - `zh-cn.json` - Simplified Chinese (中文简体)
 - `zh-tw.json` - Traditional Chinese (中文繁體) - future
+- `fa.json` - Persian/Farsi (فارسی)
+- `hi.json` - Hindi (हिन्दी)
 - `ja.json` - Japanese (日本語) - future
 - `es.json` - Spanish (Español) - future
 - `fr.json` - French (Français) - future
@@ -66,6 +68,25 @@ When the action runs with `target-language: 'zh-cn'`:
 
 **Last updated**: December 2025
 
+### Hindi (`hi.json`)
+
+**Status**: ✅ Complete (357 terms)
+
+**Contents**:
+- ~160 economic terms (सकल घरेलू उत्पाद, संतुलन, राजकोषीय नीति, etc.)
+- ~100 mathematical terms (आइगनमान, मैट्रिक्स, अवकलज, etc.)
+- ~35 statistical terms (वितरण, प्रतिगमन, प्रसरण, etc.)
+- ~45 economist names (रॉबर्ट सोलो, केनेथ एरो, etc.)
+- ~17 miscellaneous terms
+
+**Special Features**:
+- All entries include `hi-roman` field with romanized (Latin script) transliterations
+- 91 entries have `certainty` ratings (74 "low", 17 "medium") for transliterations and loanwords
+
+**Maintained by**: QuantEcon team
+
+**Last updated**: December 2025
+
 ### Japanese (`ja.json`)
 
 **Status**: 🚧 Planned
@@ -101,11 +122,28 @@ Each glossary file follows this JSON structure:
 }
 ```
 
+For Hindi, additional fields are included:
+
+```json
+{
+  "en": "Markov chain",
+  "hi": "मार्कोव श्रृंखला",
+  "hi-roman": "markov shrinkhla",
+  "context": "stochastic processes",
+  "certainty": "low"
+}
+```
+
 ### Required Fields
 
 - `en` (string): English term
 - `{language-code}` (string): Translation in target language
 - `context` (string, optional): Usage context to help AI understand when to use this translation
+
+### Optional Fields
+
+- `{language-code}-roman` (string): Romanized transliteration (for non-Latin scripts like Hindi)
+- `certainty` (string): Confidence level ("low", "medium", "high") - only included when not "high"
 
 ### Context Examples
 
